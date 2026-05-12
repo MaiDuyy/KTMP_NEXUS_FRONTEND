@@ -9,13 +9,16 @@ import {
   TrendingDown,
   Clock,
   UserPlus,
-  ArrowRight
+  ArrowRight,
+  Hash
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/src/redux/store';
-import { useGetWorkspaceMembersQuery } from '@/src/redux/feature/workspaceApi';
+import { useGetWorkspaceMembersQuery, useGetWorkspaceStatsQuery } from '@/src/redux/feature/workspaceApi';
 import { useGetChatsQuery } from '@/src/redux/feature/chatApi';
+import { useListChannelsQuery } from '@/src/redux/feature/channelApi';
+import { useRealtimeChat } from '@/src/hooks/useRealtimeChat';
 
 const StatCard = ({ title, value, trend, trendValue, icon: Icon, color }: any) => (
   <Card className="border-none shadow-sm bg-white overflow-hidden group">
@@ -66,12 +69,23 @@ const ActivityItem = ({ user, action, target, time }: any) => (
 
 export default function WorkspaceDashboard() {
   const currentWorkspaceId = useSelector((state: RootState) => state.workspace.currentWorkspaceId);
+  const currentUser = useSelector((state: RootState) => state.auth?.user);
+  
   const { data: membersData } = useGetWorkspaceMembersQuery({ workspaceId: currentWorkspaceId || '' }, { skip: !currentWorkspaceId });
   const { data: groupsData } = useGetChatsQuery({ type: 'group', workspaceId: currentWorkspaceId || '' }, { skip: !currentWorkspaceId });
+  const { data: channelsData } = useListChannelsQuery({ workspaceId: currentWorkspaceId || '' }, { skip: !currentWorkspaceId });
+  const { data: statsData } = useGetWorkspaceStatsQuery(currentWorkspaceId || '', { skip: !currentWorkspaceId });
+  const { onlineUsers } = useRealtimeChat();
 
-  const totalMembers = membersData?.total || 0;
-  const onlineMembers = membersData?.items?.filter(m => m.user?.isOnline).length || 0;
+  const totalMembers = membersData?.total || (membersData?.items as any)?.length || 0;
+  const onlineMembers = (membersData?.items as any)?.filter((m: any) => 
+    onlineUsers.has(m.userId) || m.userId === currentUser?.id
+  ).length || 0;
   const totalGroups = groupsData?.chats?.length || 0;
+  const totalChannels = channelsData?.length || 0;
+
+  const maxMessages = Math.max(...(statsData?.messageActivity?.map((m: any) => m.count) || [10]));
+  const maxMembers = Math.max(...(statsData?.memberActivity?.map((m: any) => m.count) || [10]));
 
   return (
     <div className="p-8 space-y-8">
@@ -85,25 +99,19 @@ export default function WorkspaceDashboard() {
         <StatCard 
           title="Tổng thành viên" 
           value={totalMembers} 
-          trend="up" 
-          trendValue="+12%" 
           icon={Users} 
           color="bg-blue-600" 
         />
         <StatCard 
           title="Nhóm chat" 
           value={totalGroups} 
-          trend="up" 
-          trendValue="+5" 
           icon={MessageSquare} 
           color="bg-indigo-600" 
         />
         <StatCard 
-          title="Tin nhắn (Tuần)" 
-          value="12.4k" 
-          trend="up" 
-          trendValue="+18%" 
-          icon={Activity} 
+          title="Kênh thảo luận" 
+          value={totalChannels} 
+          icon={Hash} 
           color="bg-emerald-600" 
         />
         <StatCard 
@@ -122,17 +130,19 @@ export default function WorkspaceDashboard() {
           </CardHeader>
           <CardContent>
             <div className="h-[240px] w-full flex items-end gap-2 px-2">
-              {[40, 60, 45, 90, 65, 80, 50, 70, 85, 100, 75, 60, 40, 55, 70, 95, 110, 80, 60, 45, 50, 65, 80, 90, 70, 60, 55, 40, 30, 45].map((val, i) => (
+              {statsData?.messageActivity?.length ? statsData.messageActivity.map((val: any, i: number) => (
                 <div 
                   key={i} 
                   className="flex-1 bg-blue-100 hover:bg-blue-600 transition-colors rounded-t-sm relative group cursor-pointer"
-                  style={{ height: `${val}%` }}
+                  style={{ height: `${Math.max((val.count / maxMessages) * 100, 2)}%`, minHeight: '4px' }}
                 >
-                   <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity">
-                     {val * 10}
+                   <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10 whitespace-nowrap text-center">
+                     <span className="font-bold">{val.count} tin nhắn</span><br/>{new Date(val.date).toLocaleDateString('vi-VN')}
                    </div>
                 </div>
-              ))}
+              )) : (
+                 <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">Chưa có dữ liệu tin nhắn</div>
+              )}
             </div>
             <div className="flex justify-between mt-4 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
               <span>30 ngày trước</span>
@@ -147,21 +157,23 @@ export default function WorkspaceDashboard() {
           </CardHeader>
           <CardContent>
             <div className="h-[240px] w-full flex items-end gap-4 px-4">
-              {[5, 8, 12, 7, 10, 15, 20, 18, 25, 22, 30, 28].map((val, i) => (
+              {statsData?.memberActivity?.length ? statsData.memberActivity.map((val: any, i: number) => (
                 <div 
                   key={i} 
                   className="flex-1 bg-indigo-500 rounded-t-lg relative group cursor-pointer hover:bg-indigo-600 transition-colors"
-                  style={{ height: `${(val / 30) * 100}%` }}
+                  style={{ height: `${Math.max((val.count / maxMembers) * 100, 2)}%`, minHeight: '4px' }}
                 >
-                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity">
-                     {val}
+                  <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10 whitespace-nowrap text-center">
+                     <span className="font-bold">{val.count} thành viên</span><br/>Tuần: {new Date(val.week).toLocaleDateString('vi-VN')}
                    </div>
                 </div>
-              ))}
+              )) : (
+                 <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">Chưa có dữ liệu thành viên</div>
+              )}
             </div>
             <div className="flex justify-between mt-4 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-              <span>Tuần 1</span>
-              <span>Tuần 12</span>
+              <span>12 tuần trước</span>
+              <span>Tuần này</span>
             </div>
           </CardContent>
         </Card>
@@ -175,30 +187,17 @@ export default function WorkspaceDashboard() {
         </CardHeader>
         <CardContent>
           <div className="space-y-1">
-            <ActivityItem 
-              user="Nguyễn Văn A" 
-              action="đã tạo nhóm chat" 
-              target="Dự án Alpha" 
-              time="2 giờ trước" 
-            />
-            <ActivityItem 
-              user="Trần Thị B" 
-              action="đã được mời vào" 
-              target="Workspace" 
-              time="5 giờ trước" 
-            />
-            <ActivityItem 
-              user="Lê Văn C" 
-              action="đã rời nhóm chat" 
-              target="Thảo luận chung" 
-              time="1 ngày trước" 
-            />
-            <ActivityItem 
-              user="Hệ thống" 
-              action="đã cập nhật chính sách" 
-              target="Bảo mật" 
-              time="2 ngày trước" 
-            />
+             {statsData?.recentActivity?.length ? statsData.recentActivity.map((act: any, i: number) => (
+                <ActivityItem 
+                  key={i}
+                  user={act.user} 
+                  action={act.action} 
+                  target={act.target} 
+                  time={new Date(act.time).toLocaleString('vi-VN')} 
+                />
+             )) : (
+                <div className="py-8 text-center text-slate-500 text-sm">Chưa có hoạt động nào</div>
+             )}
           </div>
         </CardContent>
       </Card>

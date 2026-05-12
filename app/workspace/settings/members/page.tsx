@@ -8,14 +8,13 @@ import {
   MoreVertical,
   Shield,
   UserMinus,
-  Mail,
   Check,
   Loader2,
   Filter,
-  Crown,
-  LogOut,
-  AlertTriangle
+  Crown
 } from 'lucide-react';
+import { getAvatarUrl } from '@/src/utils/image-utils';
+import { useRealtimeChat } from '@/src/hooks/useRealtimeChat';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '@/src/redux/store';
 import {
@@ -65,6 +64,8 @@ export default function MembersManagement() {
     { workspaceId: currentWorkspaceId || '' },
     { skip: !currentWorkspaceId }
   );
+
+  const { onlineUsers } = useRealtimeChat();
 
   const [updateRole] = useUpdateWorkspaceMemberRoleMutation();
   const [removeMember] = useRemoveWorkspaceMemberMutation();
@@ -216,9 +217,9 @@ export default function MembersManagement() {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-9 w-9">
-                        <AvatarImage src={member.user?.avatar} />
+                        <AvatarImage src={getAvatarUrl(member.user?.avatar, member.user?.name)} />
                         <AvatarFallback className="bg-blue-100 text-blue-700 font-bold">
-                          {member.user?.name?.[0].toUpperCase()}
+                          {member.user?.name?.[0]?.toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <div>
@@ -251,9 +252,9 @@ export default function MembersManagement() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      <div className={`h-2 w-2 rounded-full ${member.user?.isOnline ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-300'}`} />
+                      <div className={`h-2 w-2 rounded-full ${onlineUsers.has(member.userId) || member.userId === currentUser?.id ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-300'}`} />
                       <span className="text-xs font-medium text-slate-600">
-                        {member.user?.isOnline ? 'Đang online' : 'Ngoại tuyến'}
+                        {onlineUsers.has(member.userId) || member.userId === currentUser?.id ? 'Đang online' : 'Ngoại tuyến'}
                       </span>
                     </div>
                   </td>

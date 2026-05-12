@@ -61,6 +61,7 @@ import {
 import { Chat } from "@/src/type/chat.types";
 import { socketService } from "@/src/services/socket.service";
 import { LeaveGroupDialog } from "@/src/components/group-settings/dialogs";
+import { getAvatarUrl } from "@/src/utils/image-utils";
 
 // Định nghĩa lại Categories
 const FRIEND_CATEGORIES = [
@@ -134,14 +135,6 @@ export const ChatItem = ({
     const partner = getChatPartner();
     const displayName = chat.name || partner?.name || "Người dùng";
     const rawAvatar = chat.avatar || partner?.avatar;
-
-    const getAvatarUrl = (url: string | null | undefined, name: string) => {
-        if (!url) return `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`;
-        if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) {
-            return url;
-        }
-        return `https://${url}`;
-    };
 
     const imageUrl = getAvatarUrl(rawAvatar, displayName);
 

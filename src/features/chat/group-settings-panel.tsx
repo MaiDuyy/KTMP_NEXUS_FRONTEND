@@ -48,7 +48,9 @@ import { TransferLeadershipDialog } from "../../components/group-settings/dialog
 // Types & utils
 import { GroupSettingsPanelProps, Participant, TabKey } from "../../components/group-settings/types";
 import { getInitials, normalizeUrl, avatarColor } from "../../components/group-settings/shared/utils";
-
+import { getAvatarUrl } from "@/src/utils/image-utils";
+import { useSelector } from "react-redux";
+import { RootState } from "@/src/redux/store";
 export default function GroupSettingsPanel({
     chatId,
     isOpen,
@@ -91,14 +93,21 @@ export default function GroupSettingsPanel({
     const { data: chatData, isLoading: chatLoading, refetch } = useGetChatByIdQuery(chatId, {
         skip: !isOpen || !chatId,
     });
+
+    const chat = chatData?.chat;
+    const [debouncedSearch, setDebouncedSearch] = useState('');
+    
+        const currentWorkspaceId = useSelector((state: RootState) => state.workspace.currentWorkspaceId);
     const { data: mediaData } = useGetMediaMessagesQuery(
         { chatId, type: mediaFilter },
         { skip: !isOpen || !chatId }
     );
-    const { data: directoryData, isLoading: directoryLoading } = useSearchDirectoryQuery(
-        debouncedDirectorySearch,
-        { skip: !showAddMemberDialog || debouncedDirectorySearch.length < 2 }
-    );
+
+    const { data: directoryData, isLoading: directoryLoading } = useSearchDirectoryQuery({ searchTerm: debouncedSearch, workspaceId: currentWorkspaceId || undefined }, {
+            // skip: debouncedSearch.length < 2,
+        });
+
+ 
     const { data: pinnedData } = useGetPinnedMessagesQuery(chatId, { skip: !isOpen || !chatId });
     const { data: taskData, isLoading: tasksLoading } = useGetTasksQuery(chatId, { skip: !isOpen || !chatId });
 
@@ -116,7 +125,6 @@ export default function GroupSettingsPanel({
     const [approveJoinRequest] = useApproveJoinRequestMutation();
 
     // Derived data
-    const chat = chatData?.chat;
     const participants: Participant[] = (chat?.participants || []) as Participant[];
     const tasks = taskData?.tasks || [];
     const mediaMessages = mediaData?.media || [];
@@ -132,17 +140,24 @@ export default function GroupSettingsPanel({
     const getMemberAvatar = (p: Participant) => p.account?.avatar || p.avatar;
     const existingMemberIds = participants.map(getMemberId).filter(Boolean);
     const availableDirectoryUsers = directoryUsers.filter(
-        (u: any) => !existingMemberIds.includes(u.id) && u.id !== currentUserId
-    );
+            (u: any) => !existingMemberIds.includes(u.id) && u.id !== currentUserId
+        );
 
     const doneTasks = tasks.filter((t: any) => t.status === "DONE").length;
     const inProgressTasks = tasks.filter((t: any) => t.status === "IN_PROGRESS").length;
 
     // Effects
-    useEffect(() => {
-        const t = setTimeout(() => setDebouncedDirectorySearch(directorySearch), 300);
-        return () => clearTimeout(t);
-    }, [directorySearch]);
+    // useEffect(() => {
+    //     const t = setTimeout(() => setDebouncedDirectorySearch(directorySearch), 300);
+    //     return () => clearTimeout(t);
+    // }, [directorySearch]);
+
+        useEffect(() => {
+            const timer = setTimeout(() => {
+                setDebouncedSearch(directorySearch);
+            }, 300);
+            return () => clearTimeout(timer);
+        }, [directorySearch]);
 
     useEffect(() => {
         if (chat?.name) setNewGroupName(chat.name);

@@ -20,8 +20,8 @@ export const friendApi = apiSlice.injectEndpoints({
       providesTags: ["Friends"],
     }),
 
-    // Tìm kiếm người dùng
-    searchUsers: builder.query<SearchUsersResponse, string>({
+    // Tìm kiếm bạn bè
+    searchFriends: builder.query<SearchUsersResponse, string>({
       query: (q) => `/friends/search?q=${encodeURIComponent(q)}`,
     }),
 
@@ -111,8 +111,8 @@ export const friendApi = apiSlice.injectEndpoints({
 
 export const {
   useGetFriendsQuery,
-  useSearchUsersQuery,
-  useLazySearchUsersQuery,
+  useSearchFriendsQuery,
+  useLazySearchFriendsQuery,
   useGetReceivedRequestsQuery,
   useGetSentRequestsQuery,
   useSendFriendRequestMutation,

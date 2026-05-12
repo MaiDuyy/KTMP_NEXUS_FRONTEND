@@ -17,6 +17,9 @@ import { Search, Loader2, Users, Check, UserIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSearchDirectoryQuery } from '@/src/redux/feature/userApi';
 import { useCreateGroupChatMutation } from '@/src/redux/feature/chatApi';
+import { getAvatarUrl } from '@/src/utils/image-utils';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/src/redux/store';
 
 interface GroupCreationModalProps {
     open: boolean;
@@ -30,8 +33,9 @@ export function GroupCreationModal({ open, onClose, onChatCreated }: GroupCreati
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
 
-    const { data, isLoading, isFetching } = useSearchDirectoryQuery(debouncedSearch, {
-        skip: debouncedSearch.length < 2,
+    const currentWorkspaceId = useSelector((state: RootState) => state.workspace.currentWorkspaceId);
+    const { data, isLoading, isFetching } = useSearchDirectoryQuery({ searchTerm: debouncedSearch, workspaceId: currentWorkspaceId || undefined }, {
+        // skip: debouncedSearch.length < 2,
     });
 
     const [createGroupChat, { isLoading: creatingGroup }] = useCreateGroupChatMutation();
@@ -158,7 +162,7 @@ export function GroupCreationModal({ open, onClose, onChatCreated }: GroupCreati
                                             className="pointer-events-none"
                                         />
                                         <Avatar className="h-9 w-9 border">
-                                            <AvatarImage src={user.avatar || undefined} />
+                                            <AvatarImage src={getAvatarUrl(user.avatar, user.name)} />
                                             <AvatarFallback>
                                                 {user.name ? user.name.slice(0, 2).toUpperCase() : 'U'}
                                             </AvatarFallback>

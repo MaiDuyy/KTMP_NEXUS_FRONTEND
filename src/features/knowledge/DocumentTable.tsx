@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useGetDocumentsQuery } from '@/src/redux/feature/knowledgeApi';
+import { useGetDocumentsQuery, useDeleteDocumentMutation } from '@/src/redux/feature/knowledgeApi';
 import type { Document } from '@/src/redux/feature/knowledgeApi';
+import { toast } from "sonner";
 import { EmptyState } from '@/components/enterprise/EmptyState';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import {
     Select,
     SelectContent,
@@ -14,61 +16,79 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
+import { Card } from '@/components/ui/card';
+import {
     FileText,
     Search,
     Loader2,
-    ChevronLeft,
-    ChevronRight,
     Clock,
-    CheckCircle,
+    CheckCircle2,
     AlertCircle,
     XCircle,
+    FileIcon,
+    MoreHorizontal,
+    Database,
+    Calendar,
+    Weight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
+import { format } from 'date-fns';
 
 interface DocumentTableProps {
     onDocumentClick?: (doc: Document) => void;
     className?: string;
 }
 
-const statusIcon: Record<string, typeof Clock> = {
-    PENDING: Clock,
-    PROCESSING: Loader2,
-    COMPLETED: CheckCircle,
-    FAILED: XCircle,
+const statusConfig = {
+    PENDING: {
+        icon: Clock,
+        label: 'Pending',
+        variant: 'outline' as const,
+        className: 'bg-slate-100 text-slate-600 border-slate-200',
+    },
+    PROCESSING: {
+        icon: Loader2,
+        label: 'Processing',
+        variant: 'outline' as const,
+        className: 'border-blue-200 text-blue-600 bg-blue-50/50',
+    },
+    COMPLETED: {
+        icon: CheckCircle2,
+        label: 'Completed',
+        variant: 'outline' as const,
+        className: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    },
+    FAILED: {
+        icon: XCircle,
+        label: 'Failed',
+        variant: 'outline' as const,
+        className: 'bg-red-50 text-red-700 border-red-200',
+    },
 };
 
-const statusColor: Record<string, string> = {
-    PENDING: 'text-amber-500',
-    PROCESSING: 'text-blue-500',
-    COMPLETED: 'text-green-500',
-    FAILED: 'text-red-500',
+const fileTypeConfig: Record<string, { icon: any; color: string }> = {
+    pdf: { icon: FileText, color: 'text-red-500' },
+    docx: { icon: FileText, color: 'text-blue-500' },
+    txt: { icon: FileIcon, color: 'text-slate-500' },
+    csv: { icon: Database, color: 'text-emerald-500' },
 };
 
-const docTypeLabel: Record<string, string> = {
-    pdf: 'PDF',
-    docx: 'DOCX',
-    txt: 'TXT',
-};
-
-/**
- * Document table for Spring Boot ai-knowledge documents.
- * Uses useGetSpringDocumentsQuery which calls the Spring /documents endpoint.
- */
 export function DocumentTable({ onDocumentClick, className }: DocumentTableProps) {
     const router = useRouter();
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
     const { data: documents, isLoading, isFetching } = useGetDocumentsQuery();
+    const [deleteDocument] = useDeleteDocumentMutation();
 
-    // Date formatter
-    const dateFormatter = useMemo(() => new Intl.DateTimeFormat('en-US', {
-        dateStyle: 'medium',
-    }), []);
-
-    // Filter documents client-side (Spring returns all user docs)
     const filteredDocs = useMemo(() => {
         if (!documents) return [];
         let filtered = documents;
@@ -84,10 +104,12 @@ export function DocumentTable({ onDocumentClick, className }: DocumentTableProps
             filtered = filtered.filter((d) => d.status === statusFilter);
         }
 
-        return filtered;
+        // Sort by date descending
+        return [...filtered].sort((a, b) => 
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
     }, [documents, searchTerm, statusFilter]);
 
-    // Format file size
     const formatSize = (bytes: number) => {
         if (bytes < 1024) return `${bytes} B`;
         if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -104,130 +126,183 @@ export function DocumentTable({ onDocumentClick, className }: DocumentTableProps
 
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            <div className="flex flex-col items-center justify-center py-20 space-y-4">
+                <div className="relative">
+                    <div className="w-12 h-12 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+                    <Database className="w-5 h-5 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                </div>
+                <p className="text-sm font-medium text-muted-foreground animate-pulse">Loading knowledge base...</p>
             </div>
         );
     }
 
     return (
-        <div className={cn('space-y-4', className)}>
-            {/* Filters */}
-            <div className="flex flex-wrap gap-3 items-center">
-                <div className="flex gap-2 flex-1 min-w-[200px]">
+        <div className={cn('space-y-6', className)}>
+            {/* Control Bar */}
+            <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+                <div className="relative w-full md:max-w-md">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
-                        placeholder="Search by filename…"
+                        placeholder="Search documents..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="max-w-sm"
+                        className="pl-10 bg-background/50 focus:bg-background transition-all border-slate-200"
                         autoComplete="off"
                     />
                 </div>
 
-                <Select
-                    value={statusFilter}
-                    onValueChange={(v) => setStatusFilter(v)}
-                >
-                    <SelectTrigger className="w-[140px]">
-                        <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="ALL">All Status</SelectItem>
-                        <SelectItem value="PENDING">Pending</SelectItem>
-                        <SelectItem value="PROCESSING">Processing</SelectItem>
-                        <SelectItem value="COMPLETED">Completed</SelectItem>
-                        <SelectItem value="FAILED">Failed</SelectItem>
-                    </SelectContent>
-                </Select>
+                <div className="flex items-center gap-3 w-full md:w-auto">
+                    <Select
+                        value={statusFilter}
+                        onValueChange={(v) => setStatusFilter(v)}
+                    >
+                        <SelectTrigger className="w-[160px] bg-background/50 border-slate-200">
+                            <SelectValue placeholder="All Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="ALL">All Documents</SelectItem>
+                            <SelectItem value="PENDING">Pending</SelectItem>
+                            <SelectItem value="PROCESSING">Processing</SelectItem>
+                            <SelectItem value="COMPLETED">Completed</SelectItem>
+                            <SelectItem value="FAILED">Failed</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    
+                    {isFetching && (
+                        <div className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded-full animate-in fade-in">
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            Syncing
+                        </div>
+                    )}
+                </div>
             </div>
 
-            {/* Loading overlay */}
-            {isFetching && !isLoading && (
-                <div className="flex items-center gap-2 px-3 py-1.5 text-sm text-muted-foreground">
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                    Refreshing…
-                </div>
-            )}
-
-            {/* Table */}
-            {filteredDocs.length === 0 ? (
-                <EmptyState
-                    icon={FileText}
-                    title="No documents found"
-                    description="Upload a document to get started with RAG knowledge base"
-                />
-            ) : (
-                <div className="border rounded-lg overflow-hidden">
-                    <table className="w-full">
-                        <thead className="bg-muted/50">
-                            <tr className="text-left text-sm">
-                                <th className="px-4 py-3 font-medium">File Name</th>
-                                <th className="px-4 py-3 font-medium">Type</th>
-                                <th className="px-4 py-3 font-medium">Size</th>
-                                <th className="px-4 py-3 font-medium">Chunks</th>
-                                <th className="px-4 py-3 font-medium">Status</th>
-                                <th className="px-4 py-3 font-medium text-right">Created</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y">
+            {/* Table Section */}
+            <Card className="border-slate-200 shadow-sm overflow-hidden bg-white/50 backdrop-blur-sm">
+                {filteredDocs.length === 0 ? (
+                    <EmptyState
+                        icon={FileText}
+                        title="No documents found"
+                        description={searchTerm ? "Try adjusting your search filters" : "Upload a document to train your AI assistant"}
+                    />
+                ) : (
+                    <Table>
+                        <TableHeader className="bg-slate-50/50">
+                            <TableRow className="hover:bg-transparent border-slate-200">
+                                <TableHead className="w-[40%] text-slate-900 font-semibold py-4">Document Name</TableHead>
+                                <TableHead className="text-slate-900 font-semibold">Status</TableHead>
+                                <TableHead className="text-slate-900 font-semibold">Size</TableHead>
+                                <TableHead className="text-slate-900 font-semibold">Chunks</TableHead>
+                                <TableHead className="text-right text-slate-900 font-semibold pr-6">Modified</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
                             {filteredDocs.map((doc) => {
-                                const StatusIcon = statusIcon[doc.status] || AlertCircle;
+                                const status = statusConfig[doc.status as keyof typeof statusConfig] || statusConfig.PENDING;
+                                const StatusIcon = status.icon;
+                                const fileType = fileTypeConfig[doc.documentType.toLowerCase()] || fileTypeConfig.txt;
+                                const FileTypeIcon = fileType.icon;
+
                                 return (
-                                    <tr
+                                    <TableRow
                                         key={doc.id}
-                                        className="hover:bg-slate-50 cursor-pointer transition-colors group focus-within:bg-slate-50 outline-none"
+                                        className="group cursor-pointer hover:bg-slate-50/80 transition-colors border-slate-100"
                                         onClick={() => handleDocClick(doc)}
-                                        role="link"
-                                        tabIndex={0}
-                                        onKeyDown={(e) => e.key === 'Enter' && handleDocClick(doc)}
                                     >
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center gap-2">
-                                                <FileText className="w-4 h-4 text-slate-400 flex-shrink-0 group-hover:text-indigo-600 transition-colors" aria-hidden="true" />
-                                                <span className="font-medium truncate max-w-[300px] text-slate-900 border-b border-transparent group-hover:border-indigo-600">
-                                                    {doc.fileName}
-                                                </span>
+                                        <TableCell className="py-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className={cn("p-2 rounded-lg bg-slate-100 group-hover:bg-white transition-colors", fileType.color)}>
+                                                    <FileTypeIcon className="w-4 h-4" />
+                                                </div>
+                                                <div className="flex flex-col min-w-0">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-semibold text-slate-900 truncate group-hover:text-primary transition-colors">
+                                                            {doc.fileName}
+                                                        </span>
+                                                        {doc.securityClassification && doc.securityClassification !== 'PUBLIC' && (
+                                                            <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 bg-slate-50 text-slate-500 border-slate-200 uppercase tracking-tighter">
+                                                                {doc.securityClassification}
+                                                            </Badge>
+                                                        )}
+                                                    </div>
+                                                    <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400">
+                                                        {doc.documentType}
+                                                    </span>
+                                                </div>
                                             </div>
-                                        </td>
-                                        <td className="px-4 py-3 text-sm text-slate-500 font-mono uppercase">
-                                            {docTypeLabel[doc.documentType] || doc.documentType}
-                                        </td>
-                                        <td className="px-4 py-3 text-sm text-slate-500">
-                                            {formatSize(doc.fileSize)}
-                                        </td>
-                                        <td className="px-4 py-3 text-sm text-slate-600 font-medium">
-                                            {doc.chunkCount > 0 ? doc.chunkCount : '—'}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center gap-1.5">
-                                                <StatusIcon
-                                                    className={cn(
-                                                        'w-4 h-4',
-                                                        statusColor[doc.status] || 'text-slate-400',
-                                                        doc.status === 'PROCESSING' && 'animate-spin'
-                                                    )}
-                                                    aria-hidden="true"
-                                                />
-                                                <span className="text-sm font-medium capitalize">{doc.status.toLowerCase()}</span>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge 
+                                                variant="outline" 
+                                                className={cn(
+                                                    "gap-1.5 px-2 py-0.5 font-medium border-transparent shadow-none",
+                                                    status.className
+                                                )}
+                                            >
+                                                <StatusIcon className={cn("w-3.5 h-3.5", doc.status === 'PROCESSING' && "animate-spin")} />
+                                                {status.label}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-1.5 text-slate-500 text-xs font-medium">
+                                                <Weight className="w-3 h-3 opacity-50" />
+                                                {formatSize(doc.fileSize)}
                                             </div>
-                                        </td>
-                                        <td className="px-4 py-3 text-sm text-slate-500 text-right font-medium">
-                                            {dateFormatter.format(new Date(doc.createdAt))}
-                                        </td>
-                                    </tr>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-1.5 text-slate-700 text-xs font-semibold">
+                                                <Database className="w-3 h-3 text-slate-400" />
+                                                {doc.chunkCount > 0 ? doc.chunkCount : '—'}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-right pr-6">
+                                            <div className="flex items-center justify-end gap-4">
+                                                <div className="flex flex-col items-end">
+                                                    <span className="text-xs font-medium text-slate-900">
+                                                        {format(new Date(doc.createdAt), 'MMM d, yyyy')}
+                                                    </span>
+                                                    <span className="text-[10px] text-slate-400">
+                                                        {format(new Date(doc.createdAt), 'HH:mm')}
+                                                    </span>
+                                                </div>
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    onClick={async (e) => {
+                                                        e.stopPropagation();
+                                                        if (confirm("Bạn có chắc chắn muốn xóa tài liệu này?")) {
+                                                            try {
+                                                                await deleteDocument(doc.id.toString()).unwrap();
+                                                                toast.success("Xóa tài liệu thành công");
+                                                            } catch (error) {
+                                                                toast.error("Lỗi khi xóa tài liệu");
+                                                            }
+                                                        }
+                                                    }}
+                                                >
+                                                    <MoreHorizontal className="w-4 h-4 text-slate-400" />
+                                                </Button>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
                                 );
                             })}
-                        </tbody>
-                    </table>
-                </div>
-            )}
+                        </TableBody>
+                    </Table>
+                )}
+            </Card>
 
-            {/* Summary */}
-            {filteredDocs.length > 0 && (
-                <div className="text-sm text-muted-foreground">
-                    Showing {filteredDocs.length} document{filteredDocs.length !== 1 ? 's' : ''}
+            {/* Footer Info */}
+            <div className="flex items-center justify-between px-2">
+                <p className="text-xs text-slate-400 font-medium">
+                    Total: <span className="text-slate-900">{filteredDocs.length}</span> documents
+                </p>
+                <div className="flex items-center gap-2 text-[10px] text-slate-400 uppercase tracking-widest font-bold">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                    System Healthy
                 </div>
-            )}
+            </div>
         </div>
     );
 }

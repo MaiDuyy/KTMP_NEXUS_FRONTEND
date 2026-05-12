@@ -54,6 +54,7 @@ import {
     useTogglePinMessageMutation,
 } from "@/src/redux/feature/messageApi";
 import { socketService } from "@/src/services/socket.service";
+import { getAvatarUrl } from "@/src/utils/image-utils";
 
 // Common emojis for quick reactions
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "😡"];
@@ -504,10 +505,7 @@ export default function MessageBubble({
         );
     }
 
-    let imageUrl = message.sender?.avatar || "";
-    if (imageUrl && !imageUrl.startsWith("http://") && !imageUrl.startsWith("https://")) {
-        imageUrl = `https://${imageUrl}`;
-    }
+    const imageUrl = getAvatarUrl(message.sender?.avatar, message.sender?.name);
 
     return (
         <>

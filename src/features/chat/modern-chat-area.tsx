@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import {
   Search,
@@ -35,7 +35,7 @@ import {
   useIsUserOnline,
 } from '@/src/hooks/useRealtimeChat';
 import { Message } from '@/src/type/chat.types';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow , format, isToday, isYesterday } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import MessageBubble from './message-bubble';
 import EmojiPicker from './emoji-picker';
@@ -45,6 +45,7 @@ import { toast } from 'sonner';
 import { useUploadChatMediaMutation } from '@/src/redux/feature/uploadApi';
 import { messageApi } from '@/src/redux/feature/messageApi';
 import { AIAssistantPanel } from './AIAssistantPanel';
+import { getAvatarUrl } from '@/src/utils/image-utils';
 
 export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
   const [inputText, setInputText] = useState('');
@@ -341,6 +342,27 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
     );
   };
 
+  const groupedMessages = useMemo(() => {
+    return allMessages.reduce<{ date: string; messages: Message[] }[]>((groups, message) => {
+      const messageDate = new Date(message.time || message.createdAt || Date.now());
+      let dateLabel = format(messageDate, "dd/MM/yyyy");
+
+      if (isToday(messageDate)) {
+        dateLabel = "Hôm nay";
+      } else if (isYesterday(messageDate)) {
+        dateLabel = "Hôm qua";
+      }
+
+      const lastGroup = groups[groups.length - 1];
+      if (lastGroup && lastGroup.date === dateLabel) {
+        lastGroup.messages.push(message);
+      } else {
+        groups.push({ date: dateLabel, messages: [message] });
+      }
+      return groups;
+    }, []);
+  }, [allMessages]);
+
   // Handle file select
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, type: "image" | "file") => {
     const files = Array.from(e.target.files || []);
@@ -559,10 +581,7 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
     return 'Không hoạt động';
   };
 
-  let imageUrl = chat?.avatar || "";
-  if (imageUrl && !imageUrl.startsWith("http://") && !imageUrl.startsWith("https://")) {
-    imageUrl = `https://${imageUrl}`;
-  }
+  const imageUrl = getAvatarUrl(chat?.avatar, chatName);
 
   return (
     <div className="flex-1 flex h-screen bg-white relative overflow-hidden">
@@ -685,37 +704,48 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
               </div>
             )}
 
-            {allMessages.length === 0 ? (
+            {groupedMessages.length === 0 ? (
               <div className="flex flex-col items-center justify-center text-slate-400 py-20">
                 <Sparkles className="w-8 h-8 mb-4 opacity-50" />
                 <p>Chưa có tin nhắn nào. Hãy bắt đầu cuộc trò chuyện!</p>
               </div>
             ) : (
-              allMessages.map((msg, idx) => {
-                const msgSender = chat?.participants?.find((p) => p.accountId === (msg.senderId || msg.sender?.id));
-                const prevMsg = idx > 0 ? allMessages[idx - 1] : null;
-                const prevSenderId = prevMsg?.senderId || prevMsg?.sender?.id;
-                const currSenderId = msg.senderId || msg.sender?.id;
+              groupedMessages.map((group) => (
+                <div key={group.date} className="space-y-4">
+                  <div className="flex items-center justify-center gap-4 py-4">
+                    <div className="h-[1px] flex-1 bg-slate-50" />
+                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50/50 px-3 py-1 rounded-full border border-slate-100">
+                      {group.date}
+                    </span>
+                    <div className="h-[1px] flex-1 bg-slate-50" />
+                  </div>
 
-                const showAvatar = !msg.isMe && (!prevMsg || prevSenderId !== currSenderId);
+                  {group.messages.map((msg, idx) => {
+                    const prevMsg = idx > 0 ? group.messages[idx - 1] : null;
+                    const prevSenderId = prevMsg?.senderId || prevMsg?.sender?.id;
+                    const currSenderId = msg.senderId || msg.sender?.id;
 
-                return (
-                  <MessageBubble
-                    key={msg.id}
-                    message={msg}
-                    chatId={chatId!}
-                    isGroup={chat?.isGroup as boolean}
-                    participantCount={chat?.participantCount || 0}
-                    showAvatar={showAvatar}
-                    onReply={() => setReplyTo(msg)}
-                    onMessageDeleted={() => {
-                      // Optimistically or after refetch, we might need a way to remove from allMessages
-                      setAllMessages(prev => prev.filter(m => m.id !== msg.id));
-                    }}
-                    readReceipts={readReceipts}
-                  />
-                );
-              })
+                    // Show avatar if not me AND (is first message of date group OR sender changed)
+                    const showAvatar = !msg.isMe && (!prevMsg || prevSenderId !== currSenderId);
+
+                    return (
+                      <MessageBubble
+                        key={msg.id}
+                        message={msg}
+                        chatId={chatId!}
+                        isGroup={chat?.isGroup as boolean}
+                        participantCount={chat?.participantCount || 0}
+                        showAvatar={showAvatar}
+                        onReply={() => setReplyTo(msg)}
+                        onMessageDeleted={() => {
+                          setAllMessages(prev => prev.filter(m => m.id !== msg.id));
+                        }}
+                        readReceipts={readReceipts}
+                      />
+                    );
+                  })}
+                </div>
+              ))
             )}
           </>
         )}

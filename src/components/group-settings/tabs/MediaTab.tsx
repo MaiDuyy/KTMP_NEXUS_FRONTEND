@@ -1,6 +1,6 @@
 import React from "react";
 import { cn } from "@/lib/utils";
-import { normalizeUrl } from "../shared/utils";
+import { getAvatarUrl } from "@/src/utils/image-utils";
 
 interface MediaTabProps {
     mediaMessages: any[];
@@ -39,7 +39,7 @@ export function MediaTab({ mediaMessages, mediaFilter, setMediaFilter }: MediaTa
                             className="aspect-square rounded-xl bg-slate-100 overflow-hidden border border-slate-100 hover:border-slate-300 transition-colors cursor-pointer"
                         >
                             {m.type === "image" ? (
-                                <img src={normalizeUrl(m.content || "")} alt="" className="w-full h-full object-cover" />
+                                <img src={getAvatarUrl(m.content || "")} alt="" className="w-full h-full object-cover" />
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center text-slate-400 text-2xl">
                                     {m.type === "video" ? "▶" : "📄"}

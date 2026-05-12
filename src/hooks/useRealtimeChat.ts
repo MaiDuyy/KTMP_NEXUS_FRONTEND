@@ -686,6 +686,15 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
         }
       },
 
+      onWorkspaceUpdated: (data) => {
+        console.log("[RealtimeChat] 🔄 Workspace updated:", data.workspaceId, data.updates);
+        // Invalidate so all components re-fetch: sidebar icon, settings page header, workspace list
+        dispatch(apiSlice.util.invalidateTags([
+          "Workspaces",
+          { type: "Workspaces" as any, id: data.workspaceId },
+        ]));
+      },
+
       onSystemBroadcast: (data) => {
         console.log("[RealtimeChat] 📢 System broadcast received:", data);
         

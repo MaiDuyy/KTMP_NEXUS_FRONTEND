@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-import { getInitials, normalizeUrl, avatarColor } from "../shared/utils";
+import { getInitials, avatarColor } from "../shared/utils";
+import { getAvatarUrl } from "@/src/utils/image-utils";
 
 interface InviteTabProps {
     chat: any;
@@ -175,7 +176,7 @@ export function InviteTab({ chat, handleApproveJoin }: InviteTabProps) {
                             {joinRequests.map((req: any) => (
                                 <div key={req.id} className="flex items-center gap-3 p-3 bg-white border border-slate-100 rounded-xl hover:shadow-sm transition-shadow">
                                     <Avatar className="h-9 w-9 rounded-lg border border-slate-100">
-                                        <AvatarImage src={normalizeUrl(req.account?.avatar || "")} />
+                                        <AvatarImage src={getAvatarUrl(req.account?.avatar || "", req.account?.name)} />
                                         <AvatarFallback className={cn("rounded-lg text-[10px] font-bold", avatarColor(req.account?.name || ""))}>
                                             {getInitials(req.account?.name || "")}
                                         </AvatarFallback>

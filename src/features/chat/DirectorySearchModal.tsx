@@ -14,6 +14,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Loader2, Search, User as UserIcon } from 'lucide-react';
 import { useSearchDirectoryQuery } from '@/src/redux/feature/userApi';
 import { useGetOrCreatePrivateChatMutation } from '@/src/redux/feature/chatApi';
+import { getAvatarUrl } from '@/src/utils/image-utils';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/src/redux/store';
 
 interface DirectorySearchModalProps {
     open: boolean;
@@ -25,7 +28,8 @@ export function DirectorySearchModal({ open, onOpenChange }: DirectorySearchModa
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
 
-    const { data, isLoading, isFetching } = useSearchDirectoryQuery(debouncedSearch, {
+    const currentWorkspaceId = useSelector((state: RootState) => state.workspace.currentWorkspaceId);
+    const { data, isLoading, isFetching } = useSearchDirectoryQuery({ searchTerm: debouncedSearch, workspaceId: currentWorkspaceId || undefined }, {
         // skip: debouncedSearch.length < 2,
     });
 
@@ -86,7 +90,7 @@ export function DirectorySearchModal({ open, onOpenChange }: DirectorySearchModa
                                         className="flex items-center gap-3 w-full p-2 hover:bg-muted rounded-md transition-colors text-left disabled:opacity-50"
                                     >
                                         <Avatar className="h-9 w-9 border">
-                                            <AvatarImage src={user.avatar || undefined} />
+                                            <AvatarImage src={getAvatarUrl(user.avatar, user.name)} />
                                             <AvatarFallback>
                                                 {user.name ? user.name.slice(0, 2).toUpperCase() : 'U'}
                                             </AvatarFallback>
