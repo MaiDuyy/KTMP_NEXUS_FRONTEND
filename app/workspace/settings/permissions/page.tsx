@@ -1,198 +1,160 @@
 "use client";
 
-import React, { useState } from 'react';
+import React from 'react';
+import { Shield, Crown, ShieldCheck, User, UserX, Check, X, Info } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import {
-  Shield,
-  ShieldCheck,
-  ShieldAlert,
-  Users,
-  MessageSquare,
-  FileText,
-  Settings,
-  Save,
-  RefreshCw,
-  Info,
-  Loader2
-} from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-const PermissionGroup = ({ title, description, permissions, roles, matrix, onToggle }: any) => (
-  <div className="space-y-4">
-    <div className="flex flex-col">
-      <h3 className="text-sm font-bold text-slate-800">{title}</h3>
-      <p className="text-xs text-slate-500">{description}</p>
+// ─── Permission Matrix (reflects actual backend RBAC logic) ──────────────────
+const ROLES = [
+  { key: 'WORKSPACE_OWNER',  label: 'Owner',  icon: Crown,        color: 'text-yellow-600 bg-yellow-50 border-yellow-200' },
+  { key: 'WORKSPACE_ADMIN',  label: 'Admin',  icon: ShieldCheck,  color: 'text-blue-600 bg-blue-50 border-blue-200' },
+  { key: 'WORKSPACE_MEMBER', label: 'Member', icon: User,         color: 'text-slate-600 bg-slate-50 border-slate-200' },
+  { key: 'WORKSPACE_GUEST',  label: 'Guest',  icon: UserX,        color: 'text-slate-400 bg-slate-50 border-slate-100' },
+];
+
+const PERMISSION_GROUPS = [
+  {
+    section: 'Quản trị Workspace',
+    items: [
+      { label: 'Xem thông tin Workspace',     tip: 'Xem tên, mô tả và cấu hình Workspace.',               OWNER: true,  ADMIN: true,  MEMBER: true,  GUEST: true  },
+      { label: 'Chỉnh sửa thông tin WS',      tip: 'Thay đổi tên, slug, mô tả Workspace.',                OWNER: true,  ADMIN: true,  MEMBER: false, GUEST: false },
+      { label: 'Giải tán Workspace',           tip: 'Chỉ Owner mới có thể giải tán hoàn toàn.',            OWNER: true,  ADMIN: false, MEMBER: false, GUEST: false },
+      { label: 'Khôi phục Workspace đã giải', tip: 'Khôi phục trong thời gian lưu trữ (30 ngày).',       OWNER: true,  ADMIN: false, MEMBER: false, GUEST: false },
+      { label: 'Chuyển quyền sở hữu',         tip: 'Trao quyền Owner cho thành viên khác.',               OWNER: true,  ADMIN: false, MEMBER: false, GUEST: false },
+    ],
+  },
+  {
+    section: 'Quản lý Thành viên',
+    items: [
+      { label: 'Xem danh sách thành viên',    tip: 'Truy cập trang danh sách thành viên.',                OWNER: true,  ADMIN: true,  MEMBER: true,  GUEST: false },
+      { label: 'Mời thành viên qua email',    tip: 'Gửi lời mời tham gia Workspace.',                     OWNER: true,  ADMIN: true,  MEMBER: false, GUEST: false },
+      { label: 'Xóa thành viên',              tip: 'Trục xuất thành viên (không thể xóa Owner).',        OWNER: true,  ADMIN: true,  MEMBER: false, GUEST: false },
+      { label: 'Thay đổi vai trò thành viên', tip: 'Nâng/hạ role của thành viên (không cao hơn mình).',  OWNER: true,  ADMIN: true,  MEMBER: false, GUEST: false },
+      { label: 'Hủy lời mời đang chờ',       tip: 'Thu hồi lời mời chưa được chấp nhận.',               OWNER: true,  ADMIN: true,  MEMBER: false, GUEST: false },
+    ],
+  },
+  {
+    section: 'Nhóm Chat',
+    items: [
+      { label: 'Xem danh sách nhóm chat',     tip: 'Truy cập và xem các nhóm trong Workspace.',           OWNER: true,  ADMIN: true,  MEMBER: true,  GUEST: true  },
+      { label: 'Tạo nhóm chat mới',           tip: 'Tạo nhóm chat trong Workspace.',                      OWNER: true,  ADMIN: true,  MEMBER: true,  GUEST: false },
+      { label: 'Xóa nhóm chat',               tip: 'Chỉ nhóm trưởng hoặc Admin WS mới xóa được.',        OWNER: true,  ADMIN: true,  MEMBER: false, GUEST: false },
+      { label: 'Quản lý thành viên nhóm',     tip: 'Thêm/xóa/phân quyền thành viên trong nhóm.',         OWNER: true,  ADMIN: true,  MEMBER: false, GUEST: false },
+    ],
+  },
+  {
+    section: 'Kênh thảo luận (Channel)',
+    items: [
+      { label: 'Xem kênh công khai',          tip: 'Đọc tin nhắn trong kênh PUBLIC.',                     OWNER: true,  ADMIN: true,  MEMBER: true,  GUEST: true  },
+      { label: 'Tạo kênh mới',                tip: 'Tạo kênh PUBLIC hoặc PRIVATE trong Workspace.',       OWNER: true,  ADMIN: true,  MEMBER: false, GUEST: false },
+      { label: 'Xóa kênh',                    tip: 'Xóa kênh (chỉ Channel Owner hoặc WS Admin).',        OWNER: true,  ADMIN: true,  MEMBER: false, GUEST: false },
+      { label: 'Lưu trữ/Khôi phục kênh',     tip: 'Archive hoặc Unarchive một kênh.',                   OWNER: true,  ADMIN: true,  MEMBER: false, GUEST: false },
+    ],
+  },
+];
+
+// ─── Cell: Yes/No ─────────────────────────────────────────────────────────────
+const PermCell = ({ allowed }: { allowed: boolean }) => (
+  <td className="px-4 py-3 text-center">
+    <div className="flex justify-center">
+      {allowed
+        ? <Check size={16} className="text-emerald-600 font-bold" strokeWidth={3} />
+        : <X size={16} className="text-slate-200" strokeWidth={2.5} />}
     </div>
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-x-auto">
-      <table className="w-full text-left">
-        <thead>
-          <tr className="bg-slate-50/50 border-b border-slate-200">
-            <th className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400 w-1/3">Hành động</th>
-            {roles.map((role: string) => (
-              <th key={role} className="px-6 py-4 text-[10px] font-bold uppercase tracking-wider text-slate-400 text-center">
-                {role}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100">
-          {permissions.map((perm: any) => (
-            <tr key={perm.id} className="hover:bg-slate-50/50 transition-colors">
-              <td className="px-6 py-4">
-                <div className="flex items-center gap-2 group cursor-help">
-                  <span className="text-sm font-medium text-slate-700">{perm.label}</span>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Info size={12} className="text-slate-300 group-hover:text-slate-500 transition-colors" />
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-[200px] text-[10px]">
-                        {perm.description}
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-              </td>
-              {roles.map((role: string) => (
-                <td key={role} className="px-6 py-4 text-center">
-                  <div className="flex justify-center">
-                    <Checkbox
-                      checked={role === 'OWNER' ? true : matrix[role]?.[perm.id]}
-                      disabled={role === 'OWNER'}
-                      onCheckedChange={() => onToggle(role, perm.id)}
-                      className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 rounded"
-                    />
-                  </div>
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  </div>
+  </td>
 );
 
-export default function PermissionsManagement() {
-  const [isSaving, setIsSaving] = useState(false);
-  const roles = ['OWNER', 'ADMIN', 'MEMBER', 'GUEST'];
-
-  // Mock initial state
-  const [matrix, setMatrix] = useState<any>({
-    ADMIN: {
-      invite_member: true, remove_member: true, create_group: true, delete_group: true, edit_workspace: true
-    },
-    MEMBER: {
-      invite_member: false, remove_member: false, create_group: true, delete_group: false, edit_workspace: false
-    },
-    GUEST: {
-      invite_member: false, remove_member: false, create_group: false, delete_group: false, edit_workspace: false
-    }
-  });
-
-  const handleToggle = (role: string, permId: string) => {
-    setMatrix((prev: any) => ({
-      ...prev,
-      [role]: {
-        ...prev[role],
-        [permId]: !prev[role]?.[permId]
-      }
-    }));
-  };
-
-  const handleSave = () => {
-    setIsSaving(true);
-    setTimeout(() => {
-      setIsSaving(false);
-      toast.success("Đã lưu ma trận phân quyền thành công!");
-    }, 1000);
-  };
-
-  const permGroups = [
-    {
-      title: "Quản trị Workspace",
-      description: "Các quyền cấp cao liên quan đến cấu hình hệ thống.",
-      permissions: [
-        { id: "edit_workspace", label: "Chỉnh sửa thông tin Workspace", description: "Cho phép thay đổi tên, logo và mô tả." },
-        { id: "dissolve_workspace", label: "Giải tán Workspace", description: "Hành động hủy bỏ toàn bộ Workspace (Chỉ Owner)." },
-        { id: "manage_integrations", label: "Quản lý tích hợp", description: "Cấu hình Webhook, SSO, LDAP." }
-      ]
-    },
-    {
-      title: "Quản lý Thành viên",
-      description: "Các quyền liên quan đến việc điều phối nhân sự.",
-      permissions: [
-        { id: "invite_member", label: "Mời thành viên", description: "Gửi lời mời tham gia qua email." },
-        { id: "remove_member", label: "Xóa thành viên", description: "Trục xuất thành viên khỏi Workspace." },
-        { id: "change_role", label: "Thay đổi vai trò", description: "Nâng cấp hoặc hạ cấp quyền của người khác." }
-      ]
-    },
-    {
-      title: "Nhóm Chat & Tin nhắn",
-      description: "Các quyền tương tác hàng ngày.",
-      permissions: [
-        { id: "create_group", label: "Tạo nhóm mới", description: "Tạo kênh công khai hoặc nhóm riêng tư." },
-        { id: "delete_group", label: "Xóa nhóm", description: "Xóa vĩnh viễn một nhóm chat." },
-        { id: "pin_message", label: "Ghim tin nhắn", description: "Ghim thông tin quan trọng trong nhóm." }
-      ]
-    }
-  ];
-
+// ─── Main Page ─────────────────────────────────────────────────────────────────
+export default function PermissionsReference() {
   return (
     <div className="p-8 space-y-8">
-      <div className="flex justify-between items-end">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Phân quyền</h1>
-          <p className="text-slate-500 mt-1">Thiết lập ma trận quyền hạn chi tiết cho từng vai trò trong hệ thống.</p>
-        </div>
-        <div className="flex gap-3">
-          <Button variant="outline" className="rounded-xl font-bold border-slate-200">
-            <RefreshCw size={18} className="mr-2" /> Hoàn tác
-          </Button>
-          <Button
-            className="bg-blue-600 hover:bg-blue-700 font-bold rounded-xl shadow-lg shadow-blue-200"
-            onClick={handleSave}
-            disabled={isSaving}
-          >
-            {isSaving ? <Loader2 size={18} className="mr-2 animate-spin" /> : <Save size={18} className="mr-2" />}
-            Lưu thay đổi
-          </Button>
-        </div>
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900">Phân quyền</h1>
+        <p className="text-slate-500 mt-1">Ma trận quyền hạn theo vai trò trong Workspace. Quyền được thực thi ở cấp độ Backend.</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-12">
-        {permGroups.map((group, idx) => (
-          <PermissionGroup
-            key={idx}
-            {...group}
-            roles={roles}
-            matrix={matrix}
-            onToggle={handleToggle}
-          />
-        ))}
-      </div>
-
-      <Card className="border-none bg-amber-50 shadow-sm border border-amber-100">
-        <CardContent className="p-6 flex gap-4">
-          <ShieldAlert className="text-amber-600 shrink-0" size={24} />
-          <div className="space-y-1">
-            <p className="text-sm font-bold text-amber-900">Lưu ý quan trọng về bảo mật</p>
-            <p className="text-xs text-amber-700 leading-relaxed">
-              Các thay đổi về quyền hạn sẽ có hiệu lực ngay lập tức đối với tất cả thành viên.
-              Hãy cẩn trọng khi cấp quyền quản trị cho các vai trò thấp hơn.
-              Quyền của <strong>OWNER</strong> là cố định và không thể thay đổi để đảm bảo tính ổn định của hệ thống.
+      {/* Notice */}
+      <Card className="border-blue-100 bg-blue-50/60 shadow-none">
+        <CardContent className="p-4 flex items-start gap-3">
+          <Info size={18} className="text-blue-500 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-blue-800">Đây là tài liệu tham chiếu</p>
+            <p className="text-xs text-blue-700 mt-0.5 leading-relaxed">
+              Quyền hạn được <strong>tự động áp dụng</strong> bởi hệ thống dựa trên vai trò. 
+              Để thay đổi quyền của một thành viên, hãy điều chỉnh <strong>Vai trò (Role)</strong> của họ trong trang <a href="/workspace/settings/members" className="underline font-bold">Danh sách thành viên</a>.
             </p>
           </div>
         </CardContent>
       </Card>
+
+      {/* Role legend */}
+      <div className="flex flex-wrap gap-3">
+        {ROLES.map(({ label, icon: Icon, color }) => (
+          <div key={label} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-bold ${color}`}>
+            <Icon size={13} />
+            {label}
+          </div>
+        ))}
+      </div>
+
+      {/* Permission tables */}
+      <div className="space-y-8">
+        {PERMISSION_GROUPS.map((group) => (
+          <div key={group.section} className="space-y-3">
+            <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+              <Shield size={15} className="text-slate-400" />
+              {group.section}
+            </h3>
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-slate-50/80 border-b border-slate-200">
+                    <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 w-1/2">Quyền hạn</th>
+                    {ROLES.map(({ key, label, icon: Icon, color }) => (
+                      <th key={key} className="px-4 py-3 text-center">
+                        <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md border text-[10px] font-bold ${color}`}>
+                          <Icon size={10} />
+                          {label}
+                        </div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {group.items.map((perm) => (
+                    <tr key={perm.label} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-6 py-3">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="text-sm text-slate-700 cursor-help flex items-center gap-1.5">
+                                {perm.label}
+                                <Info size={11} className="text-slate-300" />
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="right" className="max-w-[220px] text-xs">
+                              {perm.tip}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </td>
+                      <PermCell allowed={perm.OWNER} />
+                      <PermCell allowed={perm.ADMIN} />
+                      <PermCell allowed={perm.MEMBER} />
+                      <PermCell allowed={perm.GUEST} />
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

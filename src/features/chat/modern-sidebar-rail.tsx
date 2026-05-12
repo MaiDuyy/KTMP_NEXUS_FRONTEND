@@ -42,6 +42,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { CreateWorkspaceModal } from './CreateWorkspaceModal';
 import { DissolvedWorkspacesModal } from './DissolvedWorkspacesModal';
+import { getAvatarUrl } from '@/src/utils/image-utils';
 
 interface RailIconProps {
   icon: React.ReactNode;
@@ -98,21 +99,7 @@ export default function ModernSidebarRail() {
     setMounted(true);
   }, []);
 
-  const getAvatarImageUrl = () => {
-    if (!user?.avatar) {
-      return `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || 'User'}`;
-    }
-
-    let url = user.avatar;
-    console.log(url);
-    if (!url.startsWith("http://") && !url.startsWith("https://") && !url.startsWith("data:")) {
-      url = `https://${url}`;
-    }
-
-    return url;
-  };
-
-  const imageUrl = getAvatarImageUrl();
+  const imageUrl = getAvatarUrl(user?.avatar, user?.name);
 
   return (
     <div className="w-[72px] flex flex-col items-center py-6 bg-white dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 h-screen shrink-0 relative z-20">
@@ -182,11 +169,11 @@ export default function ModernSidebarRail() {
 
       {/* Main Navigation Modules */}
       <div className="flex flex-col gap-2 flex-1">
-        <RailIcon href="/modern-dashboard" icon={<LayoutDashboard size={22} />} label="Dashboard" active={pathname === '/modern-dashboard' || pathname === '/'} />
-        <RailIcon href="/chat" icon={<MessageSquare size={22} />} label="OTT Chat" active={pathname?.startsWith('/chat')} />
-        <RailIcon href="/ai" icon={<Bot size={22} />} label="AI Assistant" active={pathname?.startsWith('/ai')} />
-        <RailIcon href="/knowledge" icon={<Files size={22} />} label="Knowledge / Docs" active={pathname?.startsWith('/knowledge')} />
-        <RailIcon href="/security" icon={<ShieldCheck size={22} />} label="Security & Audit" active={pathname?.startsWith('/security')} />
+        <RailIcon href="/dashboard" icon={<LayoutDashboard size={22} />} label="Bảng điều khiển" active={pathname === '/dashboard' || pathname === '/'} />
+        <RailIcon href="/chat" icon={<MessageSquare size={22} />} label="Trò chuyện OTT" active={pathname?.startsWith('/chat')} />
+        <RailIcon href="/ai" icon={<Bot size={22} />} label="Trợ lý AI" active={pathname?.startsWith('/ai')} />
+        <RailIcon href="/knowledge" icon={<Files size={22} />} label="Kiến thức / Tài liệu" active={pathname?.startsWith('/knowledge')} />
+        {/* <RailIcon href="/security" icon={<ShieldCheck size={22} />} label="Security & Audit" active={pathname?.startsWith('/security')} /> */}
       </div>
 
       {/* Bottom Actions */}
@@ -195,7 +182,7 @@ export default function ModernSidebarRail() {
           <RailIcon
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             icon={theme === 'dark' ? <Sun size={22} /> : <Moon size={22} />}
-            label="Toggle Theme"
+            label="Chế độ tối/sáng"
           />
         )}
         <DropdownMenu>
@@ -231,7 +218,7 @@ export default function ModernSidebarRail() {
             <DropdownMenuSeparator className="my-2" />
 
             <DropdownMenuItem className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/30 rounded-lg py-2 cursor-pointer">
-              <LogOut className="w-4 h-4 mr-3" />
+              <LogOut  className="w-4 h-4 mr-3" />
               <span className="font-bold text-sm">Đăng xuất</span>
             </DropdownMenuItem>
           </DropdownMenuContent>

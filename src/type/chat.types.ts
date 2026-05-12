@@ -208,6 +208,7 @@ export interface Message {
   reactions: MessageReaction[];
   destroy?: boolean;
   isMe: boolean;
+  createdAt?: string;
 }
 
 export interface SendMessageRequest {

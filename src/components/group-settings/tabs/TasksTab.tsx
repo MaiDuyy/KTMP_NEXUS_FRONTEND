@@ -6,7 +6,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { StatCard } from "../shared/StatCard";
 import { TaskStatusBadge } from "../shared/TaskStatusBadge";
-import { getInitials, normalizeUrl, avatarColor } from "../shared/utils";
+import { getInitials, avatarColor } from "../shared/utils";
+import { getAvatarUrl } from "@/src/utils/image-utils";
 import { toast } from "sonner";
 
 interface TasksTabProps {
@@ -121,7 +122,7 @@ export function TasksTab({
                                             <div className="flex -space-x-1">
                                                 {task.assignees.slice(0, 4).map((a: any, i: number) => (
                                                     <Avatar key={i} className="h-5 w-5 rounded-md border border-white mr-2">
-                                                        <AvatarImage src={normalizeUrl(a.avatar || "")} />
+                                                        <AvatarImage src={getAvatarUrl(a.avatar || "", a.name)} />
                                                         <AvatarFallback className={cn("rounded-md text-[9px] font-semibold", avatarColor(a.name || ""))}>
                                                             {getInitials(a.name || "")}
                                                         </AvatarFallback>

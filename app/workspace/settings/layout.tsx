@@ -8,9 +8,6 @@ import {
   MessageSquare, 
   Shield, 
   Settings, 
-  Lock, 
-  Puzzle, 
-  Database, 
   Trash2, 
   ChevronLeft,
   Mail
@@ -21,6 +18,8 @@ import { useSelector } from 'react-redux';
 import { RootState } from '@/src/redux/store';
 import { useGetUserWorkspacesQuery } from '@/src/redux/feature/workspaceApi';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { getAvatarUrl } from '@/src/utils/image-utils';
 
 interface SidebarItemProps {
   icon: React.ReactNode;
@@ -73,9 +72,12 @@ export default function WorkspaceSettingsLayout({ children }: { children: React.
             <span className="text-xs font-bold uppercase tracking-wider">Quay lại Chat</span>
           </Link>
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold shadow-lg shadow-blue-200">
-              {currentWorkspace?.name?.substring(0, 1).toUpperCase() || 'W'}
-            </div>
+            <Avatar className="h-10 w-10 rounded-xl shrink-0">
+              <AvatarImage src={currentWorkspace?.icon ? getAvatarUrl(currentWorkspace.icon) : undefined} alt={currentWorkspace?.name} className="object-cover" />
+              <AvatarFallback className="bg-blue-600 text-white font-bold text-base rounded-xl shadow-lg shadow-blue-200">
+                {currentWorkspace?.name?.substring(0, 1).toUpperCase() || 'W'}
+              </AvatarFallback>
+            </Avatar>
             <div className="flex-1 min-w-0">
               <h2 className="font-bold text-slate-900 text-sm truncate">{currentWorkspace?.name || 'Workspace'}</h2>
               <p className="text-[10px] text-slate-500 font-medium">Quản trị hệ thống</p>
@@ -127,24 +129,6 @@ export default function WorkspaceSettingsLayout({ children }: { children: React.
             label="Thông tin Workspace" 
             href="/workspace/settings/general" 
             active={pathname === '/workspace/settings/general'} 
-          />
-          <SidebarItem 
-            icon={<Lock size={18} />} 
-            label="Chính sách bảo mật" 
-            href="/workspace/settings/security" 
-            active={pathname === '/workspace/settings/security'} 
-          />
-          <SidebarItem 
-            icon={<Puzzle size={18} />} 
-            label="Tích hợp" 
-            href="/workspace/settings/integrations" 
-            active={pathname === '/workspace/settings/integrations'} 
-          />
-          <SidebarItem 
-            icon={<Database size={18} />} 
-            label="Lưu trữ dữ liệu" 
-            href="/workspace/settings/storage" 
-            active={pathname === '/workspace/settings/storage'} 
           />
 
           <div className="mt-8 pt-4 border-t border-slate-100">

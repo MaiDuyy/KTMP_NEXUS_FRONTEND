@@ -47,6 +47,7 @@ import { GroupCreationModal } from './group-creating-model';
 import FriendsPanel from './friends-panel';
 import { CreateWorkspaceModal } from './CreateWorkspaceModal';
 import { RequirePermission } from '@/src/components/guards';
+import { getAvatarUrl } from '@/src/utils/image-utils';
 
 
 interface SidebarItemProps {
@@ -176,7 +177,13 @@ export const ModernChannelSidebar: React.FC = () => {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-1.5 hover:bg-slate-100 px-1.5 py-1 rounded-md transition-all group overflow-hidden">
+                <button className="flex items-center gap-2 hover:bg-slate-100 px-1.5 py-1 rounded-md transition-all group overflow-hidden">
+                  <Avatar className="h-6 w-6 rounded-lg shrink-0">
+                    <AvatarImage src={currentWorkspace?.icon ? getAvatarUrl(currentWorkspace.icon) : undefined} alt={currentWorkspace?.name} />
+                    <AvatarFallback className="bg-blue-600 text-white text-[10px] font-bold rounded-lg">
+                      {currentWorkspace?.name?.substring(0, 1).toUpperCase() || 'W'}
+                    </AvatarFallback>
+                  </Avatar>
                   <h2 className="font-bold text-slate-900 text-sm truncate">
                     {currentWorkspace?.name || "Chọn Workspace"}
                   </h2>
@@ -194,9 +201,12 @@ export const ModernChannelSidebar: React.FC = () => {
                     }}
                     className={`rounded-lg py-2 cursor-pointer flex items-center gap-3 ${ws.id === currentWorkspaceId ? 'bg-blue-50 text-blue-700' : ''}`}
                   >
-                    <div className="h-8 w-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs shrink-0">
-                      {ws.name.substring(0, 1).toUpperCase()}
-                    </div>
+                    <Avatar className="h-8 w-8 rounded-lg shrink-0">
+                      <AvatarImage src={ws.icon ? getAvatarUrl(ws.icon) : undefined} alt={ws.name} />
+                      <AvatarFallback className="bg-blue-600 text-white font-bold text-xs rounded-lg">
+                        {ws.name.substring(0, 1).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-sm truncate">{ws.name}</p>
                       <p className="text-[10px] text-slate-500 truncate">{ws.id === currentWorkspaceId ? 'Đang truy cập' : 'Nhấn để chuyển'}</p>
@@ -244,7 +254,7 @@ export const ModernChannelSidebar: React.FC = () => {
               }`}
           >
             <MessageCircle size={14} />
-            Messages
+            Tin nhắn
           </button>
           <button
             onClick={() => setActiveTab('friends')}
@@ -254,7 +264,7 @@ export const ModernChannelSidebar: React.FC = () => {
               }`}
           >
             <Users size={14} />
-            Friends
+            Bạn bè
           </button>
         </div>
       </div>
@@ -273,7 +283,7 @@ export const ModernChannelSidebar: React.FC = () => {
                 ) : (
                   <ChevronRight className="w-3 h-3" />
                 )}
-                <span>Channels</span>
+                <span>Kênh thảo luận</span>
                 <span className="ml-auto text-xs">{groupChatsData?.chats?.length || 0}</span>
               </button>
               {channelsExpanded && filteredGroups?.map((chat) => {
@@ -297,7 +307,7 @@ export const ModernChannelSidebar: React.FC = () => {
                 onClick={() => setShowNewChatModal(true)}
               >
                 <Plus className="w-4 h-4" />
-                Add Channel
+                Thêm Kênh
               </Button>
               <WorkspaceGuard allowedRoles={['WORKSPACE_OWNER', 'WORKSPACE_ADMIN']}>
                 <Button
@@ -324,7 +334,7 @@ export const ModernChannelSidebar: React.FC = () => {
                 ) : (
                   <ChevronRight className="w-3 h-3" />
                 )}
-                <span>Direct Messages</span>
+                <span>Tin nhắn riêng</span>
                 <span className="ml-auto text-xs">{privatesData?.chats?.length || 0}</span>
               </button>
               {dmsExpanded && filteredDMs?.map((chat) => {
@@ -348,7 +358,7 @@ export const ModernChannelSidebar: React.FC = () => {
                 className="w-full justify-start gap-2 text-muted-foreground"
               >
                 <Plus className="w-4 h-4" />
-                New Message
+                Tin nhắn mới
               </Button>
             </div>
           </>

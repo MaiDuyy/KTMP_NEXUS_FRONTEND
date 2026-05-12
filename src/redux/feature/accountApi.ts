@@ -100,12 +100,6 @@ export const accountApi = apiSlice.injectEndpoints({
     getUserActivityStatus: builder.query<UserActivityStatus, string>({
       query: (userId) => `/users/${userId}/status`,
     }),
-    
-    // Tìm kiếm người dùng trong danh bạ hệ thống
-    searchUsers: builder.query<User[], string>({
-      query: (q) => `/users/directory?q=${encodeURIComponent(q)}`,
-      transformResponse: (response: { success: boolean; users: User[] }) => response.users || [],
-    }),
   }),
 });
 
@@ -120,5 +114,4 @@ export const {
   useUpdateOnlineStatusMutation,
   useHeartbeatMutation,
   useGetUserActivityStatusQuery,
-  useSearchUsersQuery,
 } = accountApi;

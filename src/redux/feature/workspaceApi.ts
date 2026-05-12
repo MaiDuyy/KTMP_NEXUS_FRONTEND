@@ -157,6 +157,10 @@ export const workspaceApi = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ["Workspaces", "WorkspaceMembers"],
     }),
+    getWorkspaceStats: builder.query<any, string>({
+      query: (workspaceId) => `/workspaces/${workspaceId}/stats`,
+      providesTags: ["Workspaces", "WorkspaceMembers"],
+    }),
   }),
 });
 
@@ -182,4 +186,5 @@ export const {
   useLeaveWorkspaceMutation,
   useUpdateWorkspaceMutation,
   useTransferOwnershipMutation,
+  useGetWorkspaceStatsQuery,
 } = workspaceApi;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Settings,
   Globe,
@@ -22,6 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { getAvatarUrl } from '@/src/utils/image-utils';
 import { toast } from 'sonner';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/src/redux/store';
@@ -34,13 +35,12 @@ import {
 } from "@/components/ui/dialog";
 import {
   useDissolveWorkspaceMutation,
-
   useGetWorkspaceMembersQuery,
-
   useLeaveWorkspaceMutation,
   useUpdateWorkspaceMemberRoleMutation,
   useUpdateWorkspaceMutation
 } from '@/src/redux/feature/workspaceApi';
+import { useUploadWorkspaceIconMutation } from '@/src/redux/feature/uploadApi';
 import {
   useListChannelsQuery,
   useDeleteChannelMutation,
@@ -104,6 +104,7 @@ export default function GeneralSettings() {
   const [leaveWorkspace, { isLoading: isLeaving }] = useLeaveWorkspaceMutation();
   const [dissolveWorkspace, { isLoading: isDissolving }] = useDissolveWorkspaceMutation();
   const [updateWorkspaceMemberRole, { isLoading: isTransferring }] = useUpdateWorkspaceMemberRoleMutation();
+  const [uploadWorkspaceIcon, { isLoading: isUploadingIcon }] = useUploadWorkspaceIconMutation();
 
   console.log(membersData);
 
@@ -112,6 +113,8 @@ export default function GeneralSettings() {
   const [isSelectingSuccessor, setIsSelectingSuccessor] = useState(false);
   const [isCleanupModalOpen, setIsCleanupModalOpen] = useState(false);
   const [selectedSuccessor, setSelectedSuccessor] = useState<any>(null);
+  const [iconPreview, setIconPreview] = useState<string | null>(null);
+  const iconInputRef = useRef<HTMLInputElement>(null);
 
   // Queries for cleanup
   const { data: channels } = useListChannelsQuery({ workspaceId: currentWorkspaceId || "" }, { skip: !currentWorkspaceId });
@@ -156,6 +159,43 @@ export default function GeneralSettings() {
       toast.success("Đã cập nhật tên Workspace thành công!");
     } catch (err: any) {
       toast.error(err?.data?.message || "Không thể cập nhật tên");
+    }
+  };
+
+  const handleIconFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentWorkspaceId) return;
+
+    // Validate client-side
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Chỉ chấp nhận file ảnh JPG, PNG, GIF, WEBP!');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Ảnh không được vượt quá 2MB!');
+      return;
+    }
+
+    // Show preview immediately
+    const reader = new FileReader();
+    reader.onload = (ev) => setIconPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('workspaceId', currentWorkspaceId);
+      const res = await uploadWorkspaceIcon(formData).unwrap();
+      // Persist URL into workspace record
+      await updateWorkspace({ workspaceId: currentWorkspaceId, icon: res.url }).unwrap();
+      toast.success('Đã cập nhật logo Workspace thành công!');
+    } catch (err: any) {
+      setIconPreview(null);
+      toast.error(err?.data?.message || 'Lỗi upload ảnh!');
+    } finally {
+      // Reset input
+      if (iconInputRef.current) iconInputRef.current.value = '';
     }
   };
 
@@ -295,18 +335,42 @@ export default function GeneralSettings() {
           label="Nhận diện thương hiệu"
           description="Logo này sẽ hiển thị trên Sidebar Rail và trong các lời mời tham gia."
           icon={ImageIcon}
-          onSave={() => toast.success("Đã cập nhật logo thành công!")}
+          onSave={() => {}} 
+          isLoading={isUploadingIcon}
         >
           <div className="flex items-center gap-6">
-            <Avatar className="h-20 w-20 rounded-2xl border-4 border-white shadow-xl">
-              <AvatarImage src={currentWorkspace?.icon} />
-              <AvatarFallback className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white text-3xl font-bold">
-                {currentWorkspace?.name?.substring(0, 1).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative group">
+              <Avatar className="h-20 w-20 rounded-2xl border-4 border-white shadow-xl">
+                <AvatarImage src={iconPreview || (currentWorkspace?.icon ? getAvatarUrl(currentWorkspace.icon) : undefined)} />
+                <AvatarFallback className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white text-3xl font-bold">
+                  {currentWorkspace?.name?.substring(0, 1).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              {isUploadingIcon && (
+                <div className="absolute inset-0 rounded-2xl bg-black/40 flex items-center justify-center">
+                  <Loader2 size={24} className="animate-spin text-white" />
+                </div>
+              )}
+            </div>
             <div className="space-y-2">
-              <Button variant="outline" className="h-9 rounded-xl font-bold border-slate-200">Thay đổi ảnh</Button>
-              <p className="text-[10px] text-slate-400">JPG, PNG hoặc SVG. Tối đa 2MB. Khuyên dùng 256x256px.</p>
+              <input
+                ref={iconInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                className="hidden"
+                onChange={handleIconFileChange}
+              />
+              <Button
+                variant="outline"
+                className="h-9 rounded-xl font-bold border-slate-200"
+                onClick={() => iconInputRef.current?.click()}
+                disabled={isUploadingIcon}
+              >
+                {isUploadingIcon ? (
+                  <><Loader2 size={14} className="mr-2 animate-spin" />Đang tải lên...</>
+                ) : 'Thay đổi ảnh'}
+              </Button>
+              <p className="text-[10px] text-slate-400">JPG, PNG, GIF hoặc WEBP. Tối đa 2MB. Khuyên dùng 256×256px.</p>
             </div>
           </div>
         </SettingsField>

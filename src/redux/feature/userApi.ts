@@ -30,8 +30,12 @@ export const userApi = apiSlice.injectEndpoints({
     }),
 
     // Search Company Directory
-    searchDirectory: builder.query<{ users: User[] }, string>({
-      query: (searchTerm) => `/users/directory?q=${encodeURIComponent(searchTerm)}`,
+    searchDirectory: builder.query<{ users: User[] }, { searchTerm: string; workspaceId?: string }>({
+      query: ({ searchTerm, workspaceId }) => {
+        let url = `/users/directory?q=${encodeURIComponent(searchTerm)}`;
+        if (workspaceId) url += `&workspaceId=${workspaceId}`;
+        return url;
+      },
     }),
 
 

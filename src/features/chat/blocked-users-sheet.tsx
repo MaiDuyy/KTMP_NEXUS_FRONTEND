@@ -32,6 +32,7 @@ import {
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { toast } from "sonner";
+import { getAvatarUrl } from "@/src/utils/image-utils";
 
 interface BlockedUsersSheetProps {
     isOpen: boolean;
@@ -115,7 +116,7 @@ export default function BlockedUsersSheet({
                                         >
                                             <Avatar className="h-10 w-10 ring-2 ring-white dark:ring-gray-900 overflow-hidden">
                                                 <AvatarImage 
-                                                    src={blockedItem.user.avatar || undefined} 
+                                                    src={getAvatarUrl(blockedItem.user.avatar, blockedItem.user.name)} 
                                                     alt={blockedItem.user.name} 
                                                     className="object-cover"
                                                 />

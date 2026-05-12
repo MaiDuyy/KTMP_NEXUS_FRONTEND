@@ -9,7 +9,7 @@ import {
     useAcceptFriendRequestMutation,
     useRejectFriendRequestMutation,
     useCancelFriendRequestMutation,
-    useLazySearchUsersQuery,
+    useLazySearchFriendsQuery,
 } from "@/src/redux/feature/friendApi";
 import { useGetOrCreatePrivateChatMutation } from "@/src/redux/feature/chatApi";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -33,6 +33,7 @@ import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
 import FriendProfileSheet from "./friend-profile-sheet";
+import { getAvatarUrl } from "@/src/utils/image-utils";
 
 interface FriendsPanelProps {
     onlineUsers: Set<string>;
@@ -52,7 +53,7 @@ export default function FriendsPanel({ onlineUsers, onStartChat }: FriendsPanelP
     const { data: friendsData, isLoading: friendsLoading } = useGetFriendsQuery();
     const { data: receivedData } = useGetReceivedRequestsQuery();
     const { data: sentData } = useGetSentRequestsQuery();
-    const [searchUsers, { data: searchData, isLoading: searchLoading }] = useLazySearchUsersQuery();
+    const [searchUsers, { data: searchData, isLoading: searchLoading }] = useLazySearchFriendsQuery();
 
     // Mutations
     const [sendRequest, { isLoading: sendingRequest }] = useSendFriendRequestMutation();
@@ -214,7 +215,7 @@ export default function FriendsPanel({ onlineUsers, onStartChat }: FriendsPanelP
                                     >
                                         <div className="relative">
                                             <Avatar className="h-11 w-11">
-                                                <AvatarImage src={friend.avatar || undefined} />
+                                                <AvatarImage src={getAvatarUrl(friend.avatar, friend.name)} />
                                                 <AvatarFallback className="bg-gradient-to-br from-blue-400 to-purple-500 text-white">
                                                     {friend.name.slice(0, 2).toUpperCase()}
                                                 </AvatarFallback>
@@ -275,7 +276,7 @@ export default function FriendsPanel({ onlineUsers, onStartChat }: FriendsPanelP
                                     className="flex items-center gap-3 p-3 border-b border-gray-100 dark:border-gray-700"
                                 >
                                     <Avatar className="h-11 w-11">
-                                        <AvatarImage src={request.sender?.avatar || undefined} />
+                                        <AvatarImage src={getAvatarUrl(request.sender?.avatar, request.sender?.name)} />
                                         <AvatarFallback className="bg-gradient-to-br from-green-400 to-teal-500 text-white">
                                             {request.sender?.name.slice(0, 2).toUpperCase()}
                                         </AvatarFallback>
@@ -325,7 +326,7 @@ export default function FriendsPanel({ onlineUsers, onStartChat }: FriendsPanelP
                                     className="flex items-center gap-3 p-3 border-b border-gray-100 dark:border-gray-700"
                                 >
                                     <Avatar className="h-11 w-11">
-                                        <AvatarImage src={request.receiver?.avatar || undefined} />
+                                        <AvatarImage src={getAvatarUrl(request.receiver?.avatar, request.receiver?.name)} />
                                         <AvatarFallback className="bg-gradient-to-br from-orange-400 to-pink-500 text-white">
                                             {request.receiver?.name.slice(0, 2).toUpperCase()}
                                         </AvatarFallback>
@@ -388,7 +389,7 @@ export default function FriendsPanel({ onlineUsers, onStartChat }: FriendsPanelP
                                         className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
                                     >
                                         <Avatar className="h-11 w-11">
-                                            <AvatarImage src={user.avatar || undefined} />
+                                            <AvatarImage src={getAvatarUrl(user.avatar, user.name)} />
                                             <AvatarFallback className="bg-gradient-to-br from-indigo-400 to-purple-500 text-white">
                                                 {user.name.slice(0, 2).toUpperCase()}
                                             </AvatarFallback>

@@ -53,6 +53,7 @@ import {
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { toast } from "sonner";
+import { getAvatarUrl } from "@/src/utils/image-utils";
 
 // Friend category tags like Zalo
 const FRIEND_CATEGORIES = [
@@ -93,7 +94,17 @@ export default function FriendProfileSheet({
 }: FriendProfileSheetProps) {
     const [showUnfriendDialog, setShowUnfriendDialog] = useState(false);
     const [showBlockDialog, setShowBlockDialog] = useState(false);
-    const [selectedCategory, setSelectedCategory] = useState<string>(friend?.category || "");
+    const [selectedCategory, setSelectedCategory] = useState<string>(() => {
+        if (typeof window !== 'undefined' && friend?.id) {
+            try {
+                const categories = JSON.parse(localStorage.getItem('friend_categories') || '{}');
+                return categories[friend.id] || friend.category || "";
+            } catch (e) {
+                return friend?.category || "";
+            }
+        }
+        return friend?.category || "";
+    });
 
     const [unfriend, { isLoading: isUnfriending }] = useUnfriendMutation();
     const [blockUser, { isLoading: isBlocking }] = useBlockUserMutation();
@@ -150,7 +161,17 @@ export default function FriendProfileSheet({
     const handleCategoryChange = (categoryId: string) => {
         setSelectedCategory(categoryId);
         toast.success(`Đã phân loại ${friend.name} vào ${FRIEND_CATEGORIES.find(c => c.id === categoryId)?.label}`);
-        // TODO: Call API to save category
+        
+        // Save to localStorage as a temporary solution
+        if (typeof window !== 'undefined' && friend?.id) {
+            try {
+                const categories = JSON.parse(localStorage.getItem('friend_categories') || '{}');
+                categories[friend.id] = categoryId;
+                localStorage.setItem('friend_categories', JSON.stringify(categories));
+            } catch (e) {
+                console.error("Failed to save category to localStorage", e);
+            }
+        }
     };
 
     return (
@@ -166,7 +187,7 @@ export default function FriendProfileSheet({
                     <div className="relative px-6 -mt-16">
                         <div className="relative inline-block">
                             <Avatar className="h-28 w-28 ring-4 ring-white dark:ring-gray-800 shadow-xl">
-                                <AvatarImage src={friend.avatar || undefined} alt={friend.name} />
+                                <AvatarImage src={getAvatarUrl(friend.avatar, friend.name)} alt={friend.name} />
                                 <AvatarFallback className="bg-gradient-to-br from-blue-400 to-blue-600 text-white text-2xl">
                                     {initials}
                                 </AvatarFallback>

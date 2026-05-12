@@ -14,9 +14,9 @@ import { format } from "date-fns";
 import { StatCard } from "../shared/StatCard";
 import { RoleBadge } from "../shared/RoleBadge";
 import { MemberAvatar } from "../shared/MemberAvatar";
-import { getInitials, normalizeUrl } from "../shared/utils";
+import { getInitials } from "../shared/utils";
 import { Participant } from "../types";
-
+import { getAvatarUrl } from "@/src/utils/image-utils";
 interface MembersTabProps {
     chatId: string;
     participants: Participant[];
@@ -80,7 +80,7 @@ export function MembersTab({
                         <tr className="border-b border-slate-100 bg-slate-50/70">
                             <th className="text-left text-[10px] font-semibold text-slate-400 tracking-wider uppercase px-4 py-2.5">Thành viên</th>
                             <th className="text-left text-[10px] font-semibold text-slate-400 tracking-wider uppercase px-4 py-2.5">Vai trò</th>
-                            <th className="text-left text-[10px] font-semibold text-slate-400 tracking-wider uppercase px-4 py-2.5 hidden md:table-cell">Ngày tham gia</th>
+                            {/* <th className="text-left text-[10px] font-semibold text-slate-400 tracking-wider uppercase px-4 py-2.5 hidden md:table-cell">Ngày tham gia</th> */}
                             <th className="px-4 py-2.5 w-10"></th>
                         </tr>
                     </thead>
@@ -106,9 +106,9 @@ export function MembersTab({
                                     <td className="px-4 py-2.5">
                                         <RoleBadge role={p.role} />
                                     </td>
-                                    <td className="px-4 py-2.5 hidden md:table-cell">
+                                    {/* <td className="px-4 py-2.5 hidden md:table-cell">
                                         <span className="text-[11px] text-slate-400">—</span>
-                                    </td>
+                                    </td> */}
                                     <td className="px-4 py-2.5">
                                         {isAdmin && !isMe && p.role !== "CHANNEL_OWNER" && (
                                             <DropdownMenu>
@@ -168,7 +168,7 @@ export function MembersTab({
                                 <div key={req.id} className="flex items-center justify-between p-2.5 border rounded-xl bg-gray-50/50">
                                     <div className="flex items-center gap-2">
                                         <Avatar className="h-8 w-8 hover:scale-105 transition-transform">
-                                            <AvatarImage src={normalizeUrl(req.account?.avatar || "")} />
+                                            <AvatarImage src={getAvatarUrl(req.account?.avatar || "", req.account?.name)} />
                                             <AvatarFallback>{getInitials(req.account?.name)}</AvatarFallback>
                                         </Avatar>
                                         <div className="min-w-0">

@@ -1,12 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useGetFriendsQuery } from "@/src/redux/feature/friendApi";
+import { useSearchDirectoryQuery } from "@/src/redux/feature/userApi";
 import {
     useGetOrCreatePrivateChatMutation,
     useCreateGroupChatMutation,
 } from "@/src/redux/feature/chatApi";
-import { Friend } from "@/src/type/chat.types";
 import {
     Dialog,
     DialogContent,
@@ -18,8 +17,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Search, Users, MessageCircle, Check } from "lucide-react";
+import { Search, Users, MessageCircle, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { getAvatarUrl } from "@/src/utils/image-utils";
+import { useSelector } from "react-redux";
+import { RootState } from "@/src/redux/store";
+import { useEffect } from "react";
 
 interface NewChatModalProps {
     open: boolean;
@@ -38,19 +41,28 @@ export default function NewChatModal({
     const [searchQuery, setSearchQuery] = useState("");
     const [groupName, setGroupName] = useState("");
     const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+    const currentWorkspaceId = useSelector((state: RootState) => state.workspace.currentWorkspaceId);
+    const [debouncedSearch, setDebouncedSearch] = useState("");
 
-    const { data: friendsData } = useGetFriendsQuery();
+    // Debounce search
+    useEffect(() => {
+        const t = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+        return () => clearTimeout(t);
+    }, [searchQuery]);
+
+    const { data: directoryData, isLoading: directoryLoading } = useSearchDirectoryQuery({
+        searchTerm: debouncedSearch,
+        workspaceId: currentWorkspaceId || undefined
+    }, {
+        // skip: debouncedSearch.length < 2
+    });
+
     const [createPrivateChat, { isLoading: creatingPrivate }] =
         useGetOrCreatePrivateChatMutation();
     const [createGroupChat, { isLoading: creatingGroup }] =
         useCreateGroupChatMutation();
 
-    const friends = friendsData?.friends || [];
-    const filteredFriends = searchQuery
-        ? friends.filter((f) =>
-            f.name.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-        : friends;
+    const users = directoryData?.users || [];
 
     // Handle create private chat
     const handleCreatePrivateChat = async (friendId: string) => {
@@ -177,47 +189,52 @@ export default function NewChatModal({
                     </div>
                 )}
 
-                {/* Friends list */}
+                {/* Directory list */}
                 <div className="max-h-64 overflow-y-auto space-y-1">
-                    {filteredFriends.length === 0 ? (
+                    {directoryLoading ? (
+                        <div className="flex flex-col items-center justify-center py-10 text-slate-400">
+                            <Loader2 className="w-6 h-6 animate-spin mb-2" />
+                            <p className="text-xs">Đang tìm kiếm...</p>
+                        </div>
+                    ) : users.length === 0 ? (
                         <p className="text-sm text-gray-400 text-center py-8">
-                            {friends.length === 0
-                                ? "Chưa có bạn bè. Hãy thêm bạn bè trước!"
-                                : "Không tìm thấy bạn bè"}
+                            {searchQuery.length < 2
+                                ? "Nhập tên hoặc email để tìm kiếm"
+                                : "Không tìm thấy người dùng phù hợp"}
                         </p>
                     ) : (
-                        filteredFriends.map((friend) => (
+                        users.map((user) => (
                             <div
-                                key={friend.id}
+                                key={user.id}
                                 onClick={() =>
                                     activeTab === "private"
-                                        ? handleCreatePrivateChat(friend.id)
-                                        : toggleMember(friend.id)
+                                        ? handleCreatePrivateChat(user.id)
+                                        : toggleMember(user.id)
                                 }
-                                className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${activeTab === "group" && selectedMembers.includes(friend.id)
+                                className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${activeTab === "group" && selectedMembers.includes(user.id)
                                         ? "bg-blue-50 dark:bg-blue-900/30"
                                         : "hover:bg-gray-50 dark:hover:bg-gray-700"
                                     }`}
                             >
                                 {activeTab === "group" && (
                                     <Checkbox
-                                        checked={selectedMembers.includes(friend.id)}
-                                        onCheckedChange={() => toggleMember(friend.id)}
+                                        checked={selectedMembers.includes(user.id)}
+                                        onCheckedChange={() => toggleMember(user.id)}
                                         className="pointer-events-none"
                                     />
                                 )}
                                 <Avatar className="h-10 w-10">
-                                    <AvatarImage src={friend.avatar || undefined} />
+                                    <AvatarImage src={getAvatarUrl(user.avatar, user.name)} />
                                     <AvatarFallback className="bg-gradient-to-br from-blue-400 to-purple-500 text-white">
-                                        {friend.name.slice(0, 2).toUpperCase()}
+                                        {user.name.slice(0, 2).toUpperCase()}
                                     </AvatarFallback>
                                 </Avatar>
                                 <div className="flex-1 min-w-0">
                                     <p className="font-medium text-gray-900 dark:text-white truncate">
-                                        {friend.name}
+                                        {user.name}
                                     </p>
                                     <p className="text-xs text-gray-500 truncate">
-                                        {friend.status || ""}
+                                        {user.email || user.status || ""}
                                     </p>
                                 </div>
                             </div>

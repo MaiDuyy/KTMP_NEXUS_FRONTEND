@@ -58,15 +58,23 @@ export const uploadApi = apiSlice.injectEndpoints({
       },
     }),
 
+    // Upload workspace icon (POST /upload/workspace-icon)
+    uploadWorkspaceIcon: builder.mutation<UploadResponse, FormData>({
+      query: (formData) => ({
+        url: "/upload/workspace-icon",
+        method: "POST",
+        body: formData,
+      }),
+      invalidatesTags: ["Workspaces"],
+    }),
+
     // Upload chat media (images, videos, files)
     uploadChatMedia: builder.mutation<FileServiceResponse, FormData>({
-      query: (formData) => {
-        return {
-          url: "/upload/chat", // calls api-gateway proxy '/upload/chat' -> file-service '/chat'
-          method: "POST",
-          body: formData, // the body MUST contain 'file' and optionally 'chatId'
-        };
-      },
+      query: (formData) => ({
+        url: "/upload/chat",
+        method: "POST",
+        body: formData,
+      }),
     }),
   }),
   overrideExisting: true,
@@ -76,6 +84,7 @@ export const {
   useUploadFileMutation,
   useUploadAvatarMutation,
   useUploadGroupAvatarMutation,
+  useUploadWorkspaceIconMutation,
   useUploadChatMediaMutation,
 } = uploadApi;
 

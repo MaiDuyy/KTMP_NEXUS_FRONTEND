@@ -126,6 +126,7 @@ export interface SocketCallbacks {
   onWorkspaceInviteAccepted?: (data: { workspaceId: string; userId: string }) => void;
   onWorkspaceInviteCancelled?: (data: { workspaceId: string }) => void;
   onWorkspaceOwnerTransferred?: (data: { workspaceId: string; oldOwnerId: string; newOwnerId: string }) => void;
+  onWorkspaceUpdated?: (data: { workspaceId: string; updates: { name?: string; description?: string; icon?: string; isPublic?: boolean }; updatedBy?: string }) => void;
   onSystemBroadcast?: (data: { title: string; body: string; type: string; data?: any; timestamp: string }) => void;
 }
 
@@ -419,6 +420,11 @@ export const connectSocket = (token: string, callbacks?: SocketCallbacks): Socke
   socket.on("workspace:owner:transferred", (data) => {
     console.log("[Socket] 👑 Workspace owner transferred:", data);
     callbacks?.onWorkspaceOwnerTransferred?.(data);
+  });
+
+  socket.on("workspace:updated", (data) => {
+    console.log("[Socket] 🔄 Workspace updated:", data);
+    callbacks?.onWorkspaceUpdated?.(data);
   });
   
   socket.on("system:broadcast", (data) => {
