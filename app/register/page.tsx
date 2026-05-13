@@ -1,45 +1,54 @@
 "use client";
 
 import { useState } from "react";
-import { AuthLayout, RegisterForm, RegisterOrgForm } from '@/src/features/auth';
-import { Building2, User } from "lucide-react";
+import { RegisterForm, RegisterOrgForm } from "@/src/features/auth";
+import { AuthLayout } from "@/src/features/auth/components/AuthLayout";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 export default function RegisterPage() {
-  const [mode, setMode] = useState<"user" | "org">("user");
+  const [mode, setMode] = useState<"personal" | "org">("personal");
 
   return (
     <AuthLayout>
-      <div className="flex p-1 bg-slate-100 rounded-lg mb-8">
+      {/* Switcher */}
+      <div className="flex p-1 bg-muted rounded-xl mb-10">
         <button
-          onClick={() => setMode("user")}
+          onClick={() => setMode("personal")}
           className={cn(
-            "flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-md transition-all",
-            mode === "user" ? "bg-white shadow-sm text-indigo-600" : "text-slate-500 hover:text-slate-700"
+            "flex-1 py-2.5 text-sm font-bold rounded-lg transition-all duration-300",
+            mode === "personal"
+              ? "bg-white text-primary shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
           )}
         >
-          <User className="w-4 h-4" />
-          Individual
+          Cá nhân
         </button>
         <button
           onClick={() => setMode("org")}
           className={cn(
-            "flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-md transition-all",
-            mode === "org" ? "bg-white shadow-sm text-indigo-600" : "text-slate-500 hover:text-slate-700"
+            "flex-1 py-2.5 text-sm font-bold rounded-lg transition-all duration-300",
+            mode === "org"
+              ? "bg-white text-primary shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
           )}
         >
-          <Building2 className="w-4 h-4" />
-          Organization
+          Doanh nghiệp
         </button>
       </div>
 
-      {mode === "user" ? <RegisterForm /> : <RegisterOrgForm />}
+      {mode === "personal" ? <RegisterForm /> : <RegisterOrgForm />}
 
-      <div className="mt-6 text-center text-sm text-slate-600">
-        Already have an account?{' '}
-        <a href="/login" className="font-semibold text-indigo-600 hover:text-indigo-500">
-          Sign in
-        </a>
+      <div className="mt-8 pt-6 border-t border-border flex flex-col items-center gap-4">
+        <p className="text-[15px] text-muted-foreground">
+          Đã có tài khoản?{" "}
+          <Link
+            href="/login"
+            className="text-primary font-bold hover:opacity-70 transition-opacity"
+          >
+            Đăng nhập ngay
+          </Link>
+        </p>
       </div>
     </AuthLayout>
   );

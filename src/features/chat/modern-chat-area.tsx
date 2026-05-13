@@ -956,7 +956,7 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
           </div>
         )}
         <div className="p-2 text-center text-[10px] text-slate-300 font-medium">
-          OTT Enterprise Collaboration Chat • Secure & Encrypted
+          NEXUS Enterprise Collaboration Chat • Secure & Encrypted
         </div>
       </div>
 

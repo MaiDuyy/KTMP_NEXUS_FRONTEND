@@ -18,18 +18,20 @@ import {
 import { useSidebar } from "@/components/ui/sidebar";
 import { useGetAccountDetailsQuery } from "@/src/redux/feature/accountApi";
 import { useRouter } from "next/navigation";
+import { useAppDispatch } from "@/src/redux/hooks";
+import { performFullLogout } from "@/src/utils/auth-utils";
 
 export function NavUser() {
   const { isMobile } = useSidebar();
   const { data: accountData } = useGetAccountDetailsQuery();
   const user = accountData?.user;
   const router = useRouter();
+  const dispatch = useAppDispatch();
 
   if (!user) return null;
 
   const handleLogout = () => {
-    // Implement logout logic here or redirect to logout page
-    router.push("/login");
+    performFullLogout(dispatch);
   };
 
   const initials = user.name

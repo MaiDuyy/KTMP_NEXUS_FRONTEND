@@ -177,7 +177,7 @@ export function AdminSettingsPage() {
                                         id="siteName"
                                         value={settings.siteName}
                                         onChange={(e) => handleChange('siteName', e.target.value)}
-                                        placeholder="OTT Chat Enterprise"
+                                        placeholder="NEXUS Enterprise"
                                         className="h-11 rounded-xl"
                                     />
                                 </div>

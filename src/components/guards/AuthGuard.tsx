@@ -6,6 +6,7 @@ import { useAppSelector, useAppDispatch } from '@/src/redux/hooks';
 import { Loader2, Ban } from 'lucide-react';
 import { useCheckAuthQuery } from '@/src/redux/feature/authApi';
 import { logOut } from '@/src/redux/feature/authSlice';
+import { performFullLogout } from '@/src/utils/auth-utils';
 import { toast } from 'sonner';
 
 interface AuthGuardProps {
@@ -49,11 +50,10 @@ export function AuthGuard({ children }: AuthGuardProps) {
       const message = errorData?.message || "";
       
       if (message.includes('đình chỉ') || (authError as any).status === 401) {
-        dispatch(logOut());
         if (message.includes('đình chỉ')) {
           toast.error(message || 'Tài khoản của bạn đã bị đình chỉ!');
         }
-        router.push('/login');
+        performFullLogout(dispatch);
       }
     }
 

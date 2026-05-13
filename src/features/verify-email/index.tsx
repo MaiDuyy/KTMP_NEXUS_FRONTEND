@@ -68,7 +68,7 @@ function VerifyEmailContent() {
     const handleSendOTP = async () => {
         if (!email) {
             toast.error("Không tìm thấy email!");
-            router.push("/auth/sign-up");
+            router.push("/register");
             return;
         }
 
@@ -115,7 +115,7 @@ function VerifyEmailContent() {
 
             // Redirect after 2 seconds
             setTimeout(() => {
-                router.push("/auth/sign-in");
+                router.push("/login");
             }, 2000);
         } catch (error: any) {
             const msg = error?.data?.message || "Mã OTP không hợp lệ!";
@@ -213,7 +213,7 @@ function VerifyEmailContent() {
 
                     <div className="text-center pt-4 border-t">
                         <Link
-                            href="/auth/sign-up"
+                            href="/register"
                             className="inline-flex items-center text-sm text-muted-foreground hover:text-primary"
                         >
                             <ArrowLeft className="mr-2 h-4 w-4" />

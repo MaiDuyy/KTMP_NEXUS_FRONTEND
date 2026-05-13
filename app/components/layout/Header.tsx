@@ -5,9 +5,24 @@ import { logOut } from '@/src/redux/feature/authSlice';
 import { useAppSelector } from '@/src/redux/hooks';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
+import { 
+    MessageSquare, 
+    Menu, 
+    X, 
+    LogOut, 
+    LogIn, 
+    Moon, 
+    Sun, 
+    User,
+    ChevronDown,
+    Settings,
+    HelpCircle,
+    FileText
+} from 'lucide-react';
+import { cn } from "@/lib/utils";
+import { Button } from '@/components/ui/button';
 
 interface HeaderProps {
     darkMode: boolean;
@@ -15,127 +30,165 @@ interface HeaderProps {
 }
 
 const NAV_ITEMS: NavItem[] = [
-    { label: "OTT", href: "#" },
-    { label: "Official Account", href: "#" },
+    { label: "Trang chủ", href: "/" },
+    { label: "Doanh nghiệp", href: "#" },
     { label: "Nhà phát triển", href: "#" },
     { label: "Bảo mật", href: "#" },
     { label: "Trợ giúp", href: "#" },
-    { label: "Liên hệ", href: "#" },
-    { label: "Báo cáo vi phạm", href: "#" },
 ];
 
 const Header: React.FC<HeaderProps> = ({ darkMode, toggleDarkMode }) => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isProfileOpen, setIsProfileOpen] = useState(false);
     const dispatch = useDispatch();
     const router = useRouter();
     const { user, isAuthenticated } = useAppSelector((state: any) => state.auth);
 
-
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-    const [searchKeyword, setSearchKeyword] = useState('');
-    const [imagePreview, setImagePreview] = useState<string | null>(null);
-    const [openModal, setOpenModal] = useState(false);
-
-    const handleLogout = async () => {
-        // Dispatch action logOut lên Redux store
+    const handleLogout = () => {
         dispatch(logOut());
         router.push('/');
-        setIsProfileMenuOpen(false);
-        // Nếu SignOutDialog gọi hàm này, nó sẽ thực thi đúng logic
+        setIsProfileOpen(false);
     };
+
     return (
-        <header className="bg-surface-light dark:bg-surface-dark shadow-sm sticky top-0 z-50 transition-colors duration-300">
+        <header className="bg-white dark:bg-[#111111] border-b border-border sticky top-0 z-50 transition-colors duration-300">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
                 {/* Logo */}
-                <div className="flex-shrink-0 flex items-center">
-                    <a className="text-3xl font-bold text-primary tracking-tight" href="#">
-                        OTT-Chat
-                    </a>
-                </div>
+                <Link href="/" className="flex items-center gap-2 group">
+                    <div className="w-9 h-9 bg-primary rounded-lg flex items-center justify-center shadow-lg shadow-primary/20 transition-transform group-hover:scale-105">
+                        <MessageSquare className="w-5 h-5 text-white" />
+                    </div>
+                    <span className="text-xl font-bold text-foreground tracking-tight">NEXUS</span>
+                </Link>
 
                 {/* Desktop Navigation */}
-                <nav className="hidden lg:flex space-x-6 xl:space-x-8">
+                <nav className="hidden lg:flex items-center space-x-1">
                     {NAV_ITEMS.map((item, index) => (
-                        <a
+                        <Link
                             key={index}
                             href={item.href}
-                            className={`text-sm font-bold uppercase transition ${index === 0
-                                ? "text-primary hover:opacity-80"
-                                : "text-slate-700 dark:text-slate-300 hover:text-primary dark:hover:text-primary"
-                                }`}
+                            className={cn(
+                                "px-4 py-2 text-[13px] font-semibold rounded-md transition-all duration-200",
+                                index === 0 
+                                    ? "text-primary bg-primary/5" 
+                                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                            )}
                         >
                             {item.label}
-                        </a>
+                        </Link>
                     ))}
                 </nav>
 
                 {/* Right Actions */}
-                <div className="flex items-center space-x-4">
-                    <button className="text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary p-1 rounded-full border border-slate-200 dark:border-slate-600">
-                        <img
-                            alt="User Avatar"
-                            className="h-8 w-8 rounded-full"
-                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuCDZQrA-QCztcaRpY58JFK8onC27szpbDCaD7qS-HrLBze5nEb6A5u4KwJOBK0sngoMYaXNZlIWdvVV2C_MzgEY_QXNKeEnwZZ3a5ECSse5JeV7zaQSQmGTJrnqS1x6hRdaeHaBsZ1k1qaKUM9c_DOg6N6Xvfs3XOKGdlZo8fZF0GsJIM3gRdTAaRZOHcSxi0GKSV_2PLwGifeM9h_DvSQE6pYHJ6qntPYceif1kx-50Q0L4xw2MLRQG9M8ihmf3KzLdRWON9qg2lM"
-                        />
+                <div className="flex items-center space-x-3">
+                    <button
+                        onClick={toggleDarkMode}
+                        className="p-2 text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors"
+                        aria-label="Toggle theme"
+                    >
+                        {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
                     </button>
-
 
                     {isAuthenticated ? (
-                        <button
-                            className="p-2 text-slate-500 hover:text-primary dark:text-slate-400 dark:hover:text-white transition"
-                            onClick={handleLogout}
-                            aria-label="Logout"
-                        >
-                            <span className="material-icons text-xl">logout : {user?.name}</span>
-                        </button>
-                    ) : (
-                        <Link href="/login">
-                            <button
-                                className="p-2 text-slate-500 hover:text-primary dark:text-slate-400 dark:hover:text-white transition"
-                                aria-label="Login"
+                        <div className="relative">
+                            <button 
+                                onClick={() => setIsProfileOpen(!isProfileOpen)}
+                                className="flex items-center gap-2 p-1 pl-1 pr-3 hover:bg-accent rounded-full border border-border transition-colors"
                             >
-                                <span className="material-icons text-xl">login</span>
+                                <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden border border-primary/20">
+                                    {user?.avatar ? (
+                                        <img src={user.avatar} alt={user.name} className="h-full w-full object-cover" />
+                                    ) : (
+                                        <User className="h-4 w-4 text-primary" />
+                                    )}
+                                </div>
+                                <span className="text-sm font-semibold text-foreground max-w-[100px] truncate">
+                                    {user?.name || "Người dùng"}
+                                </span>
+                                <ChevronDown className={cn("w-3.5 h-3.5 text-muted-foreground transition-transform", isProfileOpen && "rotate-180")} />
                             </button>
-                        </Link>
-                    )}
 
-                    <button
-                        className="p-2 text-slate-500 hover:text-primary dark:text-slate-400 dark:hover:text-white transition"
-                        onClick={toggleDarkMode}
-                        aria-label="Toggle Dark Mode"
-                    >
-                        <span className="material-icons text-xl">
-                            {darkMode ? 'brightness_7' : 'brightness_4'}
-                        </span>
-                    </button>
+                            {isProfileOpen && (
+                                <>
+                                    <div className="fixed inset-0 z-40" onClick={() => setIsProfileOpen(false)}></div>
+                                    <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-[#1c1c1c] rounded-xl shadow-2xl border border-border p-1.5 z-50 animate-in fade-in zoom-in duration-200 origin-top-right">
+                                        <div className="px-3 py-2.5 mb-1">
+                                            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Tài khoản</p>
+                                            <p className="text-sm font-semibold text-foreground truncate">{user?.email}</p>
+                                        </div>
+                                        <div className="h-px bg-border my-1 mx-1.5" />
+                                        <button className="flex w-full items-center gap-2.5 px-3 py-2 text-sm font-medium text-foreground hover:bg-accent rounded-lg transition-colors">
+                                            <Settings className="w-4 h-4 text-muted-foreground" />
+                                            Cài đặt
+                                        </button>
+                                        <button className="flex w-full items-center gap-2.5 px-3 py-2 text-sm font-medium text-foreground hover:bg-accent rounded-lg transition-colors">
+                                            <HelpCircle className="w-4 h-4 text-muted-foreground" />
+                                            Trợ giúp
+                                        </button>
+                                        <div className="h-px bg-border my-1 mx-1.5" />
+                                        <button 
+                                            onClick={handleLogout}
+                                            className="flex w-full items-center gap-2.5 px-3 py-2 text-sm font-bold text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                                        >
+                                            <LogOut className="w-4 h-4" />
+                                            Đăng xuất
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-2">
+                            <Link href="/login">
+                                <Button variant="ghost" className="hidden sm:flex text-sm font-bold text-foreground">
+                                    Đăng nhập
+                                </Button>
+                            </Link>
+                            <Link href="/register">
+                                <Button className="bg-primary hover:opacity-90 text-primary-foreground text-sm font-bold px-5">
+                                    Bắt đầu ngay
+                                </Button>
+                            </Link>
+                        </div>
+                    )}
 
                     {/* Mobile Menu Button */}
                     <button
-                        className="lg:hidden p-2 text-slate-500"
+                        className="lg:hidden p-2 text-muted-foreground hover:bg-accent rounded-lg transition-colors"
                         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                     >
-                        <span className="material-icons">menu</span>
+                        {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
                     </button>
                 </div>
             </div>
 
             {/* Mobile Menu Dropdown */}
             {isMobileMenuOpen && (
-                <div className="lg:hidden bg-surface-light dark:bg-surface-dark border-t border-slate-200 dark:border-slate-700">
-                    <nav className="flex flex-col px-4 py-2 space-y-2">
+                <div className="lg:hidden border-t border-border bg-white dark:bg-[#111111] animate-in slide-in-from-top-4 duration-300">
+                    <nav className="flex flex-col p-4 space-y-1">
                         {NAV_ITEMS.map((item, index) => (
-                            <a
+                            <Link
                                 key={index}
                                 href={item.href}
-                                className={`block py-2 text-sm font-bold uppercase ${index === 0
-                                    ? "text-primary"
-                                    : "text-slate-700 dark:text-slate-300"
-                                    }`}
+                                className={cn(
+                                    "px-4 py-3 text-sm font-bold rounded-xl transition-colors",
+                                    index === 0 ? "bg-primary/10 text-primary" : "text-foreground hover:bg-accent"
+                                )}
+                                onClick={() => setIsMobileMenuOpen(false)}
                             >
                                 {item.label}
-                            </a>
+                            </Link>
                         ))}
+                        {!isAuthenticated && (
+                            <div className="grid grid-cols-2 gap-3 pt-4 border-t border-border mt-4">
+                                <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>
+                                    <Button variant="outline" className="w-full font-bold">Đăng nhập</Button>
+                                </Link>
+                                <Link href="/register" onClick={() => setIsMobileMenuOpen(false)}>
+                                    <Button className="w-full bg-primary font-bold">Đăng ký</Button>
+                                </Link>
+                            </div>
+                        )}
                     </nav>
                 </div>
             )}
@@ -144,3 +197,4 @@ const Header: React.FC<HeaderProps> = ({ darkMode, toggleDarkMode }) => {
 };
 
 export default Header;
+

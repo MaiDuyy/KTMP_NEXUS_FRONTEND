@@ -9,6 +9,7 @@ interface AuthState {
   isAuthenticated: boolean;
   permissions: string[]; // RBAC permissions
   roles: string[]; // User roles
+
 }
 
 // --- HÀM HELPER ĐỂ LẤY DỮ LIỆU TỪ LS (chỉ user info, KHÔNG lưu token) ---
@@ -21,6 +22,7 @@ const getInitialStateFromStorage = (): AuthState => {
       isAuthenticated: false,
       permissions: [],
       roles: [],
+  
     };
   }
 
@@ -42,6 +44,7 @@ const getInitialStateFromStorage = (): AuthState => {
         isAuthenticated: true,
         permissions,
         roles,
+
       };
     }
   } catch (error) {
@@ -55,6 +58,7 @@ const getInitialStateFromStorage = (): AuthState => {
     isAuthenticated: false,
     permissions: [],
     roles: [],
+
   };
 };
 
@@ -96,6 +100,7 @@ const authSlice = createSlice({
       state.isAuthenticated = false;
       state.permissions = [];
       state.roles = [];
+
       
       if (typeof window !== 'undefined') {
         localStorage.removeItem("user");
@@ -103,6 +108,7 @@ const authSlice = createSlice({
         localStorage.removeItem("refreshToken");
         localStorage.removeItem("permissions");
         localStorage.removeItem("roles");
+        localStorage.removeItem("currentWorkspaceId");
       }
     },
     tokenReceived: (state, action: PayloadAction<{ accessToken: string, refreshToken: string }>) => {

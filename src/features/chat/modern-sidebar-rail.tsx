@@ -6,7 +6,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { useGetAccountDetailsQuery, useUpdateOnlineStatusMutation } from '@/src/redux/feature/accountApi';
 import { useLogoutMutation } from '@/src/redux/feature/authApi';
-import { logOut } from '@/src/redux/feature/authSlice';
+import { apiSlice } from '@/src/redux/api/baseApi';
+import { performFullLogout } from '@/src/utils/auth-utils';
 import { toast } from 'sonner';
 import {
   MessageSquare,
@@ -103,13 +104,12 @@ export default function ModernSidebarRail() {
   const handleLogout = async () => {
     try {
       await updateOnlineStatus({ isOnline: false });
-      await logout({});
-      dispatch(logOut());
-      toast.success("Đăng xuất thành công!");
-      router.push("/auth/sign-in");
+      await logout({}).unwrap();
     } catch (error) {
-      dispatch(logOut());
-      router.push("/auth/sign-in");
+      console.error("Logout error:", error);
+    } finally {
+      toast.success("Đăng xuất thành công!");
+      performFullLogout(dispatch);
     }
   };
 
@@ -189,7 +189,7 @@ export default function ModernSidebarRail() {
       {/* Main Navigation Modules */}
       <div className="flex flex-col gap-2 flex-1">
         <RailIcon href="/dashboard" icon={<LayoutDashboard size={22} />} label="Bảng điều khiển" active={pathname === '/dashboard' || pathname === '/'} />
-        <RailIcon href="/chat" icon={<MessageSquare size={22} />} label="Trò chuyện OTT" active={pathname?.startsWith('/chat')} />
+        <RailIcon href="/chat" icon={<MessageSquare size={22} />} label="Trò chuyện NEXUS" active={pathname?.startsWith('/chat')} />
         <RailIcon href="/ai" icon={<Bot size={22} />} label="Trợ lý AI" active={pathname?.startsWith('/ai')} />
         <RailIcon href="/knowledge" icon={<Files size={22} />} label="Kiến thức / Tài liệu" active={pathname?.startsWith('/knowledge')} />
         {/* <RailIcon href="/security" icon={<ShieldCheck size={22} />} label="Security & Audit" active={pathname?.startsWith('/security')} /> */}

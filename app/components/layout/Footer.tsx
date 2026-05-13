@@ -1,20 +1,36 @@
 "use client";
+
 import React from 'react';
+import Link from 'next/link';
 
 const Footer: React.FC = () => {
     return (
-        <footer className="bg-background-light dark:bg-background-dark py-6 transition-colors duration-300 mt-auto border-t border-slate-200 dark:border-slate-800">
-            <div className="max-w-7xl mx-auto px-4 text-center">
-                <p className="text-slate-500 dark:text-slate-400 text-sm">
-                    © 2012 - 2025 Một sản phẩm của Zalo Group -
-                    <a className="text-primary hover:underline ml-1" href="#">
-                        Điều khoản sử dụng dịch vụ
-                    </a>{" "}
-                    -
-                    <a className="text-primary hover:underline ml-1" href="#">
-                        Thông báo xử lý dữ liệu
-                    </a>
-                </p>
+        <footer className="bg-white dark:bg-[#111111] border-t border-border py-12 transition-colors duration-300 mt-auto">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div className="flex flex-col items-center md:items-start gap-2">
+                        <span className="text-xl font-bold text-foreground">NEXUS</span>
+                        <p className="text-sm text-muted-foreground font-medium">
+                            Giải pháp kết nối an toàn cho cá nhân và doanh nghiệp.
+                        </p>
+                    </div>
+
+                    <div className="flex flex-wrap justify-center gap-6 text-sm font-semibold text-muted-foreground">
+                        <Link href="#" className="hover:text-primary transition-colors">Về chúng tôi</Link>
+                        <Link href="#" className="hover:text-primary transition-colors">Điều khoản</Link>
+                        <Link href="#" className="hover:text-primary transition-colors">Bảo mật</Link>
+                        <Link href="#" className="hover:text-primary transition-colors">Hỗ trợ</Link>
+                    </div>
+                </div>
+
+                <div className="mt-12 pt-8 border-t border-border flex flex-col md:flex-row items-center justify-between gap-4">
+                    <p className="text-[13px] text-muted-foreground font-medium">
+                        © {new Date().getFullYear()} NEXUS. Tất cả quyền được bảo lưu.
+                    </p>
+                    <div className="flex items-center gap-4 text-[13px] text-muted-foreground">
+                        <span>Made with ❤️ for the world</span>
+                    </div>
+                </div>
             </div>
         </footer>
     );
