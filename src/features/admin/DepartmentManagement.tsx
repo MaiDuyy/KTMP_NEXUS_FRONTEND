@@ -59,11 +59,11 @@ export function DepartmentManagement() {
     if (!name.trim()) return;
     try {
       await createDept({ name: name.trim(), description: description.trim() || undefined }).unwrap();
-      toast.success('Department created');
+      toast.success('Đã tạo phòng ban');
       setShowCreateDialog(false);
       resetForm();
     } catch {
-      toast.error('Failed to create department');
+      toast.error('Tạo phòng ban thất bại');
     }
   };
 
@@ -71,11 +71,11 @@ export function DepartmentManagement() {
     if (!editingDept || !name.trim()) return;
     try {
       await updateDept({ id: editingDept.id, name: name.trim(), description: description.trim() || undefined }).unwrap();
-      toast.success('Department updated');
+      toast.success('Đã cập nhật phòng ban');
       setEditingDept(null);
       resetForm();
     } catch {
-      toast.error('Failed to update department');
+      toast.error('Cập nhật phòng ban thất bại');
     }
   };
 
@@ -83,11 +83,11 @@ export function DepartmentManagement() {
     if (!selectedDept) return;
     try {
       await deleteDept(selectedDept.id).unwrap();
-      toast.success('Department deleted');
+      toast.success('Đã xóa phòng ban');
       setShowDeleteDialog(false);
       setSelectedDept(null);
     } catch {
-      toast.error('Failed to delete department');
+      toast.error('Xóa phòng ban thất bại');
     }
   };
 
@@ -104,7 +104,7 @@ export function DepartmentManagement() {
         <div className="relative w-full max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search departments..."
+            placeholder="Tìm kiếm phòng ban..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             className="pl-9 h-10"
@@ -112,7 +112,7 @@ export function DepartmentManagement() {
         </div>
         <Button onClick={() => { resetForm(); setShowCreateDialog(true); }} className="h-10">
           <Plus className="w-4 h-4 mr-2" />
-          New Department
+          Phòng ban mới
         </Button>
       </div>
 
@@ -124,8 +124,8 @@ export function DepartmentManagement() {
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
           <Building className="w-12 h-12 mb-4 opacity-20" />
-          <p className="text-lg font-medium">No departments found</p>
-          <p className="text-sm">Create your first department to organize users</p>
+          <p className="text-lg font-medium">Không tìm thấy phòng ban nào</p>
+          <p className="text-sm">Tạo phòng ban đầu tiên để quản lý nhân sự</p>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -140,7 +140,7 @@ export function DepartmentManagement() {
                     <div>
                       <CardTitle className="text-base">{dept.name}</CardTitle>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        {dept.description || 'No description'}
+                        {dept.description || 'Không có mô tả'}
                       </p>
                     </div>
                   </div>
@@ -151,16 +151,16 @@ export function DepartmentManagement() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-40">
-                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                      <DropdownMenuLabel>Thao tác</DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => openEdit(dept)}>
-                        <Edit className="w-4 h-4 mr-2" /> Edit
+                        <Edit className="w-4 h-4 mr-2" /> Chỉnh sửa
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="text-red-600"
                         onClick={() => { setSelectedDept(dept); setShowDeleteDialog(true); }}
                       >
-                        <Trash2 className="w-4 h-4 mr-2" /> Delete
+                        <Trash2 className="w-4 h-4 mr-2" /> Xóa
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -170,10 +170,10 @@ export function DepartmentManagement() {
                 <div className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-1.5 text-muted-foreground">
                     <Users className="w-3.5 h-3.5" />
-                    {dept.memberCount} members
+                    {dept.memberCount} thành viên
                   </div>
                   <span className="text-xs text-muted-foreground">
-                    {format(new Date(dept.createdAt), 'MMM d, yyyy')}
+                    {format(new Date(dept.createdAt), 'dd/MM/yyyy')}
                   </span>
                 </div>
               </CardContent>
@@ -186,24 +186,24 @@ export function DepartmentManagement() {
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create Department</DialogTitle>
-            <DialogDescription>Add a new department to organize your team.</DialogDescription>
+            <DialogTitle>Tạo phòng ban</DialogTitle>
+            <DialogDescription>Thêm một phòng ban mới để tổ chức đội ngũ của bạn.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Name</Label>
-              <Input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Engineering" />
+              <Label>Tên phòng ban</Label>
+              <Input value={name} onChange={e => setName(e.target.value)} placeholder="VD: Phòng Kỹ thuật" />
             </div>
             <div className="space-y-2">
-              <Label>Description</Label>
-              <Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="What does this department do?" rows={3} />
+              <Label>Mô tả</Label>
+              <Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Chức năng của phòng ban này là gì?" rows={3} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>Hủy</Button>
             <Button onClick={handleCreate} disabled={!name.trim() || isCreating}>
               {isCreating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Create
+              Tạo
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -213,24 +213,24 @@ export function DepartmentManagement() {
       <Dialog open={!!editingDept} onOpenChange={() => setEditingDept(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Department</DialogTitle>
-            <DialogDescription>Update department details.</DialogDescription>
+            <DialogTitle>Chỉnh sửa phòng ban</DialogTitle>
+            <DialogDescription>Cập nhật thông tin phòng ban.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Name</Label>
+              <Label>Tên phòng ban</Label>
               <Input value={name} onChange={e => setName(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label>Description</Label>
+              <Label>Mô tả</Label>
               <Textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingDept(null)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setEditingDept(null)}>Hủy</Button>
             <Button onClick={handleUpdate} disabled={!name.trim() || isUpdating}>
               {isUpdating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Save Changes
+              Lưu thay đổi
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -240,17 +240,17 @@ export function DepartmentManagement() {
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="text-red-600">Delete Department</DialogTitle>
+            <DialogTitle className="text-red-600">Xóa phòng ban</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete <strong>{selectedDept?.name}</strong>?
-              Members will be unassigned but not removed from the system.
+              Bạn có chắc chắn muốn xóa <strong>{selectedDept?.name}</strong>?
+              Các thành viên sẽ bị gỡ khỏi phòng ban này nhưng không bị xóa khỏi hệ thống.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>Hủy</Button>
             <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
               {isDeleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Delete
+              Xóa
             </Button>
           </DialogFooter>
         </DialogContent>

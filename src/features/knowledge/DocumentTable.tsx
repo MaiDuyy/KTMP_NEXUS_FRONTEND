@@ -50,25 +50,25 @@ interface DocumentTableProps {
 const statusConfig = {
     PENDING: {
         icon: Clock,
-        label: 'Pending',
+        label: 'Đang chờ',
         variant: 'outline' as const,
         className: 'bg-slate-100 text-slate-600 border-slate-200',
     },
     PROCESSING: {
         icon: Loader2,
-        label: 'Processing',
+        label: 'Đang xử lý',
         variant: 'outline' as const,
         className: 'border-blue-200 text-blue-600 bg-blue-50/50',
     },
     COMPLETED: {
         icon: CheckCircle2,
-        label: 'Completed',
+        label: 'Hoàn thành',
         variant: 'outline' as const,
         className: 'bg-emerald-50 text-emerald-700 border-emerald-200',
     },
     FAILED: {
         icon: XCircle,
-        label: 'Failed',
+        label: 'Thất bại',
         variant: 'outline' as const,
         className: 'bg-red-50 text-red-700 border-red-200',
     },
@@ -131,7 +131,7 @@ export function DocumentTable({ onDocumentClick, className }: DocumentTableProps
                     <div className="w-12 h-12 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
                     <Database className="w-5 h-5 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                 </div>
-                <p className="text-sm font-medium text-muted-foreground animate-pulse">Loading knowledge base...</p>
+                <p className="text-sm font-medium text-muted-foreground animate-pulse">Đang tải cơ sở dữ liệu tri thức...</p>
             </div>
         );
     }
@@ -143,7 +143,7 @@ export function DocumentTable({ onDocumentClick, className }: DocumentTableProps
                 <div className="relative w-full md:max-w-md">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
-                        placeholder="Search documents..."
+                        placeholder="Tìm kiếm tài liệu..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-10 bg-background/50 focus:bg-background transition-all border-slate-200"
@@ -157,21 +157,21 @@ export function DocumentTable({ onDocumentClick, className }: DocumentTableProps
                         onValueChange={(v) => setStatusFilter(v)}
                     >
                         <SelectTrigger className="w-[160px] bg-background/50 border-slate-200">
-                            <SelectValue placeholder="All Status" />
+                            <SelectValue placeholder="Tất cả trạng thái" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="ALL">All Documents</SelectItem>
-                            <SelectItem value="PENDING">Pending</SelectItem>
-                            <SelectItem value="PROCESSING">Processing</SelectItem>
-                            <SelectItem value="COMPLETED">Completed</SelectItem>
-                            <SelectItem value="FAILED">Failed</SelectItem>
+                            <SelectItem value="ALL">Tất cả tài liệu</SelectItem>
+                            <SelectItem value="PENDING">Đang chờ</SelectItem>
+                            <SelectItem value="PROCESSING">Đang xử lý</SelectItem>
+                            <SelectItem value="COMPLETED">Hoàn thành</SelectItem>
+                            <SelectItem value="FAILED">Thất bại</SelectItem>
                         </SelectContent>
                     </Select>
                     
                     {isFetching && (
                         <div className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded-full animate-in fade-in">
                             <Loader2 className="w-3 h-3 animate-spin" />
-                            Syncing
+                            Đang đồng bộ
                         </div>
                     )}
                 </div>
@@ -182,18 +182,18 @@ export function DocumentTable({ onDocumentClick, className }: DocumentTableProps
                 {filteredDocs.length === 0 ? (
                     <EmptyState
                         icon={FileText}
-                        title="No documents found"
-                        description={searchTerm ? "Try adjusting your search filters" : "Upload a document to train your AI assistant"}
+                        title="Không tìm thấy tài liệu nào"
+                        description={searchTerm ? "Thử điều chỉnh bộ lọc tìm kiếm của bạn" : "Tải lên một tài liệu để cung cấp dữ liệu cho trợ lý AI của bạn"}
                     />
                 ) : (
                     <Table>
                         <TableHeader className="bg-slate-50/50">
                             <TableRow className="hover:bg-transparent border-slate-200">
-                                <TableHead className="w-[40%] text-slate-900 font-semibold py-4">Document Name</TableHead>
-                                <TableHead className="text-slate-900 font-semibold">Status</TableHead>
-                                <TableHead className="text-slate-900 font-semibold">Size</TableHead>
-                                <TableHead className="text-slate-900 font-semibold">Chunks</TableHead>
-                                <TableHead className="text-right text-slate-900 font-semibold pr-6">Modified</TableHead>
+                                <TableHead className="w-[40%] text-slate-900 font-semibold py-4">Tên tài liệu</TableHead>
+                                <TableHead className="text-slate-900 font-semibold">Trạng thái</TableHead>
+                                <TableHead className="text-slate-900 font-semibold">Kích thước</TableHead>
+                                <TableHead className="text-slate-900 font-semibold">Khối (Chunks)</TableHead>
+                                <TableHead className="text-right text-slate-900 font-semibold pr-6">Cập nhật</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -296,11 +296,11 @@ export function DocumentTable({ onDocumentClick, className }: DocumentTableProps
             {/* Footer Info */}
             <div className="flex items-center justify-between px-2">
                 <p className="text-xs text-slate-400 font-medium">
-                    Total: <span className="text-slate-900">{filteredDocs.length}</span> documents
+                    Tổng cộng: <span className="text-slate-900">{filteredDocs.length}</span> tài liệu
                 </p>
                 <div className="flex items-center gap-2 text-[10px] text-slate-400 uppercase tracking-widest font-bold">
                     <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                    System Healthy
+                    Hệ thống ổn định
                 </div>
             </div>
         </div>

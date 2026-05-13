@@ -98,6 +98,7 @@ export interface Chat {
   isGroup: boolean;
   isBlocked: boolean;
   isBlockedByMe: boolean;
+  isFriend: boolean;
   pin: boolean;
   notify: boolean;
   readed: boolean;
@@ -117,6 +118,7 @@ export interface Chat {
   updatedAt: string;
   joinPolicy?: JoinPolicy;
   joinRequests?: JoinRequest[];
+
 }
 
 export type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE" | "CANCELLED";

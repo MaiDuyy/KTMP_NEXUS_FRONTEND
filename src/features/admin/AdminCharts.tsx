@@ -2,8 +2,6 @@
 
 import React from 'react';
 import {
-  LineChart,
-  Line,
   BarChart,
   Bar,
   XAxis,
@@ -19,28 +17,26 @@ import {
 } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4'];
+const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#64748b', '#ef4444', '#06b6d4'];
 
 interface AdminChartsProps {
   userGrowth?: Array<{ date: string; count: number }>;
   messageActivity?: Array<{ date: string; count: number }>;
   roleDistribution?: Array<{ role: string; count: number }>;
-  departmentDistribution?: Array<{ department: string; count: number }>;
 }
 
 export function AdminCharts({
   userGrowth = [],
   messageActivity = [],
   roleDistribution = [],
-  departmentDistribution = [],
 }: AdminChartsProps) {
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
       {/* User Growth Chart */}
       <Card className="lg:col-span-2">
         <CardHeader>
-          <CardTitle>User Growth</CardTitle>
-          <CardDescription>Daily new signups over the last 30 days</CardDescription>
+          <CardTitle>Tăng trưởng người dùng</CardTitle>
+          <CardDescription>Số lượng đăng ký mới mỗi ngày trong 30 ngày qua</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="h-[300px] w-full">
@@ -59,7 +55,7 @@ export function AdminCharts({
                   fontSize={12} 
                   tickLine={false} 
                   axisLine={false}
-                  tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  tickFormatter={(value) => new Date(value).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
                 />
                 <YAxis 
                   stroke="#888888" 
@@ -89,8 +85,8 @@ export function AdminCharts({
       {/* Role Distribution Pie Chart */}
       <Card>
         <CardHeader>
-          <CardTitle>Role Distribution</CardTitle>
-          <CardDescription>Users segmented by role</CardDescription>
+          <CardTitle>Phân bổ vai trò</CardTitle>
+          <CardDescription>Người dùng được phân loại theo vai trò</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="h-[300px] w-full">
@@ -128,10 +124,10 @@ export function AdminCharts({
       </Card>
 
       {/* Message Activity Chart */}
-      <Card className="lg:col-span-2">
+      <Card className="lg:col-span-3">
         <CardHeader>
-          <CardTitle>Message Activity</CardTitle>
-          <CardDescription>Daily message volume across all channels</CardDescription>
+          <CardTitle>Hoạt động tin nhắn</CardTitle>
+          <CardDescription>Lưu lượng tin nhắn mỗi ngày trên tất cả các kênh</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="h-[300px] w-full">
@@ -144,7 +140,7 @@ export function AdminCharts({
                   fontSize={12} 
                   tickLine={false} 
                   axisLine={false}
-                  tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  tickFormatter={(value) => new Date(value).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
                 />
                 <YAxis 
                   stroke="#888888" 
@@ -163,36 +159,6 @@ export function AdminCharts({
                   barSize={30}
                 />
               </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Department Distribution */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Departments</CardTitle>
-          <CardDescription>Users by department</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={departmentDistribution}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  dataKey="count"
-                  nameKey="department"
-                  label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
-                >
-                  {departmentDistribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[(index + 2) % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
             </ResponsiveContainer>
           </div>
         </CardContent>

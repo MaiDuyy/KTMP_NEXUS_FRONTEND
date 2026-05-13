@@ -20,7 +20,7 @@ export interface Channel {
   name: string;
   description?: string;
   topic?: string;
-  type: 'PUBLIC' | 'PRIVATE' | 'ANNOUNCEMENT';
+  type?: 'PUBLIC' | 'PRIVATE' | 'ANNOUNCEMENT' | 'GUEST';
   workspaceId: string;
   categoryId?: string;
   isDefault: boolean;
@@ -45,6 +45,7 @@ export interface ChannelMember {
   id: string;
   userId: string;
   channelId: string;
+  role?: string;
   canPost: boolean;
   isMuted: boolean;
   isPinned: boolean;
@@ -62,7 +63,7 @@ export interface CreateChannelRequest {
   name: string;
   description?: string;
   topic?: string;
-  type?: 'PUBLIC' | 'PRIVATE' | 'ANNOUNCEMENT';
+  type?: 'PUBLIC' | 'PRIVATE' | 'ANNOUNCEMENT' | 'GUEST';
   categoryId?: string;
   isDefault?: boolean;
 }
@@ -111,11 +112,11 @@ export const channelApi = apiSlice.injectEndpoints({
         url: `/workspaces/${workspaceId}/channels/browse`,
         params,
       }),
-      transformResponse: (response: { success: boolean } & PaginatedChannels) => ({
-        channels: response.channels,
-        total: response.total,
-        page: response.page,
-        totalPages: response.totalPages,
+      transformResponse: (response: any) => ({
+        channels: response.channels || response.items || [],
+        total: response.total || 0,
+        page: response.page || 1,
+        totalPages: response.totalPages || 1,
       }),
     }),
 

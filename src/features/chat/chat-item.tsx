@@ -430,7 +430,7 @@ export const ChatItem = ({
                                         <DropdownMenuSeparator />
 
                                         {/* Category selection */}
-                                        <DropdownMenuItem className="font-medium text-gray-500" disabled>
+                                        {/* <DropdownMenuItem className="font-medium text-gray-500" disabled>
                                             <Tag className="h-4 w-4 mr-2" />
                                             Phân loại
                                         </DropdownMenuItem>
@@ -445,7 +445,7 @@ export const ChatItem = ({
                                             </DropdownMenuItem>
                                         ))}
 
-                                        <DropdownMenuSeparator />
+                                        <DropdownMenuSeparator /> */}
 
                                         {/* Kết bạn hoặc Hủy kết bạn tùy trạng thái */}
                                         {isFriend ? (

@@ -483,6 +483,37 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
         dispatch(apiSlice.util.invalidateTags([{ type: "Tasks" as any, id: data.chatId }]));
       },
 
+      // ====== Channel Events ======
+      onChannelNew: (data) => {
+        console.log("[RealtimeChat] 📣 Channel created:", data);
+        dispatch(apiSlice.util.invalidateTags(["Channels", "Chats", "Workspaces"] as any));
+      },
+
+      onChannelUpdated: (data) => {
+        console.log("[RealtimeChat] 🔄 Channel updated:", data);
+        dispatch(apiSlice.util.invalidateTags(["Channels", "Chats", "Workspaces", { type: "Channels", id: data.channelId }] as any));
+      },
+
+      onChannelDeleted: (data) => {
+        console.log("[RealtimeChat] 🗑️ Channel deleted:", data);
+        dispatch(apiSlice.util.invalidateTags(["Channels", "Chats", "Workspaces"] as any));
+      },
+
+      onChannelMemberUpdated: (data) => {
+        console.log("[RealtimeChat] 👥 Channel member updated:", data);
+        dispatch(apiSlice.util.invalidateTags(["Channels", "WorkspaceMembers", "Members", { type: "Channels", id: data.channelId }] as any));
+      },
+
+      onChannelMemberRemoved: (data) => {
+        console.log("[RealtimeChat] 🚪 Channel member removed:", data);
+        dispatch(apiSlice.util.invalidateTags(["Channels", "WorkspaceMembers", "Members", { type: "Channels", id: data.channelId }] as any));
+      },
+
+      onChannelArchived: (data) => {
+        console.log("[RealtimeChat] 📦 Channel archived:", data);
+        dispatch(apiSlice.util.invalidateTags(["Channels", "Chats", { type: "Channels", id: data.channelId }] as any));
+      },
+
       onUsersOnline: (data) => {
         console.log(
           "[RealtimeChat] 📋 Online users list:",

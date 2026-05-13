@@ -245,401 +245,208 @@ export function AccountSettingsPage() {
     }
 
     return (
-        // <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-gray-900 dark:to-gray-800 p-4 md:p-8">
-        <div className="max-w-full mx-auto space-y-6">
+        <div className="max-w-5xl mx-auto py-8 px-4 md:px-8 space-y-10">
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold">Cài đặt tài khoản</h1>
-                    <p className="text-muted-foreground">Quản lý thông tin cá nhân của bạn</p>
-                </div>
-                {/* <Button variant="destructive" onClick={handleLogout} disabled={isLoggingOut}>
-                    {isLoggingOut ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                        <LogOut className="mr-2 h-4 w-4" />
-                    )}
-                    Đăng xuất
-                </Button> */}
+            <div className="space-y-1">
+                <h1 className="text-2xl font-semibold tracking-tight">Cài đặt tài khoản</h1>
+                <p className="text-sm text-muted-foreground">Quản lý thông tin cá nhân và cài đặt bảo mật của bạn.</p>
             </div>
 
-            {/* Profile Card */}
-            <Card>
-                <CardHeader className="pb-4">
-                    <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-6">
-                            <AvatarUpload
-                                currentAvatar={currentAvatar}
-                                name={user.name}
-                                onAvatarChange={handleAvatarChange}
-                                size="xl"
-                            />
-                            <div>
-                                <CardTitle className="text-2xl">{user.name}</CardTitle>
-                                <CardDescription className="flex items-center gap-2 mt-1">
-                                    <Mail className="h-4 w-4" />
-                                    {user.email}
-                                </CardDescription>
-                                <div className="flex items-center gap-2 mt-2">
-                                    <Badge variant={user.isVerified ? "default" : "secondary"}>
-                                        <Shield className="h-3 w-3 mr-1" />
-                                        {user.isVerified ? "Đã xác thực" : "Chưa xác thực"}
-                                    </Badge>
-                                    <Badge variant="outline">
-                                        {user.role}
-                                    </Badge>
-                                    {/* <Badge
-                                        variant="outline"
-                                        className={user.isOnline ? "border-green-500 text-green-600" : ""}
-                                    >
-                                        <Circle className={`h-2 w-2 mr-1 ${user.isOnline ? "fill-green-500 text-green-500" : ""}`} />
-                                        {user.isOnline ? "Online" : "Offline"}
-                                    </Badge> */}
-                                </div>
-                            </div>
-                        </div>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setIsEditingProfile(!isEditingProfile)}
-                        >
-                            <Edit3 className="h-4 w-4 mr-2" />
-                            {isEditingProfile ? "Hủy" : "Chỉnh sửa"}
-                        </Button>
-                    </div>
-                </CardHeader>
+            <Separator className="my-6" />
 
-                <Separator />
-
-                <CardContent className="pt-6">
-                    {isEditingProfile ? (
-                        <Form {...profileForm}>
-                            <form onSubmit={profileForm.handleSubmit(handleUpdateProfile)} className="space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <FormField
-                                        control={profileForm.control}
-                                        name="name"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Họ và tên</FormLabel>
-                                                <FormControl>
-                                                    <Input {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
+            {/* Profile Section */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="md:col-span-1 space-y-1">
+                    <h2 className="text-base font-medium">Hồ sơ cá nhân</h2>
+                    <p className="text-sm text-muted-foreground">
+                        Thông tin cơ bản của bạn, được hiển thị công khai với các thành viên khác trong tổ chức.
+                    </p>
+                </div>
+                <div className="md:col-span-2">
+                    <Card className="shadow-sm border-muted/60">
+                        <CardHeader className="pb-5 border-b border-muted/40">
+                            <div className="flex items-start justify-between">
+                                <div className="flex items-center gap-4">
+                                    <AvatarUpload
+                                        currentAvatar={currentAvatar}
+                                        name={user.name}
+                                        onAvatarChange={handleAvatarChange}
+                                        size="md"
                                     />
-                                    <FormField
-                                        control={profileForm.control}
-                                        name="gender"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Giới tính</FormLabel>
-                                                <Select onValueChange={field.onChange} value={field.value}>
-                                                    <FormControl>
-                                                        <SelectTrigger>
-                                                            <SelectValue placeholder="Chọn giới tính" />
-                                                        </SelectTrigger>
-                                                    </FormControl>
-                                                    <SelectContent>
-                                                        <SelectItem value="male">Nam</SelectItem>
-                                                        <SelectItem value="female">Nữ</SelectItem>
-                                                        <SelectItem value="other">Khác</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={profileForm.control}
-                                        name="birthDate"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Ngày sinh</FormLabel>
-                                                <FormControl>
-                                                    <Input type="date" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={profileForm.control}
-                                        name="location"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Địa chỉ</FormLabel>
-                                                <FormControl>
-                                                    <Input placeholder="TP. Hồ Chí Minh" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
+                                    <div className="space-y-1">
+                                        <CardTitle className="text-lg font-semibold">{user.name}</CardTitle>
+                                        <CardDescription className="text-sm">
+                                            {user.email}
+                                        </CardDescription>
+                                        <div className="flex items-center gap-2 pt-1">
+                                            <Badge variant={user.isVerified ? "secondary" : "outline"} className="font-medium text-[10px] uppercase tracking-wider px-2 py-0.5">
+                                                {user.isVerified ? "Đã xác thực" : "Chưa xác thực"}
+                                            </Badge>
+                                            <Badge variant="outline" className="font-medium text-[10px] uppercase tracking-wider px-2 py-0.5 bg-muted/20">
+                                                {user.role}
+                                            </Badge>
+                                        </div>
+                                    </div>
                                 </div>
-                                <Button type="submit" disabled={isUpdating}>
-                                    {isUpdating ? (
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    ) : (
-                                        <Save className="mr-2 h-4 w-4" />
-                                    )}
-                                    Lưu thay đổi
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={() => setIsEditingProfile(!isEditingProfile)}
+                                    className="h-8 shadow-none"
+                                >
+                                    <Edit3 className="h-3.5 w-3.5 mr-2" />
+                                    {isEditingProfile ? "Hủy" : "Chỉnh sửa"}
                                 </Button>
-                            </form>
-                        </Form>
-                    ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="flex items-center gap-3">
-                                <User className="h-5 w-5 text-muted-foreground" />
-                                <div>
-                                    <p className="text-sm text-muted-foreground">Họ và tên</p>
-                                    <p className="font-medium">{user.name}</p>
-                                </div>
                             </div>
-                            <div className="flex items-center gap-3">
-                                <Phone className="h-5 w-5 text-muted-foreground" />
-                                <div>
-                                    <p className="text-sm text-muted-foreground">Số điện thoại</p>
-                                    <p className="font-medium">{user.number}</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <Calendar className="h-5 w-5 text-muted-foreground" />
-                                <div>
-                                    <p className="text-sm text-muted-foreground">Ngày sinh</p>
-                                    <p className="font-medium">
-                                        {user.birthDate
-                                            ? new Date(user.birthDate).toLocaleDateString("vi-VN")
-                                            : "Chưa cập nhật"}
-                                    </p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <MapPin className="h-5 w-5 text-muted-foreground" />
-                                <div>
-                                    <p className="text-sm text-muted-foreground">Địa chỉ</p>
-                                    <p className="font-medium">{user.location || "Chưa cập nhật"}</p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
+                        </CardHeader>
 
-            {/* Status Card */}
-            <Card>
-                <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <CardTitle className="flex items-center gap-2">
-                                <Settings className="h-5 w-5" />
-                                Trạng thái hoạt động
+                        <CardContent className="pt-6">
+                            {isEditingProfile ? (
+                                <Form {...profileForm}>
+                                    <form onSubmit={profileForm.handleSubmit(handleUpdateProfile)} className="space-y-4">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                            <FormField
+                                                control={profileForm.control}
+                                                name="name"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel className="text-xs uppercase text-muted-foreground font-semibold tracking-wider">Họ và tên</FormLabel>
+                                                        <FormControl>
+                                                            <Input className="bg-muted/30" {...field} />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={profileForm.control}
+                                                name="gender"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel className="text-xs uppercase text-muted-foreground font-semibold tracking-wider">Giới tính</FormLabel>
+                                                        <Select onValueChange={field.onChange} value={field.value}>
+                                                            <FormControl>
+                                                                <SelectTrigger className="bg-muted/30">
+                                                                    <SelectValue placeholder="Chọn giới tính" />
+                                                                </SelectTrigger>
+                                                            </FormControl>
+                                                            <SelectContent>
+                                                                <SelectItem value="male">Nam</SelectItem>
+                                                                <SelectItem value="female">Nữ</SelectItem>
+                                                                <SelectItem value="other">Khác</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={profileForm.control}
+                                                name="birthDate"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel className="text-xs uppercase text-muted-foreground font-semibold tracking-wider">Ngày sinh</FormLabel>
+                                                        <FormControl>
+                                                            <Input className="bg-muted/30" type="date" {...field} />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <FormField
+                                                control={profileForm.control}
+                                                name="location"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel className="text-xs uppercase text-muted-foreground font-semibold tracking-wider">Địa chỉ</FormLabel>
+                                                        <FormControl>
+                                                            <Input className="bg-muted/30" placeholder="TP. Hồ Chí Minh" {...field} />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        </div>
+                                        <div className="flex justify-end pt-2">
+                                            <Button type="submit" disabled={isUpdating} size="sm">
+                                                {isUpdating ? (
+                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                ) : (
+                                                    <Save className="mr-2 h-4 w-4" />
+                                                )}
+                                                Lưu thay đổi
+                                            </Button>
+                                        </div>
+                                    </form>
+                                </Form>
+                            ) : (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-8">
+                                    <div className="space-y-1.5">
+                                        <p className="text-xs uppercase text-muted-foreground font-semibold tracking-wider">Họ và tên</p>
+                                        <p className="text-sm font-medium">{user.name}</p>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <p className="text-xs uppercase text-muted-foreground font-semibold tracking-wider">Số điện thoại</p>
+                                        <p className="text-sm font-medium">{user.number || "Chưa cập nhật"}</p>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <p className="text-xs uppercase text-muted-foreground font-semibold tracking-wider">Ngày sinh</p>
+                                        <p className="text-sm font-medium">
+                                            {user.birthDate
+                                                ? new Date(user.birthDate).toLocaleDateString("vi-VN")
+                                                : "Chưa cập nhật"}
+                                        </p>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <p className="text-xs uppercase text-muted-foreground font-semibold tracking-wider">Địa chỉ</p>
+                                        <p className="text-sm font-medium">{user.location || "Chưa cập nhật"}</p>
+                                    </div>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
+
+            <Separator className="my-6 border-muted/60" />
+
+            {/* Status Section */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="md:col-span-1 space-y-1">
+                    <h2 className="text-base font-medium">Trạng thái hoạt động</h2>
+                    <p className="text-sm text-muted-foreground">
+                        Hiển thị trạng thái hiện tại của bạn cho đồng nghiệp trong không gian làm việc.
+                    </p>
+                </div>
+                <div className="md:col-span-2">
+                    <Card className="shadow-sm border-muted/60">
+                        <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-muted/40">
+                            <CardTitle className="text-base font-medium flex items-center">
+                                Trạng thái
                             </CardTitle>
-                            <CardDescription>
-                                Hiển thị trạng thái cho bạn bè thấy
-                            </CardDescription>
-                        </div>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setIsEditingStatus(!isEditingStatus)}
-                        >
-                            <Edit3 className="h-4 w-4 mr-2" />
-                            {isEditingStatus ? "Hủy" : "Chỉnh sửa"}
-                        </Button>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    {isEditingStatus ? (
-                        <Form {...statusForm}>
-                            <form onSubmit={statusForm.handleSubmit(handleUpdateStatus)} className="space-y-4">
-                                <FormField
-                                    control={statusForm.control}
-                                    name="status"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormControl>
-                                                <Textarea
-                                                    placeholder="Nhập trạng thái của bạn (VD: Đang bận, Đang họp...)"
-                                                    className="resize-none"
-                                                    {...field}
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <Button type="submit" disabled={isUpdatingStatus}>
-                                    {isUpdatingStatus ? (
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    ) : (
-                                        <Save className="mr-2 h-4 w-4" />
-                                    )}
-                                    Cập nhật
-                                </Button>
-                            </form>
-                        </Form>
-                    ) : (
-                        <div className="p-4 bg-muted/50 rounded-lg">
-                            <p className={user.status ? "text-foreground" : "text-muted-foreground italic"}>
-                                {user.status || "Chưa đặt trạng thái"}
-                            </p>
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
-
-            {/* Account Info */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Thông tin tài khoản</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="flex justify-between items-center p-4 bg-muted/50 rounded-lg">
-                        <div>
-                            <p className="font-medium">Ngày tạo tài khoản</p>
-                            <p className="text-sm text-muted-foreground">
-                                {user.createdAt
-                                    ? new Date(user.createdAt).toLocaleDateString("vi-VN", {
-                                        year: "numeric",
-                                        month: "long",
-                                        day: "numeric",
-                                    })
-                                    : "Không xác định"}
-                            </p>
-                        </div>
-                    </div>
-                    <div className="flex justify-between items-center p-4 bg-muted/50 rounded-lg">
-                        <div>
-                            <p className="font-medium">Lần đăng nhập cuối</p>
-                            <p className="text-sm text-muted-foreground">
-                                {user.lastSeen
-                                    ? new Date(user.lastSeen).toLocaleString("vi-VN")
-                                    : "Chưa xác định"}
-                            </p>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-
-            {/* Security Card */}
-            <Card>
-                <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <CardTitle className="flex items-center gap-2">
-                                <Lock className="h-5 w-5" />
-                                Bảo mật
-                            </CardTitle>
-                            <CardDescription>
-                                Quản lý mật khẩu và bảo mật tài khoản
-                            </CardDescription>
-                        </div>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex justify-between items-center p-4 bg-muted/50 rounded-lg">
-                        <div className="flex items-center gap-3">
-                            <Key className="h-5 w-5 text-muted-foreground" />
-                            <div>
-                                <p className="font-medium">Mật khẩu</p>
-                                <p className="text-sm text-muted-foreground">Thay đổi mật khẩu đăng nhập</p>
-                            </div>
-                        </div>
-                        <Dialog open={showPasswordModal} onOpenChange={setShowPasswordModal}>
-                            <DialogTrigger asChild>
-                                <Button variant="outline" size="sm">
-                                    <Edit3 className="h-4 w-4 mr-2" />
-                                    Đổi mật khẩu
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent className="sm:max-w-md">
-                                <DialogHeader>
-                                    <DialogTitle className="flex items-center gap-2">
-                                        <Lock className="h-5 w-5" />
-                                        Đổi mật khẩu
-                                    </DialogTitle>
-                                    <DialogDescription>
-                                        Nhập mật khẩu hiện tại và mật khẩu mới để thay đổi.
-                                    </DialogDescription>
-                                </DialogHeader>
-                                <Form {...passwordForm}>
-                                    <form onSubmit={passwordForm.handleSubmit(handleChangePassword)} className="space-y-4">
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => setIsEditingStatus(!isEditingStatus)}
+                                className="h-8 shadow-none"
+                            >
+                                <Edit3 className="h-3.5 w-3.5 mr-2" />
+                                {isEditingStatus ? "Hủy" : "Cập nhật"}
+                            </Button>
+                        </CardHeader>
+                        <CardContent className="pt-6">
+                            {isEditingStatus ? (
+                                <Form {...statusForm}>
+                                    <form onSubmit={statusForm.handleSubmit(handleUpdateStatus)} className="space-y-4">
                                         <FormField
-                                            control={passwordForm.control}
-                                            name="currentPassword"
+                                            control={statusForm.control}
+                                            name="status"
                                             render={({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel>Mật khẩu hiện tại</FormLabel>
                                                     <FormControl>
-                                                        <div className="relative">
-                                                            <Input
-                                                                type={showCurrentPassword ? "text" : "password"}
-                                                                placeholder="Nhập mật khẩu hiện tại"
-                                                                {...field}
-                                                            />
-                                                            <Button
-                                                                type="button"
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="absolute right-0 top-0 h-full px-3"
-                                                                onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                                                            >
-                                                                {showCurrentPassword ? (
-                                                                    <EyeOff className="h-4 w-4" />
-                                                                ) : (
-                                                                    <Eye className="h-4 w-4" />
-                                                                )}
-                                                            </Button>
-                                                        </div>
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={passwordForm.control}
-                                            name="newPassword"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Mật khẩu mới</FormLabel>
-                                                    <FormControl>
-                                                        <div className="relative">
-                                                            <Input
-                                                                type={showNewPassword ? "text" : "password"}
-                                                                placeholder="Nhập mật khẩu mới"
-                                                                {...field}
-                                                            />
-                                                            <Button
-                                                                type="button"
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="absolute right-0 top-0 h-full px-3"
-                                                                onClick={() => setShowNewPassword(!showNewPassword)}
-                                                            >
-                                                                {showNewPassword ? (
-                                                                    <EyeOff className="h-4 w-4" />
-                                                                ) : (
-                                                                    <Eye className="h-4 w-4" />
-                                                                )}
-                                                            </Button>
-                                                        </div>
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={passwordForm.control}
-                                            name="confirmPassword"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Xác nhận mật khẩu mới</FormLabel>
-                                                    <FormControl>
-                                                        <Input
-                                                            type="password"
-                                                            placeholder="Nhập lại mật khẩu mới"
+                                                        <Textarea
+                                                            placeholder="Nhập trạng thái của bạn (VD: Đang bận, Đang họp...)"
+                                                            className="resize-none bg-muted/30 min-h-[100px]"
                                                             {...field}
                                                         />
                                                     </FormControl>
@@ -647,33 +454,203 @@ export function AccountSettingsPage() {
                                                 </FormItem>
                                             )}
                                         />
-                                        <DialogFooter className="pt-4">
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                onClick={() => {
-                                                    setShowPasswordModal(false);
-                                                    passwordForm.reset();
-                                                }}
-                                            >
-                                                Hủy
-                                            </Button>
-                                            <Button type="submit" disabled={isChangingPassword}>
-                                                {isChangingPassword ? (
+                                        <div className="flex justify-end pt-2">
+                                            <Button type="submit" disabled={isUpdatingStatus} size="sm">
+                                                {isUpdatingStatus ? (
                                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                                 ) : (
                                                     <Save className="mr-2 h-4 w-4" />
                                                 )}
-                                                Đổi mật khẩu
+                                                Lưu trạng thái
                                             </Button>
-                                        </DialogFooter>
+                                        </div>
                                     </form>
                                 </Form>
-                            </DialogContent>
-                        </Dialog>
-                    </div>
-                </CardContent>
-            </Card>
+                            ) : (
+                                <div className="p-4 bg-muted/30 rounded-lg border border-muted/40 flex items-center min-h-[80px]">
+                                    <p className={`text-sm ${user.status ? "text-foreground font-medium" : "text-muted-foreground italic"}`}>
+                                        {user.status || "Chưa đặt trạng thái hoạt động"}
+                                    </p>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
+
+            <Separator className="my-6 border-muted/60" />
+
+            {/* Security Section */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="md:col-span-1 space-y-1">
+                    <h2 className="text-base font-medium">Bảo mật</h2>
+                    <p className="text-sm text-muted-foreground">
+                        Quản lý mật khẩu đăng nhập và thông tin đăng nhập cuối cùng.
+                    </p>
+                </div>
+                <div className="md:col-span-2 space-y-6">
+                    <Card className="shadow-sm border-muted/60">
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-base font-medium">Mật khẩu</CardTitle>
+                            <CardDescription>Cập nhật mật khẩu để bảo vệ tài khoản</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex justify-between items-center py-1">
+                                <p className="text-sm text-muted-foreground">Mật khẩu đăng nhập</p>
+                                <Dialog open={showPasswordModal} onOpenChange={setShowPasswordModal}>
+                                    <DialogTrigger asChild>
+                                        <Button variant="secondary" size="sm" className="h-8 shadow-none">
+                                            Thay đổi
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="sm:max-w-md">
+                                        <DialogHeader>
+                                            <DialogTitle className="text-xl">Đổi mật khẩu</DialogTitle>
+                                            <DialogDescription>
+                                                Nhập mật khẩu hiện tại và mật khẩu mới để thay đổi.
+                                            </DialogDescription>
+                                        </DialogHeader>
+                                        <Form {...passwordForm}>
+                                            <form onSubmit={passwordForm.handleSubmit(handleChangePassword)} className="space-y-4 pt-2">
+                                                <FormField
+                                                    control={passwordForm.control}
+                                                    name="currentPassword"
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel className="text-xs uppercase text-muted-foreground font-semibold">Mật khẩu hiện tại</FormLabel>
+                                                            <FormControl>
+                                                                <div className="relative">
+                                                                    <Input
+                                                                        type={showCurrentPassword ? "text" : "password"}
+                                                                        className="bg-muted/30"
+                                                                        {...field}
+                                                                    />
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                                                                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                                                                    >
+                                                                        {showCurrentPassword ? (
+                                                                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                                                                        ) : (
+                                                                            <Eye className="h-4 w-4 text-muted-foreground" />
+                                                                        )}
+                                                                    </Button>
+                                                                </div>
+                                                            </FormControl>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                                <FormField
+                                                    control={passwordForm.control}
+                                                    name="newPassword"
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel className="text-xs uppercase text-muted-foreground font-semibold">Mật khẩu mới</FormLabel>
+                                                            <FormControl>
+                                                                <div className="relative">
+                                                                    <Input
+                                                                        type={showNewPassword ? "text" : "password"}
+                                                                        className="bg-muted/30"
+                                                                        {...field}
+                                                                    />
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                                                                        onClick={() => setShowNewPassword(!showNewPassword)}
+                                                                    >
+                                                                        {showNewPassword ? (
+                                                                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                                                                        ) : (
+                                                                            <Eye className="h-4 w-4 text-muted-foreground" />
+                                                                        )}
+                                                                    </Button>
+                                                                </div>
+                                                            </FormControl>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                                <FormField
+                                                    control={passwordForm.control}
+                                                    name="confirmPassword"
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel className="text-xs uppercase text-muted-foreground font-semibold">Xác nhận mật khẩu</FormLabel>
+                                                            <FormControl>
+                                                                <Input
+                                                                    type="password"
+                                                                    className="bg-muted/30"
+                                                                    {...field}
+                                                                />
+                                                            </FormControl>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                                <DialogFooter className="pt-6">
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        onClick={() => {
+                                                            setShowPasswordModal(false);
+                                                            passwordForm.reset();
+                                                        }}
+                                                    >
+                                                        Hủy
+                                                    </Button>
+                                                    <Button type="submit" disabled={isChangingPassword}>
+                                                        {isChangingPassword ? (
+                                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                        ) : (
+                                                            <Save className="mr-2 h-4 w-4" />
+                                                        )}
+                                                        Lưu mật khẩu
+                                                    </Button>
+                                                </DialogFooter>
+                                            </form>
+                                        </Form>
+                                    </DialogContent>
+                                </Dialog>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="shadow-sm border-muted/60">
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-base font-medium">Hoạt động đăng nhập</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="flex justify-between items-center">
+                                <p className="text-sm text-muted-foreground">Ngày tham gia</p>
+                                <p className="text-sm font-medium">
+                                    {user.createdAt
+                                        ? new Date(user.createdAt).toLocaleDateString("vi-VN", {
+                                            year: "numeric",
+                                            month: "long",
+                                            day: "numeric",
+                                        })
+                                        : "Không xác định"}
+                                </p>
+                            </div>
+                            <Separator className="border-muted/40" />
+                            <div className="flex justify-between items-center">
+                                <p className="text-sm text-muted-foreground">Lần đăng nhập cuối</p>
+                                <p className="text-sm font-medium">
+                                    {user.lastSeen
+                                        ? new Date(user.lastSeen).toLocaleString("vi-VN")
+                                        : "Chưa xác định"}
+                                </p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
         </div>
         // </div>
     );

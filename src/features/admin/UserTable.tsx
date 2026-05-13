@@ -72,17 +72,14 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { InviteDialog } from './InviteDialog';
 import { UserEditDialog } from './UserEditDialog';
-import { useRealtimeChat } from '@/src/hooks/useRealtimeChat';
+import { useRealtimeChat, useIsUserOnline } from '@/src/hooks/useRealtimeChat';
 import { useAppSelector } from '@/src/redux/hooks';
+import { getAvatarUrl } from '@/src/utils/image-utils';
 
 const ROLE_LABELS: Record<string, string> = {
     SUPER_ADMIN: 'Quản trị viên cấp cao',
     ADMIN: 'Quản trị viên',
-    WORKSPACE_MANAGER: 'Quản lý không gian làm việc',
-    WORKSPACE_OWNER: 'Chủ sở hữu Không gian làm việc',
-    WORKSPACE_ADMIN: 'Quản trị viên Không gian làm việc',
-    WORKSPACE_MEMBER: 'Thành viên Không gian làm việc',
-    WORKSPACE_GUEST: 'Khách Không gian làm việc',
+    WORKSPACE_MANAGER: 'Quản lý Workspace',
     EMPLOYEE: 'Nhân viên',
 };
 
@@ -96,6 +93,119 @@ const ROLE_COLORS: Record<string, string> = {
     WORKSPACE_GUEST: 'bg-gray-100 text-gray-700 border-gray-200',
     EMPLOYEE: 'bg-green-100 text-green-700 border-green-200',
 };
+
+function UserRow({ user, isOnline, currentUser, onEdit, onRole, onQuota, onSuspend, onUnsuspend, onDelete }: any) {
+    
+    const getInitials = (name: string) => {
+        return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    };
+
+    return (
+        <TableRow className="hover:bg-slate-50/50 transition-colors">
+            <TableCell>
+                <div className="flex items-center gap-3">
+                    <div className="relative">
+                        <Avatar className="h-10 w-10 border-2 border-white shadow-sm">
+                            <AvatarImage src={getAvatarUrl(user.avatar, user.name)} alt={user.name} />
+                            <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                        </Avatar>
+                        {isOnline && (
+                            <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-white" />
+                        )}
+                    </div>
+                    <div className="flex flex-col">
+                        <p className="font-semibold text-slate-900">{user.name}</p>
+                        <p className="text-xs text-muted-foreground">{user.email}</p>
+                    </div>
+                </div>
+            </TableCell>
+            <TableCell>
+                {user.role ? (
+                    <Badge
+                        variant="outline"
+                        className={cn("font-medium", ROLE_COLORS[user.role] || "bg-slate-50 text-slate-600")}
+                    >
+                        {ROLE_LABELS[user.role] || user.role}
+                    </Badge>
+                ) : (
+                    <span className="text-sm text-slate-400">-</span>
+                )}
+            </TableCell>
+            <TableCell>
+                <Badge
+                    variant="outline"
+                    className={cn(
+                        "font-medium px-2.5 py-0.5 rounded-full",
+                        user.isActive && !user.isSuspended
+                            ? "bg-green-50 text-green-700 border-green-200"
+                            : "bg-red-50 text-red-700 border-red-200"
+                    )}
+                >
+                    {user.isSuspended ? 'Đã đình chỉ' : user.isActive ? 'Đang hoạt động' : 'Ngưng hoạt động'}
+                </Badge>
+            </TableCell>
+            <TableCell>
+                <div className="flex flex-col gap-1">
+                    <span className="text-xs font-medium text-slate-500">
+                        {isOnline ? 'Đang trực tuyến' : user.lastSeen
+                            ? `Truy cập lần cuối ${format(new Date(user.lastSeen), 'HH:mm dd/MM')}`
+                            : 'Chưa từng truy cập'
+                        }
+                    </span>
+                </div>
+            </TableCell>
+            <TableCell>
+                <span className="text-sm text-slate-500 font-medium">
+                    {format(new Date(user.createdAt), 'dd/MM/yyyy')}
+                </span>
+            </TableCell>
+            <TableCell>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-slate-100 rounded-full">
+                            <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuLabel>Thao tác</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => onEdit(user)}>
+                            <Edit className="w-4 h-4 mr-2" />
+                            Chỉnh sửa hồ sơ
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onRole(user)}>
+                            <Shield className="w-4 h-4 mr-2" />
+                            Quản lý vai trò
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onQuota(user)}>
+                            <Building2 className="w-4 h-4 mr-2" />
+                            Quản lý định mức
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        {user.isSuspended ? (
+                            <DropdownMenuItem onClick={() => onUnsuspend(user)}>
+                                <UserCheck className="w-4 h-4 mr-2 text-green-600" />
+                                Kích hoạt lại
+                            </DropdownMenuItem>
+                        ) : (
+                            <DropdownMenuItem onClick={() => onSuspend(user)}>
+                                <Ban className="w-4 h-4 mr-2 text-amber-600" />
+                                Tạm đình chỉ
+                            </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem
+                            className="text-red-600 focus:text-red-600"
+                            onClick={() => onDelete(user)}
+                        >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Xóa người dùng
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </TableCell>
+        </TableRow>
+    );
+}
 
 interface UserTableProps {
     onInviteUser?: () => void;
@@ -151,12 +261,10 @@ export function UserTable({ onInviteUser, onEditUser }: UserTableProps) {
         }
 
         try {
-            if (deleteMode === 'anonymize') {
-                // Giả sử API hỗ trợ query param hoặc biến thể cho anonymize
-                await deleteUser(selectedUser.id + '?anonymize=true').unwrap();
-            } else {
-                await deleteUser(selectedUser.id).unwrap();
-            }
+            await deleteUser({ 
+                id: selectedUser.id, 
+                anonymize: deleteMode === 'anonymize' 
+            }).unwrap();
             toast.success(deleteMode === 'anonymize' ? 'Vô danh hóa người dùng thành công' : 'Xóa người dùng vĩnh viễn thành công');
             setShowDeleteDialog(false);
             setSelectedUser(null);
@@ -310,132 +418,22 @@ export function UserTable({ onInviteUser, onEditUser }: UserTableProps) {
                             </TableRow>
                         ) : (
                             users.map((user) => (
-                                <TableRow key={user.id} className="hover:bg-slate-50/50 transition-colors">
-                                    <TableCell>
-                                        <div className="flex items-center gap-3">
-                                            <div className="relative">
-                                                <Avatar className="h-10 w-10 border-2 border-white shadow-sm">
-                                                    <AvatarImage src={user.avatar} alt={user.name} />
-                                                    <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
-                                                </Avatar>
-                                                {(onlineUsers.has(user.id) || user.isOnline) && (
-                                                    <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-white" />
-                                                )}
-                                            </div>
-                                            <div className="flex flex-col">
-                                                <p className="font-semibold text-slate-900">{user.name}</p>
-                                                <p className="text-xs text-muted-foreground">{user.email}</p>
-                                            </div>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        {user.role ? (
-                                            <Badge
-                                                variant="outline"
-                                                className={cn("font-medium", ROLE_COLORS[user.role] || "bg-slate-50 text-slate-600")}
-                                            >
-                                                {ROLE_LABELS[user.role] || user.role}
-                                            </Badge>
-                                        ) : (
-                                            <span className="text-sm text-slate-400">-</span>
-                                        )}
-                                    </TableCell>
-                                    <TableCell>
-                                        <Badge
-                                            variant="outline"
-                                            className={cn(
-                                                "font-medium px-2.5 py-0.5 rounded-full",
-                                                user.isActive && !user.isSuspended
-                                                    ? "bg-green-50 text-green-700 border-green-200"
-                                                    : "bg-red-50 text-red-700 border-red-200"
-                                            )}
-                                        >
-                                            {user.isSuspended ? 'Đã đình chỉ' : user.isActive ? 'Đang hoạt động' : 'Ngừng hoạt động'}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex flex-col gap-1">
-                                            <span className="text-xs font-medium text-slate-500">
-                                                {(onlineUsers.has(user.id) || user.isOnline) ? 'Đang trực tuyến' : user.lastSeen
-                                                    ? `Truy cập lần cuối ${format(new Date(user.lastSeen), 'HH:mm dd/MM')}`
-                                                    : 'Chưa từng truy cập'
-                                                }
-                                            </span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <span className="text-sm text-slate-500 font-medium">
-                                            {format(new Date(user.createdAt), 'dd/MM/yyyy')}
-                                        </span>
-                                    </TableCell>
-                                    <TableCell>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-slate-100 rounded-full">
-                                                    <MoreHorizontal className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end" className="w-48">
-                                                <DropdownMenuLabel>Thao tác</DropdownMenuLabel>
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuItem onClick={() => {
-                                                    setSelectedUser(user);
-                                                    setShowEditDialog(true);
-                                                    onEditUser?.(user);
-                                                }}>
-                                                    <Edit className="w-4 h-4 mr-2" />
-                                                    Chỉnh sửa hồ sơ
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => {
-                                                    setSelectedUser(user);
-                                                    setShowRoleDialog(true);
-                                                }}>
-                                                    <Shield className="w-4 h-4 mr-2" />
-                                                    Quản lý vai trò
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => {
-                                                    setSelectedUser(user);
-                                                    setQuotaValue(10); // Or fetch current from user object if added
-                                                    setShowQuotaDialog(true);
-                                                }}>
-                                                    <Building2 className="w-4 h-4 mr-2" />
-                                                    Quản lý định mức
-                                                </DropdownMenuItem>
-
-                                                <DropdownMenuSeparator />
-
-                                                {user.isSuspended ? (
-                                                    <DropdownMenuItem onClick={() => {
-                                                        setSelectedUser(user);
-                                                        setShowUnsuspendDialog(true);
-                                                    }}>
-                                                        <UserCheck className="w-4 h-4 mr-2 text-green-600" />
-                                                        Kích hoạt lại
-                                                    </DropdownMenuItem>
-                                                ) : (
-                                                    <DropdownMenuItem onClick={() => {
-                                                        setSelectedUser(user);
-                                                        setShowSuspendDialog(true);
-                                                    }}>
-                                                        <Ban className="w-4 h-4 mr-2 text-amber-600" />
-                                                        Tạm đình chỉ
-                                                    </DropdownMenuItem>
-                                                )}
-
-                                                <DropdownMenuItem
-                                                    className="text-red-600 focus:text-red-600"
-                                                    onClick={() => {
-                                                        setSelectedUser(user);
-                                                        setShowDeleteDialog(true);
-                                                    }}
-                                                >
-                                                    <Trash2 className="w-4 h-4 mr-2" />
-                                                    Xóa người dùng
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </TableCell>
-                                </TableRow>
+                                <UserRow
+                                    key={user.id}
+                                    user={user}
+                                    isOnline={onlineUsers.has(user.id)}
+                                    currentUser={currentUser}
+                                    onEdit={(u: any) => {
+                                        setSelectedUser(u);
+                                        setShowEditDialog(true);
+                                        onEditUser?.(u);
+                                    }}
+                                    onRole={(u : any) => { setSelectedUser(u); setShowRoleDialog(true); }}
+                                    onQuota={(u : any) => { setSelectedUser(u); setQuotaValue(10); setShowQuotaDialog(true); }}
+                                    onSuspend={(u : any) => { setSelectedUser(u); setShowSuspendDialog(true); }}
+                                    onUnsuspend={(u :any) => { setSelectedUser(u); setShowUnsuspendDialog(true); }}
+                                    onDelete={(u: any) => { setSelectedUser(u); setShowDeleteDialog(true); }}
+                                />
                             ))
                         )}
                     </TableBody>

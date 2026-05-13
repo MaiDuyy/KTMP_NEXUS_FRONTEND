@@ -4,6 +4,8 @@ import { useState } from "react";
 import {
     useUnfriendMutation,
     useBlockUserMutation,
+    useUnblockUserMutation,
+    useSendFriendRequestMutation,
 } from "@/src/redux/feature/friendApi";
 import { useGetOrCreatePrivateChatMutation } from "@/src/redux/feature/chatApi";
 import { Button } from "@/components/ui/button";
@@ -38,7 +40,10 @@ import {
     Video,
     MoreVertical,
     UserMinus,
+    UserPlus,
+    UserCheck,
     Ban,
+    ShieldCheck,
     Star,
     Heart,
     Briefcase,
@@ -56,12 +61,12 @@ import { toast } from "sonner";
 import { getAvatarUrl } from "@/src/utils/image-utils";
 
 // Friend category tags like Zalo
-const FRIEND_CATEGORIES = [
-    { id: "favorite", label: "Yêu thích", icon: Star, color: "text-yellow-500 bg-yellow-500/10" },
-    { id: "family", label: "Gia đình", icon: Heart, color: "text-red-500 bg-red-500/10" },
-    { id: "work", label: "Công việc", icon: Briefcase, color: "text-blue-500 bg-blue-500/10" },
-    { id: "friend", label: "Bạn bè", icon: Users, color: "text-green-500 bg-green-500/10" },
-];
+// const FRIEND_CATEGORIES = [
+//     { id: "favorite", label: "Yêu thích", icon: Star, color: "text-yellow-500 bg-yellow-500/10" },
+//     { id: "family", label: "Gia đình", icon: Heart, color: "text-red-500 bg-red-500/10" },
+//     { id: "work", label: "Công việc", icon: Briefcase, color: "text-blue-500 bg-blue-500/10" },
+//     { id: "friend", label: "Bạn bè", icon: Users, color: "text-green-500 bg-green-500/10" },
+// ];
 
 interface Friend {
     id: string;
@@ -75,6 +80,7 @@ interface Friend {
     category?: string;
     lastSeen?: string;
     isOnline?: boolean;
+    relation?: "none" | "friend" | "request_sent" | "request_received" | "blocked";
 }
 
 interface FriendProfileSheetProps {
@@ -108,9 +114,13 @@ export default function FriendProfileSheet({
 
     const [unfriend, { isLoading: isUnfriending }] = useUnfriendMutation();
     const [blockUser, { isLoading: isBlocking }] = useBlockUserMutation();
+    const [unblockUser, { isLoading: isUnblocking }] = useUnblockUserMutation();
+    const [sendRequest, { isLoading: isSendingRequest }] = useSendFriendRequestMutation();
     const [getOrCreateChat, { isLoading: isCreatingChat }] = useGetOrCreatePrivateChatMutation();
 
     if (!friend) return null;
+
+    const relation = friend.relation || "friend";
 
     console.log("friend " , friend);
     
@@ -157,22 +167,44 @@ export default function FriendProfileSheet({
         }
     };
 
-    // Handle category change
-    const handleCategoryChange = (categoryId: string) => {
-        setSelectedCategory(categoryId);
-        toast.success(`Đã phân loại ${friend.name} vào ${FRIEND_CATEGORIES.find(c => c.id === categoryId)?.label}`);
-        
-        // Save to localStorage as a temporary solution
-        if (typeof window !== 'undefined' && friend?.id) {
-            try {
-                const categories = JSON.parse(localStorage.getItem('friend_categories') || '{}');
-                categories[friend.id] = categoryId;
-                localStorage.setItem('friend_categories', JSON.stringify(categories));
-            } catch (e) {
-                console.error("Failed to save category to localStorage", e);
-            }
+    // Handle unblock
+    const handleUnblock = async () => {
+        try {
+            await unblockUser(friend.id).unwrap();
+            toast.success(`Đã bỏ chặn ${friend.name}`);
+            onClose();
+        } catch (error: any) {
+            toast.error(error?.data?.message || "Lỗi bỏ chặn người dùng");
         }
     };
+
+    // Handle send friend request
+    const handleSendRequest = async () => {
+        try {
+            await sendRequest({ receiverId: friend.id }).unwrap();
+            toast.success("Đã gửi lời mời kết bạn!");
+            onClose();
+        } catch (error: any) {
+            toast.error(error?.data?.message || "Lỗi gửi lời mời!");
+        }
+    };
+
+    // Handle category change
+    // const handleCategoryChange = (categoryId: string) => {
+    //     setSelectedCategory(categoryId);
+    //     toast.success(`Đã phân loại ${friend.name} vào ${FRIEND_CATEGORIES.find(c => c.id === categoryId)?.label}`);
+        
+    //     // Save to localStorage as a temporary solution
+    //     if (typeof window !== 'undefined' && friend?.id) {
+    //         try {
+    //             const categories = JSON.parse(localStorage.getItem('friend_categories') || '{}');
+    //             categories[friend.id] = categoryId;
+    //             localStorage.setItem('friend_categories', JSON.stringify(categories));
+    //         } catch (e) {
+    //             console.error("Failed to save category to localStorage", e);
+    //         }
+    //     }
+    // };
 
     return (
         <>
@@ -210,7 +242,7 @@ export default function FriendProfileSheet({
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48">
                                 {/* Category selection */}
-                                <DropdownMenuItem className="font-medium text-gray-500" disabled>
+                                {/* <DropdownMenuItem className="font-medium text-gray-500" disabled>
                                     <Tag className="h-4 w-4 mr-2" />
                                     Phân loại
                                 </DropdownMenuItem>
@@ -227,21 +259,45 @@ export default function FriendProfileSheet({
                                         )}
                                     </DropdownMenuItem>
                                 ))}
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                    onClick={() => setShowUnfriendDialog(true)}
-                                    className="text-orange-600"
-                                >
-                                    <UserMinus className="h-4 w-4 mr-2" />
-                                    Hủy kết bạn
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                    onClick={() => setShowBlockDialog(true)}
-                                    className="text-red-600"
-                                >
-                                    <Ban className="h-4 w-4 mr-2" />
-                                    Chặn người này
-                                </DropdownMenuItem>
+                                <DropdownMenuSeparator /> */}
+                                {/* Actions based on relation */}
+                                {relation === "friend" && (
+                                    <DropdownMenuItem
+                                        onClick={() => setShowUnfriendDialog(true)}
+                                        className="text-orange-600"
+                                    >
+                                        <UserMinus className="h-4 w-4 mr-2" />
+                                        Hủy kết bạn
+                                    </DropdownMenuItem>
+                                )}
+                                {(relation === "none" || relation === "request_received") && (
+                                    <DropdownMenuItem
+                                        onClick={handleSendRequest}
+                                        disabled={isSendingRequest}
+                                        className="text-blue-600"
+                                    >
+                                        <UserPlus className="h-4 w-4 mr-2" />
+                                        Kết bạn
+                                    </DropdownMenuItem>
+                                )}
+                                {relation === "blocked" ? (
+                                    <DropdownMenuItem
+                                        onClick={handleUnblock}
+                                        disabled={isUnblocking}
+                                        className="text-emerald-600 font-bold"
+                                    >
+                                        <ShieldCheck className="h-4 w-4 mr-2" />
+                                        Mở chặn
+                                    </DropdownMenuItem>
+                                ) : (
+                                    <DropdownMenuItem
+                                        onClick={() => setShowBlockDialog(true)}
+                                        className="text-red-600"
+                                    >
+                                        <Ban className="h-4 w-4 mr-2" />
+                                        Chặn người này
+                                    </DropdownMenuItem>
+                                )}
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
@@ -259,7 +315,7 @@ export default function FriendProfileSheet({
                             </p>
                         </div>
 
-                        {/* Category badge */}
+                        {/* Category badge
                         {selectedCategory && (
                             <div className="flex items-center gap-2">
                                 {FRIEND_CATEGORIES.filter(c => c.id === selectedCategory).map((cat) => (
@@ -269,7 +325,7 @@ export default function FriendProfileSheet({
                                     </Badge>
                                 ))}
                             </div>
-                        )}
+                        )} */}
 
                         {/* Quick actions */}
                         <div className="flex gap-3">
@@ -340,7 +396,7 @@ export default function FriendProfileSheet({
                         </div>
 
                         {/* Friend categories section */}
-                        <div className="space-y-4">
+                        {/* <div className="space-y-4">
                             <h3 className="font-semibold flex items-center gap-2">
                                 <Tag className="h-4 w-4" />
                                 Phân loại bạn bè
@@ -360,26 +416,61 @@ export default function FriendProfileSheet({
                                     </Button>
                                 ))}
                             </div>
-                        </div>
+                        </div> */}
 
                         {/* Danger zone */}
                         <div className="pt-4 border-t space-y-3">
-                            <Button
-                                variant="outline"
-                                className="w-full text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-                                onClick={() => setShowUnfriendDialog(true)}
-                            >
-                                <UserMinus className="h-4 w-4 mr-2" />
-                                Hủy kết bạn
-                            </Button>
-                            <Button
-                                variant="outline"
-                                className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
-                                onClick={() => setShowBlockDialog(true)}
-                            >
-                                <Ban className="h-4 w-4 mr-2" />
-                                Chặn người này
-                            </Button>
+                            {relation === "friend" && (
+                                <Button
+                                    variant="outline"
+                                    className="w-full text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                                    onClick={() => setShowUnfriendDialog(true)}
+                                >
+                                    <UserMinus className="h-4 w-4 mr-2" />
+                                    Hủy kết bạn
+                                </Button>
+                            )}
+                            {(relation === "none" || relation === "request_received") && (
+                                <Button
+                                    variant="outline"
+                                    className="w-full text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                    onClick={handleSendRequest}
+                                    disabled={isSendingRequest}
+                                >
+                                    <UserPlus className="h-4 w-4 mr-2" />
+                                    Kết bạn
+                                </Button>
+                            )}
+                            {relation === "request_sent" && (
+                                <Button
+                                    variant="outline"
+                                    className="w-full text-orange-600"
+                                    disabled
+                                >
+                                    <UserCheck className="h-4 w-4 mr-2" />
+                                    Đã gửi lời mời
+                                </Button>
+                            )}
+                            {relation === "blocked" ? (
+                                <Button
+                                    variant="outline"
+                                    className="w-full text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                    onClick={handleUnblock}
+                                    disabled={isUnblocking}
+                                >
+                                    <ShieldCheck className="h-4 w-4 mr-2" />
+                                    Mở chặn
+                                </Button>
+                            ) : (
+                                <Button
+                                    variant="outline"
+                                    className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    onClick={() => setShowBlockDialog(true)}
+                                >
+                                    <Ban className="h-4 w-4 mr-2" />
+                                    Chặn người này
+                                </Button>
+                            )}
                         </div>
                     </div>
                 </SheetContent>
