@@ -179,10 +179,11 @@ export const adminApi = apiSlice.injectEndpoints({
     }),
 
     // Delete user
-    deleteUser: builder.mutation<{ message: string }, string>({
-      query: (id) => ({
+    deleteUser: builder.mutation<{ message: string }, { id: string; anonymize?: boolean }>({
+      query: ({ id, anonymize }) => ({
         url: `/users/${id}`,
         method: 'DELETE',
+        params: anonymize ? { anonymize: 'true' } : {},
       }),
       invalidatesTags: ['Users'],
     }),

@@ -25,7 +25,7 @@ function StatusBadge({ status }: { status: ServiceHealth['status'] }) {
     return (
       <Badge className="bg-green-100 text-green-700 border-none gap-1.5">
         <CheckCircle className="w-3 h-3" />
-        Healthy
+        Hoạt động
       </Badge>
     );
   }
@@ -33,14 +33,14 @@ function StatusBadge({ status }: { status: ServiceHealth['status'] }) {
     return (
       <Badge variant="destructive" className="gap-1.5">
         <XCircle className="w-3 h-3" />
-        Down
+        Dừng hoạt động
       </Badge>
     );
   }
   return (
     <Badge variant="outline" className="gap-1.5 text-muted-foreground">
       <AlertTriangle className="w-3 h-3" />
-      Unknown
+      Không xác định
     </Badge>
   );
 }
@@ -57,9 +57,9 @@ export function SystemHealth() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">System Health</h2>
+          <h2 className="text-2xl font-bold tracking-tight">Tình trạng hệ thống</h2>
           <p className="text-sm text-muted-foreground">
-            Real-time status of all microservices
+            Trạng thái real-time của tất cả microservices
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -71,11 +71,11 @@ export function SystemHealth() {
             )}
           >
             {allHealthy ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
-            {healthyCount}/{totalCount} Services Online
+            {healthyCount}/{totalCount} Dịch vụ trực tuyến
           </Badge>
           <Button variant="outline" onClick={() => refetch()} disabled={isFetching}>
             <RefreshCw className={cn('w-4 h-4 mr-2', isFetching && 'animate-spin')} />
-            Refresh
+            Làm mới
           </Button>
         </div>
       </div>
@@ -149,18 +149,18 @@ export function SystemHealth() {
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <Activity className="w-4 h-4 text-primary" />
-              Summary
+              Tóm tắt
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
                 <p className="text-3xl font-bold text-green-600">{healthyCount}</p>
-                <p className="text-xs text-muted-foreground">Healthy</p>
+                <p className="text-xs text-muted-foreground">Hoạt động</p>
               </div>
               <div>
                 <p className="text-3xl font-bold text-red-600">{totalCount - healthyCount}</p>
-                <p className="text-xs text-muted-foreground">Down</p>
+                <p className="text-xs text-muted-foreground">Dừng</p>
               </div>
               <div>
                 <p className="text-3xl font-bold text-slate-900">
@@ -168,7 +168,7 @@ export function SystemHealth() {
                     ? Math.round(services.filter(s => s.responseTime).reduce((a, s) => a + (s.responseTime || 0), 0) / services.filter(s => s.responseTime).length)
                     : 0}ms
                 </p>
-                <p className="text-xs text-muted-foreground">Avg Response</p>
+                <p className="text-xs text-muted-foreground">Thời gian phản hồi TB</p>
               </div>
             </div>
           </CardContent>

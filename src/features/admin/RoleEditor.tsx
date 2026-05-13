@@ -74,10 +74,10 @@ export function RoleEditor() {
             }).unwrap();
             resetForm();
             setShowCreateDialog(false);
-            toast.success('Role created successfully');
+            toast.success('Tạo vai trò thành công');
         } catch (error) {
             console.error('Failed to create role:', error);
-            toast.error('Failed to create role');
+            toast.error('Tạo vai trò thất bại');
         }
     };
 
@@ -94,10 +94,10 @@ export function RoleEditor() {
             }).unwrap();
             resetForm();
             setEditingRole(null);
-            toast.success('Role updated successfully');
+            toast.success('Cập nhật vai trò thành công');
         } catch (error) {
             console.error('Failed to update role:', error);
-            toast.error('Failed to update role');
+            toast.error('Cập nhật vai trò thất bại');
         }
     };
 
@@ -107,10 +107,10 @@ export function RoleEditor() {
             await deleteRole(selectedRole.id).unwrap();
             setShowDeleteDialog(false);
             setSelectedRole(null);
-            toast.success('Role deleted successfully');
+            toast.success('Xóa vai trò thành công');
         } catch (error) {
             console.error('Failed to delete role:', error);
-            toast.error('Failed to delete role');
+            toast.error('Xóa vai trò thất bại');
         }
     };
 
@@ -129,9 +129,9 @@ export function RoleEditor() {
                     data: { permissionIds: [permission.id] }
                 }).unwrap();
             }
-            toast.success('Permissions updated');
+            toast.success('Cập nhật quyền hạn thành công');
         } catch (error) {
-            toast.error('Failed to update permissions');
+            toast.error('Cập nhật quyền hạn thất bại');
         }
     };
 
@@ -162,14 +162,14 @@ export function RoleEditor() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-2xl font-bold tracking-tight">Role Management</h2>
+                    <h2 className="text-2xl font-bold tracking-tight">Quản lý vai trò</h2>
                     <p className="text-sm text-muted-foreground">
-                        Define and manage system roles and their associated permissions.
+                        Định nghĩa và quản lý các vai trò trong hệ thống cùng các quyền tương ứng.
                     </p>
                 </div>
                 <Button onClick={() => setShowCreateDialog(true)}>
                     <Plus className="w-4 h-4 mr-2" />
-                    Create New Role
+                    Tạo vai trò mới
                 </Button>
             </div>
 
@@ -200,7 +200,7 @@ export function RoleEditor() {
                                     {role.isSystem ? (
                                         <Badge variant="outline" className="h-6 gap-1 bg-white">
                                             <Lock className="w-3 h-3" />
-                                            System
+                                            Hệ thống
                                         </Badge>
                                     ) : (
                                         <div className="flex gap-1">
@@ -228,27 +228,27 @@ export function RoleEditor() {
                                 </div>
                             </div>
                             <CardDescription className="line-clamp-2 min-h-[2.5rem] mt-2">
-                                {role.description || 'No description provided for this role.'}
+                                {role.description || 'Chưa có mô tả nào cho vai trò này.'}
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="flex items-center justify-between text-sm py-2 border-y border-dashed">
-                                <span className="text-muted-foreground font-medium">Power Level</span>
+                                <span className="text-muted-foreground font-medium">Cấp độ quyền</span>
                                 <Badge variant={role.level > 50 ? "default" : "secondary"}>
-                                    Level {role.level}
+                                    Cấp {role.level}
                                 </Badge>
                             </div>
                             
                             <div className="space-y-2">
                                 <div className="flex items-center justify-between">
-                                    <span className="text-xs font-semibold text-muted-foreground uppercase">Permissions</span>
+                                    <span className="text-xs font-semibold text-muted-foreground uppercase">Quyền hạn</span>
                                     <Button 
                                         variant="link" 
                                         size="sm" 
                                         className="h-auto p-0 text-xs"
                                         onClick={() => setSelectedRoleForPermissions(role)}
                                     >
-                                        Manage
+                                        Quản lý
                                     </Button>
                                 </div>
                                 <div className="flex flex-wrap gap-1.5">
@@ -259,11 +259,11 @@ export function RoleEditor() {
                                             </Badge>
                                         ))
                                     ) : (
-                                        <span className="text-[10px] text-muted-foreground italic">No permissions assigned</span>
+                                        <span className="text-[10px] text-muted-foreground italic">Chưa gán quyền hạn nào</span>
                                     )}
                                     {role.permissions && role.permissions.length > 3 && (
                                         <Badge variant="secondary" className="text-[10px] font-normal px-1.5 py-0">
-                                            +{role.permissions.length - 3} more
+                                            +{role.permissions.length - 3} quyền khác
                                         </Badge>
                                     )}
                                 </div>
@@ -279,10 +279,10 @@ export function RoleEditor() {
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <Settings2 className="w-5 h-5 text-blue-600" />
-                            Permissions: {selectedRoleForPermissions?.displayName}
+                            Quyền hạn: {selectedRoleForPermissions?.displayName}
                         </DialogTitle>
                         <DialogDescription>
-                            Select the granular permissions allowed for this role.
+                            Chọn các quyền chi tiết cho phép đối với vai trò này.
                         </DialogDescription>
                     </DialogHeader>
                     
@@ -321,7 +321,7 @@ export function RoleEditor() {
                                                             {permission.action}
                                                         </label>
                                                         <p className="text-[10px] text-muted-foreground">
-                                                            {permission.description || `Can ${permission.action} ${resource}`}
+                                                            {permission.description || `Có thể ${permission.action} ${resource}`}
                                                         </p>
                                                     </div>
                                                 </div>
@@ -335,7 +335,7 @@ export function RoleEditor() {
                     
                     <DialogFooter className="mt-4 border-t pt-4">
                         <Button onClick={() => setSelectedRoleForPermissions(null)}>
-                            Close Management
+                            Đóng
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -345,24 +345,24 @@ export function RoleEditor() {
             <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Create New Role</DialogTitle>
+                        <DialogTitle>Tạo vai trò mới</DialogTitle>
                         <DialogDescription>
-                            Create a custom role with specific permissions and power level.
+                            Tạo vai trò tùy chỉnh với các quyền hạn và cấp độ cụ thể.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="name">System Name</Label>
+                                <Label htmlFor="name">Tên hệ thống (Mã)</Label>
                                 <Input
                                     id="name"
-                                    placeholder="e.g., moderator"
+                                    placeholder="VD: moderator"
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="level">Power Level (0-100)</Label>
+                                <Label htmlFor="level">Cấp độ quyền (0-100)</Label>
                                 <Input
                                     id="level"
                                     type="number"
@@ -374,19 +374,19 @@ export function RoleEditor() {
                             </div>
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="displayName">Display Name</Label>
+                            <Label htmlFor="displayName">Tên hiển thị</Label>
                             <Input
                                 id="displayName"
-                                placeholder="e.g., Community Moderator"
+                                placeholder="VD: Quản trị viên cộng đồng"
                                 value={displayName}
                                 onChange={(e) => setDisplayName(e.target.value)}
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="description">Description</Label>
+                            <Label htmlFor="description">Mô tả</Label>
                             <Textarea
                                 id="description"
-                                placeholder="Describe what this role is for..."
+                                placeholder="Mô tả mục đích của vai trò này..."
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
                                 rows={3}
@@ -395,11 +395,11 @@ export function RoleEditor() {
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
-                            Cancel
+                            Hủy
                         </Button>
                         <Button onClick={handleCreate} disabled={!name || !displayName || isCreating}>
                             {isCreating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                            Create Role
+                            Tạo vai trò
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -409,14 +409,14 @@ export function RoleEditor() {
             <Dialog open={!!editingRole} onOpenChange={() => setEditingRole(null)}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Edit Role: {editingRole?.name}</DialogTitle>
+                        <DialogTitle>Sửa vai trò: {editingRole?.name}</DialogTitle>
                         <DialogDescription>
-                            Update the visual identity and power level of this role.
+                            Cập nhật thông tin và cấp độ quyền lực cho vai trò này.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                         <div className="space-y-2">
-                            <Label htmlFor="editDisplayName">Display Name</Label>
+                            <Label htmlFor="editDisplayName">Tên hiển thị</Label>
                             <Input
                                 id="editDisplayName"
                                 value={displayName}
@@ -424,7 +424,7 @@ export function RoleEditor() {
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="editLevel">Power Level (0-100)</Label>
+                            <Label htmlFor="editLevel">Cấp độ quyền (0-100)</Label>
                             <Input
                                 id="editLevel"
                                 type="number"
@@ -435,7 +435,7 @@ export function RoleEditor() {
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="editDescription">Description</Label>
+                            <Label htmlFor="editDescription">Mô tả</Label>
                             <Textarea
                                 id="editDescription"
                                 value={description}
@@ -446,11 +446,11 @@ export function RoleEditor() {
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setEditingRole(null)}>
-                            Cancel
+                            Hủy
                         </Button>
                         <Button onClick={handleUpdate} disabled={!displayName || isUpdating}>
                             {isUpdating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                            Save Changes
+                            Lưu thay đổi
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -460,19 +460,19 @@ export function RoleEditor() {
             <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle className="text-red-600">Danger: Delete Role</DialogTitle>
+                        <DialogTitle className="text-red-600">Nguy hiểm: Xóa vai trò</DialogTitle>
                         <DialogDescription>
-                            You are about to delete <strong>{selectedRole?.displayName}</strong>. 
-                            This action is permanent. Users assigned to this role will lose their permissions.
+                            Bạn sắp xóa <strong>{selectedRole?.displayName}</strong>. 
+                            Hành động này không thể hoàn tác. Người dùng có vai trò này sẽ mất các quyền tương ứng.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
-                            Cancel
+                            Hủy
                         </Button>
                         <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
                             {isDeleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                            I understand, delete role
+                            Tôi hiểu, tiến hành xóa
                         </Button>
                     </DialogFooter>
                 </DialogContent>

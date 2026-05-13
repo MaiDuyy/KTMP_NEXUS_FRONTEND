@@ -36,9 +36,9 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 const TYPE_CONFIG = {
-  PUBLIC: { icon: Hash, color: 'bg-green-100 text-green-700', label: 'Public' },
-  PRIVATE: { icon: Lock, color: 'bg-amber-100 text-amber-700', label: 'Private' },
-  ANNOUNCEMENT: { icon: Megaphone, color: 'bg-blue-100 text-blue-700', label: 'Announcement' },
+  PUBLIC: { icon: Hash, color: 'bg-green-100 text-green-700', label: 'Công khai' },
+  PRIVATE: { icon: Lock, color: 'bg-amber-100 text-amber-700', label: 'Riêng tư' },
+  ANNOUNCEMENT: { icon: Megaphone, color: 'bg-blue-100 text-blue-700', label: 'Thông báo' },
 };
 
 export function ChannelManagement() {
@@ -68,11 +68,11 @@ export function ChannelManagement() {
     if (!selectedChannel) return;
     try {
       await deleteChannel(selectedChannel.id).unwrap();
-      toast.success('Channel deleted');
+      toast.success('Đã xóa kênh');
       setShowDeleteDialog(false);
       setSelectedChannel(null);
     } catch {
-      toast.error('Failed to delete channel');
+      toast.error('Xóa kênh thất bại');
     }
   };
 
@@ -80,13 +80,13 @@ export function ChannelManagement() {
     try {
       if (channel.isArchived) {
         await unarchiveChannel(channel.id).unwrap();
-        toast.success('Channel restored');
+        toast.success('Đã khôi phục kênh');
       } else {
         await archiveChannel(channel.id).unwrap();
-        toast.success('Channel archived');
+        toast.success('Đã lưu trữ kênh');
       }
     } catch {
-      toast.error('Failed to update channel');
+      toast.error('Cập nhật kênh thất bại');
     }
   };
 
@@ -98,7 +98,7 @@ export function ChannelManagement() {
           <Select value={selectedWorkspaceId} onValueChange={setSelectedWorkspaceId}>
             <SelectTrigger className="w-[250px] h-10">
               <Building2 className="w-4 h-4 mr-2 text-muted-foreground" />
-              <SelectValue placeholder="Select workspace" />
+              <SelectValue placeholder="Chọn không gian làm việc" />
             </SelectTrigger>
             <SelectContent>
               {workspaces.map(ws => (
@@ -109,7 +109,7 @@ export function ChannelManagement() {
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search channels..."
+              placeholder="Tìm kiếm kênh..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               className="pl-9 h-10"
@@ -118,8 +118,8 @@ export function ChannelManagement() {
         </div>
         <Tabs value={showArchived ? 'all' : 'active'} onValueChange={v => setShowArchived(v === 'all')}>
           <TabsList>
-            <TabsTrigger value="active">Active</TabsTrigger>
-            <TabsTrigger value="all">All incl. Archived</TabsTrigger>
+            <TabsTrigger value="active">Đang hoạt động</TabsTrigger>
+            <TabsTrigger value="all">Tất cả (Bao gồm lưu trữ)</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -128,8 +128,8 @@ export function ChannelManagement() {
       {!selectedWorkspaceId ? (
         <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
           <Building2 className="w-12 h-12 mb-4 opacity-20" />
-          <p className="text-lg font-medium">Select a workspace</p>
-          <p className="text-sm">Choose a workspace to manage its channels</p>
+          <p className="text-lg font-medium">Chọn một không gian làm việc</p>
+          <p className="text-sm">Chọn không gian làm việc để quản lý các kênh</p>
         </div>
       ) : loadingChannels ? (
         <div className="flex items-center justify-center h-64">
@@ -140,12 +140,12 @@ export function ChannelManagement() {
           <Table>
             <TableHeader className="bg-slate-50/50">
               <TableRow>
-                <TableHead className="w-[300px]">Channel</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Members</TableHead>
-                <TableHead>Messages</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead className="w-[300px]">Kênh</TableHead>
+                <TableHead>Loại</TableHead>
+                <TableHead>Thành viên</TableHead>
+                <TableHead>Tin nhắn</TableHead>
+                <TableHead>Ngày tạo</TableHead>
+                <TableHead>Trạng thái</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -153,7 +153,7 @@ export function ChannelManagement() {
               {filteredChannels.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
-                    No channels found
+                    Không tìm thấy kênh nào
                   </TableCell>
                 </TableRow>
               ) : (
@@ -193,15 +193,15 @@ export function ChannelManagement() {
                         </div>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {format(new Date(channel.createdAt), 'MMM d, yyyy')}
+                        {format(new Date(channel.createdAt), 'dd/MM/yyyy')}
                       </TableCell>
                       <TableCell>
                         {channel.isArchived ? (
-                          <Badge variant="outline" className="bg-slate-100 text-slate-500 text-xs">Archived</Badge>
+                          <Badge variant="outline" className="bg-slate-100 text-slate-500 text-xs">Đã lưu trữ</Badge>
                         ) : channel.isDefault ? (
-                          <Badge className="bg-blue-100 text-blue-700 text-xs border-none">Default</Badge>
+                          <Badge className="bg-blue-100 text-blue-700 text-xs border-none">Mặc định</Badge>
                         ) : (
-                          <Badge className="bg-green-100 text-green-700 text-xs border-none">Active</Badge>
+                          <Badge className="bg-green-100 text-green-700 text-xs border-none">Hoạt động</Badge>
                         )}
                       </TableCell>
                       <TableCell>
@@ -212,20 +212,20 @@ export function ChannelManagement() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuLabel>Thao tác</DropdownMenuLabel>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => handleArchiveToggle(channel)}>
                               {channel.isArchived ? (
-                                <><ArchiveRestore className="w-4 h-4 mr-2" /> Restore</>
+                                <><ArchiveRestore className="w-4 h-4 mr-2" /> Khôi phục</>
                               ) : (
-                                <><Archive className="w-4 h-4 mr-2" /> Archive</>
+                                <><Archive className="w-4 h-4 mr-2" /> Lưu trữ</>
                               )}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="text-red-600"
                               onClick={() => { setSelectedChannel(channel); setShowDeleteDialog(true); }}
                             >
-                              <Trash2 className="w-4 h-4 mr-2" /> Delete
+                              <Trash2 className="w-4 h-4 mr-2" /> Xóa
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -239,21 +239,20 @@ export function ChannelManagement() {
         </div>
       )}
 
-      {/* Delete dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Channel</DialogTitle>
+            <DialogTitle>Xóa kênh</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete <strong>#{selectedChannel?.name}</strong>?
-              All messages and files will be permanently removed.
+              Bạn có chắc chắn muốn xóa <strong>#{selectedChannel?.name}</strong>?
+              Tất cả tin nhắn và tệp tin sẽ bị xóa vĩnh viễn.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>Hủy</Button>
             <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
               {isDeleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Delete Permanently
+              Xóa vĩnh viễn
             </Button>
           </DialogFooter>
         </DialogContent>

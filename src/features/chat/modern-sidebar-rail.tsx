@@ -4,7 +4,10 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
-import { useGetAccountDetailsQuery } from '@/src/redux/feature/accountApi';
+import { useGetAccountDetailsQuery, useUpdateOnlineStatusMutation } from '@/src/redux/feature/accountApi';
+import { useLogoutMutation } from '@/src/redux/feature/authApi';
+import { logOut } from '@/src/redux/feature/authSlice';
+import { toast } from 'sonner';
 import {
   MessageSquare,
   Files,
@@ -93,6 +96,22 @@ export default function ModernSidebarRail() {
   const [mounted, setMounted] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDissolvedModalOpen, setIsDissolvedModalOpen] = useState(false);
+
+  const [logout] = useLogoutMutation();
+  const [updateOnlineStatus] = useUpdateOnlineStatusMutation();
+
+  const handleLogout = async () => {
+    try {
+      await updateOnlineStatus({ isOnline: false });
+      await logout({});
+      dispatch(logOut());
+      toast.success("Đăng xuất thành công!");
+      router.push("/auth/sign-in");
+    } catch (error) {
+      dispatch(logOut());
+      router.push("/auth/sign-in");
+    }
+  };
 
   // Avoid Hydration Mismatch
   useEffect(() => {
@@ -217,7 +236,7 @@ export default function ModernSidebarRail() {
 
             <DropdownMenuSeparator className="my-2" />
 
-            <DropdownMenuItem className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/30 rounded-lg py-2 cursor-pointer">
+            <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/30 rounded-lg py-2 cursor-pointer">
               <LogOut  className="w-4 h-4 mr-3" />
               <span className="font-bold text-sm">Đăng xuất</span>
             </DropdownMenuItem>

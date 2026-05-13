@@ -70,8 +70,8 @@ export function DocumentPreview({
                     <FileText className="w-6 h-6 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                 </div>
                 <div className="text-center">
-                    <h3 className="font-semibold text-slate-900">Retrieving Document</h3>
-                    <p className="text-sm text-slate-500">Preparing high-fidelity preview...</p>
+                    <h3 className="font-semibold text-slate-900">Đang tải tài liệu</h3>
+                    <p className="text-sm text-slate-500">Đang chuẩn bị bản xem trước...</p>
                 </div>
             </div>
         );
@@ -81,9 +81,9 @@ export function DocumentPreview({
         return (
             <EmptyState
                 icon={FileText}
-                title="Document not found"
-                description="The document may have been deleted or moved. Please check your knowledge base."
-                action={{ label: 'Back to Knowledge Base', onClick: () => router.push('/knowledge') }}
+                title="Không tìm thấy tài liệu"
+                description="Tài liệu có thể đã bị xóa hoặc di chuyển. Vui lòng kiểm tra cơ sở dữ liệu tri thức của bạn."
+                action={{ label: 'Quay lại cơ sở dữ liệu tri thức', onClick: () => router.push('/knowledge') }}
             />
         );
     }
@@ -99,7 +99,7 @@ export function DocumentPreview({
                     className="text-slate-500 hover:text-slate-900 gap-2 pl-0 hover:bg-transparent"
                 >
                     <ChevronLeft className="w-4 h-4" />
-                    Knowledge Base
+                    Cơ sở dữ liệu tri thức
                 </Button>
                 
                 <div className="flex items-center gap-2">
@@ -109,7 +109,7 @@ export function DocumentPreview({
                     {doc.status === 'COMPLETED' && (
                         <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-50 shadow-none">
                             <CheckCircle2 className="w-3 h-3 mr-1" />
-                            Indexed
+                            Đã lập chỉ mục
                         </Badge>
                     )}
                 </div>
@@ -123,12 +123,12 @@ export function DocumentPreview({
                 <div className="flex items-center gap-3 text-sm text-slate-500">
                     <span className="flex items-center gap-1.5 font-medium text-slate-700">
                         <Clock className="w-3.5 h-3.5" />
-                        Added on {format(new Date(doc.createdAt), 'MMMM d, yyyy')}
+                        Đã thêm vào {format(new Date(doc.createdAt), 'dd/MM/yyyy')}
                     </span>
                     <Separator orientation="vertical" className="h-4" />
                     <span className="flex items-center gap-1.5">
                         <Layers className="w-3.5 h-3.5" />
-                        {doc.chunkCount} Fragments
+                        {doc.chunkCount} Đoạn
                     </span>
                     <Separator orientation="vertical" className="h-4" />
                     <span className="flex items-center gap-1.5">
@@ -146,7 +146,7 @@ export function DocumentPreview({
                     <div className="space-y-4">
                         <div className="flex items-center justify-between px-1">
                             <h2 className="text-xs font-bold uppercase tracking-widest text-slate-500">
-                                Document Structure
+                                Cấu trúc tài liệu
                             </h2>
                             <span className="text-[10px] font-mono bg-slate-900 text-white px-1.5 py-0.5 rounded">
                                 {chunks.length}
@@ -157,7 +157,7 @@ export function DocumentPreview({
                             {chunksLoading ? (
                                 <div className="flex flex-col items-center justify-center h-full py-20 gap-3 text-slate-400">
                                     <Loader2 className="w-6 h-6 animate-spin" />
-                                    <span className="text-[10px] font-bold uppercase tracking-tighter">Analyzing Chunks</span>
+                                    <span className="text-[10px] font-bold uppercase tracking-tighter">Đang phân tích các đoạn</span>
                                 </div>
                             ) : !chunks.length ? (
                                 <div className="p-12 text-center space-y-4">
@@ -165,7 +165,7 @@ export function DocumentPreview({
                                         <Hash className="w-6 h-6 text-slate-200" />
                                     </div>
                                     <p className="text-xs text-slate-400 font-medium">
-                                        Indexing in progress...
+                                        Đang lập chỉ mục...
                                     </p>
                                 </div>
                             ) : (
@@ -195,7 +195,7 @@ export function DocumentPreview({
                                                         'text-xs font-semibold truncate transition-colors',
                                                         activeChunk?.chunkIndex === chunk.chunkIndex ? 'text-slate-900' : 'text-slate-700'
                                                     )}>
-                                                        {chunk.chunkTitle || `Fragment ${chunk.chunkIndex + 1}`}
+                                                        {chunk.chunkTitle || `Đoạn ${chunk.chunkIndex + 1}`}
                                                     </h3>
                                                     <p className="text-[10px] text-slate-400 line-clamp-1 mt-0.5">
                                                         {chunk.text?.substring(0, 45)}...
@@ -216,12 +216,12 @@ export function DocumentPreview({
                     <Card className="p-5 border-slate-200 shadow-none bg-slate-50 space-y-4">
                         <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
                             <Info className="w-3 h-3" />
-                            Technical Properties
+                            Thuộc tính kỹ thuật
                         </h3>
                         <div className="space-y-3">
                             <div className="flex justify-between items-center">
                                 <span className="text-xs text-slate-500 flex items-center gap-2">
-                                    <FileType2 className="w-3 h-3" /> Format
+                                    <FileType2 className="w-3 h-3" /> Định dạng
                                 </span>
                                 <span className="text-xs font-bold text-slate-900 uppercase font-mono">{doc.documentType}</span>
                             </div>
@@ -235,7 +235,7 @@ export function DocumentPreview({
                             <Separator className="bg-slate-200/50" />
                             <div className="flex justify-between items-center">
                                 <span className="text-xs text-slate-500 flex items-center gap-2">
-                                    <User className="w-3 h-3" /> Owner ID
+                                    <User className="w-3 h-3" /> ID Chủ sở hữu
                                 </span>
                                 <span className="text-xs font-bold text-slate-900 truncate max-w-[120px] font-mono">{doc.userId}</span>
                             </div>
@@ -254,10 +254,10 @@ export function DocumentPreview({
                                     </div>
                                     <div>
                                         <h2 className="text-base font-bold text-slate-900 leading-tight">
-                                            {activeChunk.chunkTitle || `Fragment ${activeChunk.chunkIndex + 1}`}
+                                            {activeChunk.chunkTitle || `Đoạn ${activeChunk.chunkIndex + 1}`}
                                         </h2>
                                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
-                                            {activeChunk.tokenCount} Tokens • {activeChunk.charCount} Characters
+                                            {activeChunk.tokenCount} Tokens • {activeChunk.charCount} Ký tự
                                         </p>
                                     </div>
                                 </div>
@@ -284,13 +284,13 @@ export function DocumentPreview({
                                         Index <b className="text-slate-900 bg-slate-200 px-1.5 py-0.5 rounded">{activeChunk.chunkIndex}</b>
                                     </span>
                                     <span className="flex items-center gap-2">
-                                        Word Count <b className="text-slate-900">{activeChunk.text.split(/\s+/).length}</b>
+                                        Số từ <b className="text-slate-900">{activeChunk.text.split(/\s+/).length}</b>
                                     </span>
                                 </div>
                                 {activeChunk.similarity !== undefined && activeChunk.similarity > 0 && (
                                     <Badge variant="outline" className="text-[10px] bg-white border-slate-200 gap-1.5 text-slate-600 px-2 py-0.5 shadow-none hover:bg-white">
                                         <Tag className="w-3 h-3" />
-                                        {(activeChunk.similarity * 100).toFixed(1)}% Relevance
+                                        {(activeChunk.similarity * 100).toFixed(1)}% Độ liên quan
                                     </Badge>
                                 )}
                             </footer>
@@ -302,8 +302,8 @@ export function DocumentPreview({
                                 <Layers className="w-6 h-6 text-slate-200 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                             </div>
                             <div className="text-center space-y-1">
-                                <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Initializing Preview</p>
-                                <p className="text-sm text-slate-300">Synchronizing data fragments...</p>
+                                <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Đang khởi tạo bản xem trước</p>
+                                <p className="text-sm text-slate-300">Đang đồng bộ các đoạn dữ liệu...</p>
                             </div>
                         </div>
                     )}

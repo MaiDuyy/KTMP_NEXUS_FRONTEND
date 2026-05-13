@@ -109,6 +109,12 @@ export interface SocketCallbacks {
   onChatMemberUpdated?: (data: { chatId: string; memberId: string; action: string; newRole?: string }) => void;
   onChatRoleUpdated?: (data: { chatId: string; memberId: string; newRole: string }) => void;
   onChatUpdated?: (data: { chatId: string; [key: string]: any }) => void;
+  onChannelNew?: (data: { workspaceId: string; channel: any }) => void;
+  onChannelUpdated?: (data: { channelId: string; workspaceId: string; [key: string]: any }) => void;
+  onChannelDeleted?: (data: { channelId: string; workspaceId: string }) => void;
+  onChannelMemberUpdated?: (data: { channelId: string; userId: string; action: string }) => void;
+  onChannelMemberRemoved?: (data: { channelId: string; userId: string }) => void;
+  onChannelArchived?: (data: { channelId: string; workspaceId: string }) => void;
   onJoinRequestNew?: (data: { chatId: string; accountId: string; requestId: string }) => void;
   onJoinRequestUpdated?: (data: { chatId: string; accountId: string; status: string }) => void;
   onTaskNew?: (data: { chatId: string; [key: string]: any }) => void;
@@ -335,6 +341,37 @@ export const connectSocket = (token: string, callbacks?: SocketCallbacks): Socke
   socket.on("chat:updated", (data) => {
     console.log("[Socket] 🔄 Chat updated:", data);
     callbacks?.onChatUpdated?.(data);
+  });
+
+  // Channel lifecycle events
+  socket.on("channel:new", (data) => {
+    console.log("[Socket] 📣 Channel created:", data);
+    callbacks?.onChannelNew?.(data);
+  });
+
+  socket.on("channel:updated", (data) => {
+    console.log("[Socket] 🔄 Channel updated:", data);
+    callbacks?.onChannelUpdated?.(data);
+  });
+
+  socket.on("channel:deleted", (data) => {
+    console.log("[Socket] 🗑️ Channel deleted:", data);
+    callbacks?.onChannelDeleted?.(data);
+  });
+
+  socket.on("channel:member_updated", (data) => {
+    console.log("[Socket] 👥 Channel member updated:", data);
+    callbacks?.onChannelMemberUpdated?.(data);
+  });
+
+  socket.on("channel:member_removed", (data) => {
+    console.log("[Socket] 🚪 Channel member removed:", data);
+    callbacks?.onChannelMemberRemoved?.(data);
+  });
+
+  socket.on("channel:archived", (data) => {
+    console.log("[Socket] 📦 Channel archived:", data);
+    callbacks?.onChannelArchived?.(data);
   });
 
   socket.on("chat:join_request:new", (data) => {

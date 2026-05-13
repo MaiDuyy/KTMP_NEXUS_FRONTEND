@@ -1,25 +1,9 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import {
-  Search,
-  Phone,
-  Video,
-  Info,
-  Paperclip,
-  Smile,
-  Mic,
-  Send,
-  Sparkles,
-  Bold,
-  Italic,
-  Link2,
-  List as ListIcon,
-  Reply,
-  X,
-  Loader2,
-  ImageIcon,
-  File,
-  Ban
+  Search, Phone, Video, Info, Paperclip, Smile, Mic, Send,
+  Sparkles, Bold, Italic, Link2, List as ListIcon, Reply, X,
+  Loader2, ImageIcon, File, Ban, Hash, Lock,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
@@ -27,25 +11,25 @@ import { Button } from '@/components/ui/button';
 
 import { useGetChatByIdQuery, useMarkChatAsReadMutation, useGetChatReadReceiptsQuery } from '@/src/redux/feature/chatApi';
 import { useGetMessagesQuery, useLazyGetMessagesQuery, useSendMessageMutation } from '@/src/redux/feature/messageApi';
+import { useGetChannelQuery } from '@/src/redux/feature/channelApi';
 import { socketService } from '@/src/services/socket.service';
 import {
-  useRealtimeChat,
-  useChatRoom,
-  useTypingUsers,
-  useIsUserOnline,
+  useRealtimeChat, useChatRoom, useTypingUsers, useIsUserOnline,
 } from '@/src/hooks/useRealtimeChat';
 import { Message } from '@/src/type/chat.types';
-import { formatDistanceToNow , format, isToday, isYesterday } from 'date-fns';
+import { formatDistanceToNow, format, isToday, isYesterday } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import MessageBubble from './message-bubble';
 import EmojiPicker from './emoji-picker';
 import ChatInfoPanel from './chat-info-panel';
 import GroupSettingsPanel from './group-settings-panel';
+import { ChannelInfoPanel } from './channel-info-panel';
 import { toast } from 'sonner';
 import { useUploadChatMediaMutation } from '@/src/redux/feature/uploadApi';
 import { messageApi } from '@/src/redux/feature/messageApi';
 import { AIAssistantPanel } from './AIAssistantPanel';
 import { getAvatarUrl } from '@/src/utils/image-utils';
+import { useRouter } from 'next/navigation';
 
 export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
   const [inputText, setInputText] = useState('');
@@ -78,6 +62,7 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
   // ──────────────────────────────────────────
   const user = useSelector((state: any) => state.auth?.user);
   const dispatch = useDispatch();
+  const router = useRouter();
   const userPermissions = useSelector((state: any) => state.auth?.permissions || []);
   const isAdmin = userPermissions.includes('CHAT.READ.ALL');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -100,6 +85,10 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
 
   // API - skip if no chatId
   const { data: chatData, isLoading: chatLoading } = useGetChatByIdQuery(chatId!, { skip: !chatId });
+
+  // Detect if current chat is a Workspace Channel
+  const { data: channelData } = useGetChannelQuery(chatId!, { skip: !chatId });
+  const isChannel = !!channelData;
 
   const [triggerGetMessages, { isFetching }] = useLazyGetMessagesQuery();
   const { data: readReceipts } = useGetChatReadReceiptsQuery(chatId!, { skip: !chatId });
@@ -603,34 +592,58 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
 
       {/* Header */}
       <header className="h-14 border-b border-slate-100 flex items-center justify-between px-6 shrink-0">
-        <div className="flex items-center gap-3">
-          {isDirectMessage ? (
-            <div className="relative">
-              <Avatar className="h-8 w-8 border-2 border-white">
-                <AvatarImage src={imageUrl || partner?.avatar || undefined} />
-                <AvatarFallback>{chatName[0]}</AvatarFallback>
-              </Avatar>
-              {isPartnerOnline && (
-                <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white" />
-              )}
+        <div className="flex items-center gap-3 min-w-0">
+          {isChannel ? (
+            /* Channel header: show # or 🔒 icon */
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+                {channelData?.type === 'PRIVATE' ? (
+                  <Lock size={16} className="text-slate-500" />
+                ) : (
+                  <Hash size={16} className="text-slate-500" />
+                )}
+              </div>
+              <div className="min-w-0">
+                <h3 className="font-bold text-slate-900 text-[15px] truncate">{channelData?.name}</h3>
+                <p className="text-[11px] text-slate-400 truncate max-w-xs">
+                  {typingUsers.length > 0
+                    ? `${typingUsers.map(u => u.userName).join(', ')} đang gõ...`
+                    : channelData?.topic || `${channelData?._count?.members ?? 0} thành viên`}
+                </p>
+              </div>
+            </div>
+          ) : isDirectMessage ? (
+            /* DM header: show avatar + online status */
+            <div className="flex items-center gap-2.5">
+              <div className="relative">
+                <Avatar className="h-8 w-8 border-2 border-white">
+                  <AvatarImage src={imageUrl || partner?.avatar || undefined} />
+                  <AvatarFallback>{chatName[0]}</AvatarFallback>
+                </Avatar>
+                {isPartnerOnline && (
+                  <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white" />
+                )}
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 text-[15px]">{chatName}</h3>
+                <p className={`text-[11px] font-medium ${typingUsers.length > 0 ? 'text-blue-500' : isPartnerOnline ? 'text-emerald-500' : 'text-slate-400'}`}>
+                  {getStatusText()}
+                </p>
+              </div>
             </div>
           ) : (
-            <Avatar className="h-8 w-8 border-2 border-white">
-              <AvatarImage src={imageUrl || undefined} />
-              <AvatarFallback>{chatName[0]}</AvatarFallback>
-            </Avatar>
+            /* Group Chat header: show group avatar */
+            <div className="flex items-center gap-2.5">
+              <Avatar className="h-8 w-8 border-2 border-white">
+                <AvatarImage src={imageUrl || undefined} />
+                <AvatarFallback>{chatName[0]}</AvatarFallback>
+              </Avatar>
+              <div>
+                <h3 className="font-bold text-slate-900 text-[15px]">{chatName}</h3>
+                <p className="text-[11px] text-slate-400">{getStatusText()}</p>
+              </div>
+            </div>
           )}
-          <div>
-            <h3 className="font-bold text-slate-900 text-[15px]">{chatName}</h3>
-            <p className={`text-[11px] font-medium ${typingUsers.length > 0
-              ? 'text-blue-500'
-              : isPartnerOnline
-                ? 'text-emerald-500'
-                : 'text-slate-400'
-              }`}>
-              {getStatusText()}
-            </p>
-          </div>
         </div>
 
         <div className="flex-1 max-w-md mx-6 relative">
@@ -663,16 +676,19 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
           <div className="h-4 w-[1px] bg-slate-100 mx-1" />
           <Button variant="ghost"
             size="icon"
-
             onClick={() => {
-              if (chat?.isGroup) {
+              if (isChannel) {
+                setShowGroupSettings(true); // reuse showGroupSettings flag for ChannelInfoPanel
+              } else if (chat?.isGroup) {
                 setShowGroupSettings(true);
               } else {
                 setShowInfoPanel(true);
               }
             }}
-            title={chat?.isGroup ? "Cài đặt nhóm" : "Thông tin cuộc trò chuyện"}
-            className="h-8 w-8 text-slate-400 hover:text-slate-600"><Info size={18} /></Button>
+            title={isChannel ? 'Thông tin kênh' : chat?.isGroup ? 'Cài đặt nhóm' : 'Thông tin cuộc trò chuyện'}
+            className="h-8 w-8 text-slate-400 hover:text-slate-600">
+            <Info size={18} />
+          </Button>
         </div>
       </header>
 
@@ -945,19 +961,27 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
       </div>
 
 
-      {/* Chat Info Panel */}
+      {/* Chat Info Panel (DMs) */}
       <ChatInfoPanel
         chatId={chatId}
         chatName={chat?.name || "Chat No Name"}
         isOpen={showInfoPanel}
         onClose={() => setShowInfoPanel(false)}
-        onMessageClick={(messageId) => {
-          setShowInfoPanel(false);
-        }}
+        onMessageClick={(messageId) => { setShowInfoPanel(false); }}
       />
 
-      {/* Group Settings Panel */}
-      {chat?.isGroup && (
+      {/* Channel Info Panel (Workspace Channels) */}
+      {isChannel && chatId && (
+        <ChannelInfoPanel
+          channelId={chatId}
+          isOpen={showGroupSettings}
+          onClose={() => setShowGroupSettings(false)}
+          onLeaveChannel={() => router.push('/chat')}
+        />
+      )}
+
+      {/* Group Settings Panel (Group Chats - not channels) */}
+      {chat?.isGroup && !isChannel && (
         <GroupSettingsPanel
           chatId={chatId}
           isOpen={showGroupSettings}

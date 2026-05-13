@@ -31,55 +31,55 @@ export function AdminStats() {
     if (error || !data) {
         return (
             <div className="text-center py-8 text-muted-foreground">
-                Failed to load statistics
+                Không thể tải dữ liệu thống kê
             </div>
         );
     }
 
     const stats = [
         {
-            title: 'Total Users',
+            title: 'Tổng người dùng',
             value: formatNumber(data.totalUsers),
             icon: Users,
             color: 'text-blue-600',
             bgColor: 'bg-blue-50',
         },
         {
-            title: 'Active Users',
+            title: 'Người dùng hoạt động',
             value: formatNumber(data.activeUsers),
             icon: UserCheck,
             color: 'text-green-600',
             bgColor: 'bg-green-50',
         },
         {
-            title: 'Total Messages',
+            title: 'Tổng tin nhắn',
             value: formatNumber(data.totalMessages),
             icon: MessageSquare,
             color: 'text-indigo-600',
             bgColor: 'bg-indigo-50',
         },
         {
-            title: 'Workspaces',
+            title: 'Đoạn chat',
             value: formatNumber(data.totalWorkspaces),
             icon: Layers,
             color: 'text-amber-600',
             bgColor: 'bg-amber-50',
         },
         {
-            title: 'Storage Used',
+            title: 'Dung lượng',
             value: formatFileSize(data.fileStorageUsage),
             icon: HardDrive,
             color: 'text-rose-600',
             bgColor: 'bg-rose-50',
         },
         {
-            title: 'Active Rate',
+            title: 'Tỷ lệ hoạt động',
             value: data.totalUsers > 0
                 ? `${Math.round((data.activeUsers / data.totalUsers) * 100)}%`
                 : '0%',
             icon: TrendingUp,
-            color: 'text-purple-600',
-            bgColor: 'bg-purple-50',
+            color: 'text-emerald-600',
+            bgColor: 'bg-emerald-50',
         },
     ];
 
@@ -111,8 +111,8 @@ export function AdminStats() {
             <div className="space-y-6">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h2 className="text-xl font-bold tracking-tight">System Analytics</h2>
-                        <p className="text-sm text-muted-foreground">Deep dive into platform growth and activity</p>
+                        <h2 className="text-xl font-bold tracking-tight">Phân tích hệ thống</h2>
+                        <p className="text-sm text-muted-foreground">Thống kê tăng trưởng và hoạt động nền tảng</p>
                     </div>
                 </div>
                 
@@ -120,7 +120,6 @@ export function AdminStats() {
                     userGrowth={data.userGrowth}
                     messageActivity={data.messageActivity}
                     roleDistribution={data.roleDistribution}
-                    departmentDistribution={data.departmentDistribution}
                 />
             </div>
 
@@ -129,9 +128,9 @@ export function AdminStats() {
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
                         <Activity className="w-4 h-4 text-primary" />
-                        Recent Activity
+                        Hoạt động gần đây
                     </CardTitle>
-                    <CardDescription>Latest organization events and system logs</CardDescription>
+                    <CardDescription>Sự kiện mới nhất và nhật ký hệ thống</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
@@ -158,7 +157,7 @@ export function AdminStats() {
                             </div>
                         ) : (
                             <p className="text-sm text-muted-foreground text-center py-8">
-                                No recent activity
+                                Chưa có hoạt động nào gần đây
                             </p>
                         )}
                     </div>
