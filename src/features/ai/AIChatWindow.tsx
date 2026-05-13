@@ -165,7 +165,7 @@ export function AIChatWindow({ conversationId, className }: AIChatWindowProps) {
                                 Tôi có thể giúp gì cho bạn hôm nay?
                             </h2>
                             <p className="text-slate-500 max-w-md leading-relaxed mb-8 font-medium">
-                                Tôi là Trợ lý AI Nội bộ của OTT. Tôi có thể giúp bạn tìm kiếm tài liệu công ty, tóm tắt kiến thức hoặc trả lời các câu hỏi kỹ thuật.
+                                Tôi là Trợ lý AI Nội bộ của NEXUS. Tôi có thể giúp bạn tìm kiếm tài liệu công ty, tóm tắt kiến thức hoặc trả lời các câu hỏi kỹ thuật.
                             </p>
                             <div className="flex flex-wrap justify-center gap-3">
                                 {[
@@ -214,7 +214,7 @@ export function AIChatWindow({ conversationId, className }: AIChatWindowProps) {
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
                                 onKeyDown={handleKeyDown}
-                                placeholder="Hỏi Trợ lý OTT về tri thức nội bộ..."
+                                placeholder="Hỏi Trợ lý NEXUS về tri thức nội bộ..."
                                 className="min-h-[60px] max-h-48 w-full bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 py-4 pl-5 pr-14 text-base font-medium placeholder:text-slate-400 resize-none custom-scrollbar"
                                 disabled={isStreaming}
                             />

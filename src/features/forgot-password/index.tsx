@@ -2,373 +2,294 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, KeyRound, ArrowLeft, RefreshCw, Mail, Eye, EyeOff, CheckCircle2 } from "lucide-react";
+import { 
+  Loader2, 
+  Mail, 
+  Lock, 
+  ShieldCheck, 
+  ArrowRight, 
+  ChevronLeft,
+  CheckCircle2,
+  RefreshCw
+} from "lucide-react";
 import { toast } from "sonner";
-
-import { Button } from "@/components/ui/button";
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
-import {
-    Form,
-    FormControl,
-    FormField,
-    FormItem,
-    FormLabel,
-    FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { OTPInput } from "@/components/ui/otp-input";
 import Link from "next/link";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { OTPInput } from "@/components/ui/otp-input";
+import { AuthLayout } from "../auth";
+import { PasswordStrengthMeter } from "../auth/components/PasswordStrengthMeter";
+
 import {
-    useSendForgotPasswordOTPMutation,
-    useResetPasswordWithOTPMutation,
-    useResendOTPMutation,
+ 
+  useResendOTPMutation,
+  useResetPasswordWithOTPMutation,
+  useSendForgotPasswordOTPMutation,
+  useVerifyEmailOTPMutation,
 } from "@/src/redux/feature/otpApi";
 
-const emailSchema = z.object({
-    email: z.string().email("Email không hợp lệ"),
-});
-
-const resetSchema = z.object({
-    newPassword: z.string().min(6, "Mật khẩu phải có ít nhất 6 ký tự"),
-    confirmPassword: z.string(),
-}).refine((data) => data.newPassword === data.confirmPassword, {
-    message: "Mật khẩu nhập lại không khớp",
-    path: ["confirmPassword"],
-});
-
-type Step = "email" | "otp" | "password" | "success";
-
 export function ForgotPasswordPage() {
-    const router = useRouter();
-    const [step, setStep] = useState<Step>("email");
-    const [email, setEmail] = useState("");
-    const [otpValue, setOtpValue] = useState("");
-    const [countdown, setCountdown] = useState(0);
-    const [showPassword, setShowPassword] = useState(false);
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [step, setStep] = useState(1);
+  const [email, setEmail] = useState("");
+  const [otp, setOtp] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [countdown, setCountdown] = useState(0);
+  const [showPassword, setShowPassword] = useState(false);
 
-    const [sendForgotOTP, { isLoading: isSending }] = useSendForgotPasswordOTPMutation();
-    const [resetPassword, { isLoading: isResetting }] = useResetPasswordWithOTPMutation();
-    const [resendOTP, { isLoading: isResending }] = useResendOTPMutation();
+  const router = useRouter();
 
-    const emailForm = useForm<z.infer<typeof emailSchema>>({
-        resolver: zodResolver(emailSchema),
-        defaultValues: { email: "" },
-    });
+  const [forgotPassword, { isLoading: isRequesting }] = useSendForgotPasswordOTPMutation();
+  const [verifyOTP, { isLoading: isVerifying }] = useVerifyEmailOTPMutation();
+  const [resetPassword, { isLoading: isResetting }] = useResetPasswordWithOTPMutation();
+  const [resendOTP, { isLoading: isResending }] = useResendOTPMutation();
 
-    const resetForm = useForm<z.infer<typeof resetSchema>>({
-        resolver: zodResolver(resetSchema),
-        defaultValues: { newPassword: "", confirmPassword: "" },
-    });
-
-    // Countdown timer
-    useEffect(() => {
-        if (countdown > 0) {
-            const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-            return () => clearTimeout(timer);
-        }
-    }, [countdown]);
-
-    const handleSendEmail = async (data: z.infer<typeof emailSchema>) => {
-        try {
-            const result = await sendForgotOTP({ email: data.email }).unwrap();
-            setEmail(data.email);
-            setStep("otp");
-            setCountdown(60);
-            toast.success(result.message);
-        } catch (error: any) {
-            const msg = error?.data?.message || "Không thể gửi OTP!";
-            if (error?.data?.retryAfter) {
-                setCountdown(error.data.retryAfter);
-            }
-            toast.error(msg);
-        }
-    };
-
-    const handleResendOTP = async () => {
-        if (countdown > 0) return;
-
-        try {
-            const result = await resendOTP({ email, type: "RESET_PASSWORD" }).unwrap();
-            toast.success(result.message);
-            setCountdown(60);
-            setOtpValue("");
-        } catch (error: any) {
-            const msg = error?.data?.message || "Không thể gửi lại OTP!";
-            if (error?.data?.retryAfter) {
-                setCountdown(error.data.retryAfter);
-            }
-            toast.error(msg);
-        }
-    };
-
-    const handleVerifyOTP = () => {
-        if (otpValue.length !== 6) {
-            toast.error("Vui lòng nhập đầy đủ mã OTP!");
-            return;
-        }
-        setStep("password");
-    };
-
-    const handleResetPassword = async (data: z.infer<typeof resetSchema>) => {
-        try {
-            await resetPassword({
-                email,
-                code: otpValue,
-                newPassword: data.newPassword,
-            }).unwrap();
-
-            setStep("success");
-            toast.success("Đặt lại mật khẩu thành công!");
-
-            setTimeout(() => {
-                router.push("/auth/sign-in");
-            }, 3000);
-        } catch (error: any) {
-            const msg = error?.data?.message || "Đặt lại mật khẩu thất bại!";
-            toast.error(msg);
-
-            // If OTP error, go back to OTP step
-            if (msg.toLowerCase().includes("otp")) {
-                setStep("otp");
-                setOtpValue("");
-            }
-        }
-    };
-
-    // Success Screen
-    if (step === "success") {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100 dark:from-gray-900 dark:to-gray-800 p-4">
-                <Card className="w-full max-w-md text-center">
-                    <CardHeader>
-                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
-                            <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400" />
-                        </div>
-                        <CardTitle className="text-2xl text-green-600 dark:text-green-400">
-                            Đặt lại mật khẩu thành công!
-                        </CardTitle>
-                        <CardDescription>
-                            Bạn có thể đăng nhập với mật khẩu mới. Đang chuyển hướng...
-                        </CardDescription>
-                    </CardHeader>
-                </Card>
-            </div>
-        );
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
     }
+  }, [countdown]);
 
-    return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-rose-100 dark:from-gray-900 dark:to-gray-800 p-4">
-            <Card className="w-full max-w-md">
-                <CardHeader className="text-center">
-                    <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-                        {step === "email" && <Mail className="h-8 w-8 text-primary" />}
-                        {step === "otp" && <KeyRound className="h-8 w-8 text-primary" />}
-                        {step === "password" && <KeyRound className="h-8 w-8 text-primary" />}
-                    </div>
-                    <CardTitle className="text-2xl">
-                        {step === "email" && "Quên mật khẩu"}
-                        {step === "otp" && "Nhập mã OTP"}
-                        {step === "password" && "Đặt mật khẩu mới"}
-                    </CardTitle>
-                    <CardDescription>
-                        {step === "email" && "Nhập email của bạn để nhận mã xác thực"}
-                        {step === "otp" && (
-                            <>
-                                Mã OTP đã được gửi đến
-                                <br />
-                                <span className="font-semibold text-foreground">{email}</span>
-                            </>
-                        )}
-                        {step === "password" && "Nhập mật khẩu mới cho tài khoản của bạn"}
-                    </CardDescription>
-                </CardHeader>
+  const handleRequestOTP = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const result = await forgotPassword({ email }).unwrap();
+      toast.success(result.message || "Mã xác thực đã được gửi đến email của bạn.");
+      setStep(2);
+      setCountdown(60);
+    } catch (error: any) {
+      toast.error(error?.data?.message || "Không thể gửi mã xác thực. Vui lòng thử lại.");
+    }
+  };
 
-                <CardContent className="space-y-6">
-                    {/* Step 1: Email */}
-                    {step === "email" && (
-                        <Form {...emailForm}>
-                            <form onSubmit={emailForm.handleSubmit(handleSendEmail)} className="space-y-4">
-                                <FormField
-                                    control={emailForm.control}
-                                    name="email"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Email</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="name@example.com" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <Button type="submit" className="w-full" disabled={isSending}>
-                                    {isSending ? (
-                                        <>
-                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                            Đang gửi...
-                                        </>
-                                    ) : (
-                                        "Gửi mã xác thực"
-                                    )}
-                                </Button>
-                            </form>
-                        </Form>
-                    )}
+  const handleVerifyOTP = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (otp.length !== 6) {
+      toast.error("Vui lòng nhập đầy đủ mã OTP 6 chữ số.");
+      return;
+    }
+    try {
+      await verifyOTP({ email, code: otp }).unwrap();
+      toast.success("Xác thực thành công. Vui lòng thiết lập mật khẩu mới.");
+      setStep(3);
+    } catch (error: any) {
+      toast.error(error?.data?.message || "Mã xác thực không chính xác.");
+      setOtp("");
+    }
+  };
 
-                    {/* Step 2: OTP */}
-                    {step === "otp" && (
-                        <>
-                            <OTPInput
-                                value={otpValue}
-                                onChange={setOtpValue}
-                                disabled={false}
-                            />
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      toast.error("Mật khẩu xác nhận không khớp.");
+      return;
+    }
+    try {
+      const result = await resetPassword({ email, code: otp, newPassword }).unwrap();
+      toast.success(result.message || "Mật khẩu của bạn đã được thay đổi thành công.");
+      setStep(4);
+    } catch (error: any) {
+      toast.error(error?.data?.message || "Không thể đặt lại mật khẩu. Vui lòng thử lại.");
+    }
+  };
 
-                            <Button
-                                onClick={handleVerifyOTP}
-                                disabled={otpValue.length !== 6}
-                                className="w-full"
-                                size="lg"
-                            >
-                                Tiếp tục
-                            </Button>
+  const handleResendOTP = async () => {
+    if (countdown > 0) return;
+    try {
+      const result = await resendOTP({ email, type: "FORGOT_PASSWORD" }).unwrap();
+      toast.success(result.message || "Mã xác thực mới đã được gửi.");
+      setCountdown(60);
+      setOtp("");
+    } catch (error: any) {
+      toast.error(error?.data?.message || "Không thể gửi lại mã.");
+    }
+  };
 
-                            <div className="text-center">
-                                <Button
-                                    variant="ghost"
-                                    onClick={handleResendOTP}
-                                    disabled={countdown > 0 || isResending}
-                                    className="text-primary"
-                                >
-                                    {isResending ? (
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    ) : (
-                                        <RefreshCw className="mr-2 h-4 w-4" />
-                                    )}
-                                    {countdown > 0 ? `Gửi lại sau ${countdown}s` : "Gửi lại mã OTP"}
-                                </Button>
-                            </div>
+  return (
+    <AuthLayout>
+      <div className="flex flex-col gap-8">
+        {step === 1 && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="space-y-3">
+              <h1 className="text-3xl font-semibold tracking-[-0.03em] text-foreground">
+                Quên mật khẩu?
+              </h1>
+              <p className="text-base text-muted-foreground">
+                Đừng lo lắng, chúng tôi sẽ gửi cho bạn mã xác thực để đặt lại mật khẩu.
+              </p>
+            </div>
 
-                            <Button
-                                variant="outline"
-                                onClick={() => setStep("email")}
-                                className="w-full"
-                            >
-                                <ArrowLeft className="mr-2 h-4 w-4" />
-                                Thay đổi email
-                            </Button>
-                        </>
-                    )}
+            <form onSubmit={handleRequestOTP} className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-foreground">Email công việc</label>
+                <div className="relative">
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="email"
+                    placeholder="ten@congty.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="pl-11 h-12 border-border focus:border-primary focus:ring-0 rounded-lg transition-colors"
+                  />
+                </div>
+              </div>
 
-                    {/* Step 3: New Password */}
-                    {step === "password" && (
-                        <Form {...resetForm}>
-                            <form onSubmit={resetForm.handleSubmit(handleResetPassword)} className="space-y-4">
-                                <FormField
-                                    control={resetForm.control}
-                                    name="newPassword"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Mật khẩu mới</FormLabel>
-                                            <FormControl>
-                                                <div className="relative">
-                                                    <Input
-                                                        type={showPassword ? "text" : "password"}
-                                                        placeholder="••••••"
-                                                        {...field}
-                                                    />
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="absolute right-0 top-0 h-full px-3"
-                                                        onClick={() => setShowPassword(!showPassword)}
-                                                    >
-                                                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                                    </Button>
-                                                </div>
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+              <Button
+                type="submit"
+                disabled={isRequesting}
+                className="w-full bg-primary hover:opacity-90 text-primary-foreground h-12 font-semibold rounded-lg shadow-sm transition-all"
+              >
+                {isRequesting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>Gửi mã xác thực <ArrowRight className="ml-2 h-4 w-4" /></>
+                )}
+              </Button>
+            </form>
+          </div>
+        )}
 
-                                <FormField
-                                    control={resetForm.control}
-                                    name="confirmPassword"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Nhập lại mật khẩu</FormLabel>
-                                            <FormControl>
-                                                <div className="relative">
-                                                    <Input
-                                                        type={showConfirmPassword ? "text" : "password"}
-                                                        placeholder="••••••"
-                                                        {...field}
-                                                    />
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="absolute right-0 top-0 h-full px-3"
-                                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                                    >
-                                                        {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                                    </Button>
-                                                </div>
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+        {step === 2 && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="space-y-3">
+              <h1 className="text-3xl font-semibold tracking-[-0.03em] text-foreground">
+                Kiểm tra email
+              </h1>
+              <p className="text-base text-muted-foreground">
+                Chúng tôi đã gửi mã xác thực 6 chữ số đến <span className="text-foreground font-semibold">{email}</span>.
+              </p>
+            </div>
 
-                                <Button type="submit" className="w-full" disabled={isResetting}>
-                                    {isResetting ? (
-                                        <>
-                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                            Đang xử lý...
-                                        </>
-                                    ) : (
-                                        "Đặt lại mật khẩu"
-                                    )}
-                                </Button>
+            <form onSubmit={handleVerifyOTP} className="space-y-6">
+              <div className="flex justify-center py-2">
+                <OTPInput value={otp} onChange={setOtp} disabled={isVerifying} />
+              </div>
 
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => setStep("otp")}
-                                    className="w-full"
-                                >
-                                    <ArrowLeft className="mr-2 h-4 w-4" />
-                                    Quay lại
-                                </Button>
-                            </form>
-                        </Form>
-                    )}
+              <div className="space-y-3">
+                <Button
+                  type="submit"
+                  disabled={otp.length !== 6 || isVerifying}
+                  className="w-full bg-primary hover:opacity-90 text-primary-foreground h-12 font-semibold rounded-lg shadow-sm transition-all"
+                >
+                  {isVerifying ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Xác thực mã OTP"
+                  )}
+                </Button>
 
-                    {/* Back to Sign In */}
-                    <div className="text-center pt-4 border-t">
-                        <Link
-                            href="/auth/sign-in"
-                            className="inline-flex items-center text-sm text-muted-foreground hover:text-primary"
-                        >
-                            <ArrowLeft className="mr-2 h-4 w-4" />
-                            Quay lại đăng nhập
-                        </Link>
-                    </div>
-                </CardContent>
-            </Card>
-        </div>
-    );
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleResendOTP}
+                  disabled={countdown > 0 || isResending}
+                  className="w-full text-sm font-semibold text-primary hover:bg-transparent hover:opacity-70"
+                >
+                  {isResending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                  )}
+                  {countdown > 0 ? `Gửi lại mã sau ${countdown}s` : "Gửi lại mã xác thực"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="space-y-3">
+              <h1 className="text-3xl font-semibold tracking-[-0.03em] text-foreground">
+                Đặt lại mật khẩu
+              </h1>
+              <p className="text-base text-muted-foreground">
+                Vui lòng chọn mật khẩu mới chắc chắn để bảo vệ tài khoản của bạn.
+              </p>
+            </div>
+
+            <form onSubmit={handleResetPassword} className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-foreground">Mật khẩu mới</label>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                    className="pl-11 h-12 border-border focus:border-primary focus:ring-0 rounded-lg transition-colors"
+                  />
+                </div>
+                <PasswordStrengthMeter password={newPassword} />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-foreground">Xác nhận mật khẩu mới</label>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="password"
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    className="pl-11 h-12 border-border focus:border-primary focus:ring-0 rounded-lg transition-colors"
+                  />
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                disabled={isResetting || !newPassword || newPassword !== confirmPassword}
+                className="w-full bg-primary hover:opacity-90 text-primary-foreground h-12 font-semibold rounded-lg shadow-sm transition-all mt-4"
+              >
+                {isResetting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  "Đổi mật khẩu"
+                )}
+              </Button>
+            </form>
+          </div>
+        )}
+
+        {step === 4 && (
+          <div className="flex flex-col items-center justify-center py-8 space-y-6 animate-in fade-in zoom-in duration-500">
+            <div className="h-20 w-20 rounded-full bg-emerald-50 flex items-center justify-center">
+              <CheckCircle2 className="h-10 w-10 text-emerald-500" />
+            </div>
+            
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl font-bold text-foreground">Thành công!</h2>
+              <p className="text-muted-foreground">
+                Mật khẩu của bạn đã được đặt lại. Bây giờ bạn có thể đăng nhập bằng mật khẩu mới.
+              </p>
+            </div>
+
+            <Button
+              asChild
+              className="w-full bg-primary hover:opacity-90 text-primary-foreground h-12 font-semibold rounded-lg transition-all"
+            >
+              <Link href="/login">Quay lại đăng nhập</Link>
+            </Button>
+          </div>
+        )}
+
+        {step < 4 && (
+          <Link 
+            href="/login" 
+            className="flex items-center justify-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors pt-4"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Quay lại đăng nhập
+          </Link>
+        )}
+      </div>
+    </AuthLayout>
+  );
 }

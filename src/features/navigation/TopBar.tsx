@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Bell, LogOut, Settings, User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { logOut } from '@/src/redux/feature/authSlice';
+import { performFullLogout } from '@/src/utils/auth-utils';
 
 interface TopBarProps {
     className?: string;
@@ -28,8 +28,7 @@ export function TopBar({ className }: TopBarProps) {
     const user = useAppSelector((state) => state.auth.user);
 
     const handleLogout = () => {
-        dispatch(logOut());
-        router.push('/auth/sign-in');
+        performFullLogout(dispatch);
     };
 
     const initials = user?.name

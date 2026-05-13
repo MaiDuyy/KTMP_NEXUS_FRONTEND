@@ -65,6 +65,7 @@ import {
 import { AvatarUpload } from "./avatar-upload";
 import { useAppDispatch, useAppSelector } from "@/src/redux/hooks";
 import { logOut, setCredentials } from "@/src/redux/feature/authSlice";
+import { performFullLogout } from "@/src/utils/auth-utils";
 import { useLogoutMutation } from "@/src/redux/feature/authApi";
 import {
     useGetAccountDetailsQuery,
@@ -193,12 +194,11 @@ export function AccountSettingsPage() {
             // Update offline status
             await updateOnlineStatus({ isOnline: false });
             await logout({});
-            dispatch(logOut());
-            toast.success("Đăng xuất thành công!");
-            router.push("/auth/sign-in");
         } catch (error) {
-            dispatch(logOut());
-            router.push("/auth/sign-in");
+            console.error("Logout error:", error);
+        } finally {
+            toast.success("Đăng xuất thành công!");
+            performFullLogout(dispatch);
         }
     };
 

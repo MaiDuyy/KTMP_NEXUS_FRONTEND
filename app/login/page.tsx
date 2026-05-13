@@ -1,16 +1,23 @@
 "use client";
 
-import { AuthLayout, LoginForm } from '@/src/features/auth';
+import { LoginForm } from "@/src/features/auth";
+import { AuthLayout } from "@/src/features/auth/components/AuthLayout";
+import Link from "next/link";
 
 export default function LoginPage() {
   return (
     <AuthLayout>
       <LoginForm />
-      <div className="mt-6 text-center text-sm text-slate-600">
-        Don&apos;t have an account?{' '}
-        <a href="/register" className="font-semibold text-indigo-600 hover:text-indigo-500">
-          Create a workspace
-        </a>
+      <div className="mt-8 pt-6 border-t border-border flex flex-col items-center gap-4">
+        <p className="text-[15px] text-muted-foreground">
+          Chưa có tài khoản?{" "}
+          <Link
+            href="/register"
+            className="text-primary font-bold hover:opacity-70 transition-opacity"
+          >
+            Đăng ký ngay
+          </Link>
+        </p>
       </div>
     </AuthLayout>
   );

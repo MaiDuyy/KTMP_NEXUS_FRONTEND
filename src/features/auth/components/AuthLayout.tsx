@@ -1,6 +1,8 @@
+"use client";
+
 import React from 'react';
-import Image from 'next/image';
-import { ShieldCheck } from 'lucide-react';
+import { cn } from "@/lib/utils";
+import { MessageSquare, Shield, Zap, Globe } from "lucide-react";
 
 interface AuthLayoutProps {
   children: React.ReactNode;
@@ -8,92 +10,96 @@ interface AuthLayoutProps {
 
 export const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
   return (
-    <div className="flex min-h-screen w-full flex-col lg:flex-row bg-white">
-      {/* Left Pane - Branding & Security */}
-      <div className="relative hidden w-1/2 flex-col bg-slate-900 p-12 text-white lg:flex justify-between">
-        {/* Subtle Background Pattern */}
-        <div className="absolute inset-0 z-0 opacity-20 pointer-events-none">
-          <svg className="h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-            <defs>
-              <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
-                <path d="M 10 0 L 0 0 0 10" fill="none" stroke="currentColor" strokeWidth="0.5"/>
-              </pattern>
-            </defs>
-            <rect width="100" height="100" fill="url(#grid)" />
-          </svg>
+    <div className="min-h-screen flex bg-white font-sans selection:bg-primary/10 selection:text-primary">
+      {/* Cột Trái - Thương hiệu & Branding (Ẩn trên mobile) */}
+      <div className="hidden lg:flex lg:w-[45%] bg-primary relative overflow-hidden flex-col justify-between p-12">
+        {/* Họa tiết trang trí */}
+        <div className="absolute inset-0 opacity-10 pointer-events-none">
+          <div className="absolute top-0 left-0 w-full h-full" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '32px 32px' }}></div>
         </div>
 
-        <div className="relative z-10 flex flex-col items-start gap-8">
-          <div className="flex items-center gap-3">
-            <div className="relative h-12 w-12 overflow-hidden rounded-xl bg-indigo-600 p-2">
-              <Image
-                src="/images/auth/logo.png"
-                alt="OTT Chat Logo"
-                fill
-                className="object-contain"
+        <div className="relative z-10">
+          <div className="flex items-center gap-3 mb-16">
+            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg shadow-black/10">
+              <MessageSquare className="w-6 h-6 text-primary" />
+            </div>
+            <span className="text-2xl font-bold text-white tracking-tight">NEXUS</span>
+          </div>
+
+          <div className="space-y-10">
+            <h1 className="text-5xl font-bold text-white leading-[1.1] tracking-[-0.04em]">
+              Nền tảng giao tiếp <br />
+              <span className="text-white/70">Dành cho doanh nghiệp</span>
+            </h1>
+
+            <div className="space-y-6">
+              <FeatureItem 
+                icon={<Shield className="w-5 h-5" />} 
+                title="Bảo mật tuyệt đối" 
+                description="Mã hóa đầu cuối cho mọi cuộc hội thoại và dữ liệu."
+              />
+              <FeatureItem 
+                icon={<Zap className="w-5 h-5" />} 
+                title="Tốc độ vượt trội" 
+                description="Gửi tin nhắn và tệp tin dung lượng lớn trong tích tắc."
+              />
+              <FeatureItem 
+                icon={<Globe className="w-5 h-5" />} 
+                title="Kết nối mọi nơi" 
+                description="Hỗ trợ đa nền tảng, đồng bộ hóa tức thì."
               />
             </div>
-            <span className="text-2xl font-bold tracking-tight">OTT Chat</span>
-          </div>
-          
-          <div className="max-w-md">
-            <h2 className="text-4xl font-bold leading-tight">
-              Secure collaboration for the modern enterprise.
-            </h2>
-            <p className="mt-4 text-lg text-slate-400">
-              Bring your teams together with real-time messaging, AI-powered knowledge, and enterprise-grade security.
-            </p>
           </div>
         </div>
 
-        <div className="relative z-10 flex flex-col gap-6">
-          <div className="flex items-center gap-4 bg-slate-800/50 p-4 rounded-lg border border-slate-700/50 backdrop-blur-sm self-start">
-            <ShieldCheck className="h-8 w-8 text-indigo-400" />
-            <div>
-              <p className="text-sm font-semibold">Enterprise Security</p>
-              <p className="text-xs text-slate-400">SOC2 Certified & End-to-End Encrypted</p>
+        <div className="relative z-10">
+            <div className="p-6 bg-white/10 backdrop-blur-md rounded-2xl border border-white/10">
+                <p className="text-white/90 italic text-sm leading-relaxed mb-4">
+                    "Hệ thống đã giúp đội ngũ của chúng tôi tối ưu hóa quy trình làm việc và kết nối các phòng ban một cách liền mạch hơn bao giờ hết."
+                </p>
+                <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-white/20 border border-white/20"></div>
+                    <div>
+                        <p className="text-white text-xs font-bold uppercase tracking-wider">Nguyễn Văn A</p>
+                        <p className="text-white/60 text-[10px]">Giám đốc vận hành @ Doanh nghiệp ABC</p>
+                    </div>
+                </div>
             </div>
-            <div className="ml-4 h-12 w-12 relative overflow-hidden rounded opacity-80">
-                 <Image
-                    src="/images/auth/security-badge.png"
-                    alt="Security Compliance"
-                    fill
-                    className="object-contain grayscale hover:grayscale-0 transition-all duration-300"
-                />
-            </div>
-          </div>
-          
-          <blockquote className="space-y-2">
-            <p className="text-sm italic text-slate-500">
-              "Trusted by 500+ global enterprises for secure, scalable communication."
-            </p>
-          </blockquote>
         </div>
       </div>
 
-      {/* Right Pane - Forms */}
-      <div className="flex flex-1 flex-col items-center justify-center p-6 sm:p-12 lg:w-1/2">
-        {/* Mobile Logo */}
-        <div className="mb-8 flex items-center gap-2 lg:hidden">
-            <div className="relative h-10 w-10 overflow-hidden rounded-lg bg-indigo-600 p-2">
-              <Image
-                src="/images/auth/logo.png"
-                alt="OTT Chat Logo"
-                fill
-                className="object-contain"
-              />
+      {/* Cột Phải - Form Login/Register */}
+      <div className="flex-1 flex flex-col justify-center items-center p-6 sm:p-12 md:p-20 bg-[#fcfcfc]">
+        <div className="w-full max-w-[420px]">
+          {/* Logo mobile */}
+          <div className="lg:hidden flex items-center justify-center gap-2 mb-10">
+            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
+                <MessageSquare className="w-6 h-6 text-white" />
             </div>
-            <span className="text-xl font-bold tracking-tight text-slate-900">OTT Chat</span>
-        </div>
-        
-        <div className="w-full max-w-[400px] animate-in fade-in slide-in-from-bottom-4 duration-500">
-          {children}
-        </div>
-        
-        <div className="mt-auto pt-8 text-center text-sm text-slate-500">
-          Need help? <a href="mailto:support@ottchat.com" className="text-indigo-600 hover:underline font-medium">Contact IT Support</a>
+            <span className="text-2xl font-bold text-primary tracking-tight">NEXUS</span>
+          </div>
+
+          <div className="bg-white lg:bg-transparent p-8 lg:p-0 rounded-2xl shadow-xl shadow-black/[0.03] lg:shadow-none border border-[#f0f0f0] lg:border-none">
+            {children}
+          </div>
+          
+          <footer className="mt-12 text-center text-[13px] text-[#94a3b8]">
+            <p>&copy; {new Date().getFullYear()} NEXUS Platform. Bản quyền được bảo lưu.</p>
+          </footer>
         </div>
       </div>
     </div>
   );
 };
+
+const FeatureItem = ({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) => (
+  <div className="flex gap-4">
+    <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center text-white">
+      {icon}
+    </div>
+    <div>
+      <h3 className="text-white font-semibold mb-1">{title}</h3>
+      <p className="text-white/60 text-sm leading-relaxed">{description}</p>
+    </div>
+  </div>
+);

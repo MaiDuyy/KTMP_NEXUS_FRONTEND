@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { useAppSelector, useAppDispatch } from "@/src/redux/hooks";
 import { useUpdateProfileMutation, useChangePasswordMutation } from "@/src/redux/feature/userApi";
 import { setCredentials, logOut } from "@/src/redux/feature/authSlice";
+import { performFullLogout } from "@/src/utils/auth-utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -144,8 +145,7 @@ export default function SettingsPage() {
     };
 
     const handleLogout = () => {
-        dispatch(logOut());
-        window.location.href = "/auth/sign-in";
+        performFullLogout(dispatch);
     };
 
     const toggleDarkMode = () => {

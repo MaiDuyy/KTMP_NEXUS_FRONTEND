@@ -416,7 +416,7 @@ export default function GeneralSettings() {
         >
           <div className="flex gap-2">
             <div className="h-11 flex items-center px-4 bg-slate-100 border border-slate-200 rounded-l-xl text-slate-500 text-sm font-medium">
-              ott-chat.com/
+              nexus-chat.com/
             </div>
             <Input
               defaultValue={currentWorkspace?.name?.toLowerCase().replace(/\s+/g, '-')}
