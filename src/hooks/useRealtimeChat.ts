@@ -165,7 +165,50 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
         // Invalidate only Chats so the sidebar re-fetches and re-sorts.
         // Do NOT invalidate Messages here — updateQueryData already handles the
         // optimistic push and a concurrent refetch would race-overwrite it.
-        dispatch(apiSlice.util.invalidateTags(["Chats"]));
+        // Optimistically update the chat list (getChats) cache so the sidebar reflects 
+        // the new message and unread count without refetching from server.
+        const chatListParams = [
+          { type: 'all' },
+          { type: 'group' },
+          { type: 'private' },
+          undefined
+        ];
+
+        chatListParams.forEach(p => {
+          dispatch(
+            chatApi.util.updateQueryData("getChats", p as any, (draft) => {
+              if (draft && draft.chats) {
+                const chat = draft.chats.find((c: any) => c.id === data.chatId);
+                if (chat) {
+                  // Update last message info
+                  chat.lastMessage = {
+                    content: enrichedMessage.content,
+                    type: enrichedMessage.type,
+                    senderName: enrichedMessage.sender?.name || 'User',
+                    time: enrichedMessage.createdAt
+                  };
+                  chat.updatedAt = enrichedMessage.createdAt;
+                  
+                  // Only increment unread if not from current user
+                  if (!isMyMessage) {
+                    chat.unreadCount = (chat.unreadCount || 0) + 1;
+                    chat.readed = false;
+                  }
+
+                  // Re-sort list by newest activity
+                  draft.chats.sort((a: any, b: any) => {
+                    const aTime = a.lastMessage?.time || a.updatedAt || "";
+                    const bTime = b.lastMessage?.time || b.updatedAt || "";
+                    return bTime.localeCompare(aTime);
+                  });
+                }
+              }
+            })
+          );
+        });
+
+        // Invalidate ONLY the specific chat details tag if anyone is looking at it
+        dispatch(apiSlice.util.invalidateTags([{ type: "Chats", id: data.chatId }]));
 
         // DISPATCH GLOBAL EVENT for local state sync
         window.dispatchEvent(new CustomEvent("chat:new_message", { 
@@ -271,7 +314,25 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
         }
 
         // Still invalidate Chats to update unread badges across the app
-        dispatch(apiSlice.util.invalidateTags(["Chats"]));
+        // Update unread badges in the chat list cache
+        const chatListParamsRead = [ { type: 'all' }, { type: 'group' }, { type: 'private' }, undefined ];
+        chatListParamsRead.forEach(p => {
+          dispatch(
+            chatApi.util.updateQueryData("getChats", p as any, (draft) => {
+              if (draft && draft.chats) {
+                const chat = draft.chats.find((c: any) => c.id === data.chatId);
+                const authUser = store.getState().auth?.user;
+                if (chat && data.userId === authUser?.id) {
+                  chat.unreadCount = 0;
+                  chat.readed = true;
+                }
+              }
+            })
+          );
+        });
+
+        // Still invalidate the specific chat if needed
+        dispatch(apiSlice.util.invalidateTags([{ type: "Chats", id: data.chatId }]));
 
         // DISPATCH GLOBAL EVENT
         window.dispatchEvent(new CustomEvent("chat:message_read", {
@@ -411,12 +472,13 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
       onUserAvatarUpdated: (data) => {
         console.log("[RealtimeChat] 👤 User avatar updated:", data.userId);
         // Invalidate tags to refetch the sidebar, profiles, and chat list
-        dispatch(apiSlice.util.invalidateTags(["User", "Chats"]));
+        // Invalidate only specific user and general LIST, not the whole Chats tag
+        dispatch(apiSlice.util.invalidateTags(["User", { type: "Chats", id: "LIST" }]));
       },
 
       onChatDeleted: (data) => {
         console.log("[RealtimeChat] 🗑️ Chat deleted:", data.chatId);
-        dispatch(apiSlice.util.invalidateTags(["Chats"]));
+        dispatch(apiSlice.util.invalidateTags([{ type: "Chats", id: "LIST" }]));
         
         // If user is currently in this chat, redirect to home
         if (typeof window !== 'undefined' && window.location.pathname.includes(data.chatId)) {
@@ -427,7 +489,7 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
 
       onChatMemberRemoved: (data) => {
         console.log("[RealtimeChat] 🚪 Member removed from chat:", data.chatId);
-        dispatch(apiSlice.util.invalidateTags(["Chats"]));
+        dispatch(apiSlice.util.invalidateTags([{ type: "Chats", id: "LIST" }]));
 
         // If user is the one removed and currently in this chat, redirect
         const authUser = store.getState().auth?.user;

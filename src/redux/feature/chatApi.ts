@@ -80,7 +80,13 @@ export const chatApi = apiSlice.injectEndpoints({
         });
         return { ...response, chats: sorted };
       },
-      providesTags: ["Chats"],
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.chats.map(({ id }) => ({ type: "Chats" as const, id })),
+              { type: "Chats", id: "LIST" },
+            ]
+          : [{ type: "Chats", id: "LIST" }],
     }),
 
     // Lấy chi tiết chat
@@ -102,7 +108,7 @@ export const chatApi = apiSlice.injectEndpoints({
         method: "POST",
         body,
       }),
-      invalidatesTags: ["Chats"],
+      invalidatesTags: [{ type: "Chats", id: "LIST" }],
     }),
 
     // Tạo nhóm chat
@@ -112,7 +118,7 @@ export const chatApi = apiSlice.injectEndpoints({
         method: "POST",
         body,
       }),
-      invalidatesTags: ["Chats"],
+      invalidatesTags: [{ type: "Chats", id: "LIST" }],
     }),
 
     // Cập nhật nhóm
@@ -131,7 +137,7 @@ export const chatApi = apiSlice.injectEndpoints({
         url: `/chats/${chatId}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["Chats"],
+      invalidatesTags: [{ type: "Chats", id: "LIST" }],
     }),
 
     // Thêm thành viên
@@ -169,7 +175,7 @@ export const chatApi = apiSlice.injectEndpoints({
         url: `/chats/${chatId}/leave`,
         method: "POST",
       }),
-      invalidatesTags: ["Chats"],
+      invalidatesTags: [{ type: "Chats", id: "LIST" }],
     }),
 
     // Ghim/bỏ ghim chat
@@ -179,7 +185,10 @@ export const chatApi = apiSlice.injectEndpoints({
         method: "PUT",
         body: { pin },
       }),
-      invalidatesTags: ["Chats"],
+      invalidatesTags: (_result, _error, { chatId }) => [
+        { type: "Chats", id: chatId },
+        { type: "Chats", id: "LIST" },
+      ],
     }),
 
     // Bật/tắt thông báo
@@ -226,7 +235,7 @@ export const chatApi = apiSlice.injectEndpoints({
           patchPrivate.undo();
         }
       },
-      invalidatesTags: ["Chats"],
+      invalidatesTags: (_result, _error, chatId) => [{ type: "Chats", id: chatId }],
     }),
 
     // Lấy danh sách Read Receipts của chat
@@ -250,7 +259,7 @@ export const chatApi = apiSlice.injectEndpoints({
             url: `/chats/${chatId}/join`,
             method: "POST",
         }),
-        invalidatesTags: ["Chats"],
+        invalidatesTags: [{ type: "Chats", id: "LIST" }],
     }),
 
     // Approve Join Request
