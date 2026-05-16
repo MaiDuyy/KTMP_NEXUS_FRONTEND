@@ -25,6 +25,7 @@ export interface Channel {
   categoryId?: string;
   isDefault: boolean;
   isArchived: boolean;
+  isReadOnly: boolean;
   position: number;
   createdAt: string;
   _count: {
@@ -139,7 +140,7 @@ export const channelApi = apiSlice.injectEndpoints({
     }),
 
     // Update channel
-    updateChannel: builder.mutation<Channel, { channelId: string; name?: string; description?: string; topic?: string }>({
+    updateChannel: builder.mutation<Channel, { channelId: string; name?: string; description?: string; topic?: string; isReadOnly?: boolean }>({
       query: ({ channelId, ...body }) => ({
         url: `/channels/${channelId}`,
         method: 'PUT',

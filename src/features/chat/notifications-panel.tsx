@@ -24,6 +24,8 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
 import { useRouter } from "next/navigation";
+import { useDispatch } from "react-redux";
+import { setWorkspace } from "@/src/redux/feature/workspaceSlice";
 
 const NOTIFICATION_ICONS: Record<NotificationType, React.ReactNode> = {
     FRIEND_REQUEST: <UserPlus className="h-5 w-5 text-blue-500" />,
@@ -39,6 +41,7 @@ const NOTIFICATION_ICONS: Record<NotificationType, React.ReactNode> = {
 
 export default function NotificationsPanel() {
     const router = useRouter();
+    const dispatch = useDispatch();
     const { data, isLoading, refetch } = useGetNotificationsQuery();
     const [markAsRead] = useMarkNotificationAsReadMutation();
     const [markAllRead] = useMarkAllAsReadMutation();
@@ -116,7 +119,24 @@ export default function NotificationsPanel() {
                         {notifications.map((notification) => (
                             <div
                                 key={notification.id}
-                                onClick={() => !notification.isRead && handleMarkAsRead(notification.id)}
+                                onClick={() => {
+                                    if (!notification.isRead) handleMarkAsRead(notification.id);
+                                    
+                                    // Chuyển workspace nếu có thông tin
+                                    const wsId = notification.data?.workspaceId;
+                                    if (wsId) {
+                                        dispatch(setWorkspace(wsId));
+                                    } else if (notification.type === 'NEW_MESSAGE' && !wsId) {
+                                        // Nếu là tin nhắn mà không có workspaceId thì có thể là global chat
+                                        dispatch(setWorkspace(null));
+                                    }
+
+                                    if (notification.data?.action?.url) {
+                                        router.push(notification.data.action.url);
+                                    } else if (notification.data?.chatId) {
+                                        router.push(`/chat/${notification.data.chatId}`);
+                                    }
+                                }}
                                 className={`flex gap-3 p-3 cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 ${!notification.isRead ? "bg-blue-50/50 dark:bg-gray-800" : ""
                                     }`}
                             >
@@ -126,10 +146,17 @@ export default function NotificationsPanel() {
                                 </div>
 
                                 {/* Content */}
-                                <div className="flex-1 min-w-0">
-                                    <p className={`text-sm ${!notification.isRead ? "font-semibold text-gray-900 dark:text-white" : "text-gray-700 dark:text-gray-300"}`}>
-                                        {notification.title}
-                                    </p>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between mb-0.5">
+                                        <p className={`text-sm truncate ${!notification.isRead ? "font-semibold text-gray-900 dark:text-white" : "text-gray-700 dark:text-gray-300"}`}>
+                                            {notification.title}
+                                        </p>
+                                        {notification.data?.workspaceName && (
+                                            <span className="text-[9px] font-black uppercase tracking-tighter text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 shrink-0">
+                                                {notification.data.workspaceName}
+                                            </span>
+                                        )}
+                                    </div>
                                     <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
                                         {notification.body}
                                     </p>

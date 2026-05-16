@@ -14,7 +14,8 @@ import { useGetUnreadCountQuery } from '@/src/redux/feature/notificationApi';
 import {
   Bell, ChevronDown, ChevronRight, Hash, Lock, MessageCircle,
   MoreVertical, Plus, Settings, Users, Check, Search, X,
-  LogOut, BellOff, Bell as BellOn, Megaphone, Loader2,
+  LogOut, BellOff, Bell as BellOn, Megaphone, Loader2, Globe,
+  Shield
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import NotificationsPanel from './notifications-panel';
@@ -29,7 +30,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useGetChatsQuery } from '@/src/redux/feature/chatApi';
+import { useGetChatsQuery, useGetWorkspaceUnreadCountsQuery } from '@/src/redux/feature/chatApi';
 import { Chat } from '@/src/type/chat.types';
 import { useDispatch, useSelector } from 'react-redux';
 import { setWorkspace } from '@/src/redux/feature/workspaceSlice';
@@ -262,18 +263,24 @@ const ChannelRow: React.FC<ChannelRowProps> = ({ channel, active, unreadCount, o
 
   return (
     <div
-      className={`group flex items-center justify-between px-2 py-1.5 rounded-md cursor-pointer transition-all text-sm ${
-        active ? 'bg-blue-50 text-blue-700 font-semibold' : unreadCount && unreadCount > 0 ? 'text-slate-900 font-bold' : 'text-slate-600 hover:bg-slate-100'
+      className={`group flex items-center justify-between px-2 py-1 rounded-xl cursor-pointer transition-all duration-200 text-sm ${
+        active 
+          ? 'bg-blue-600/10 text-blue-700 shadow-sm border border-blue-200/50' 
+          : unreadCount && unreadCount > 0 
+            ? 'text-slate-900 font-bold' 
+            : 'text-slate-600 hover:bg-slate-200/60'
       }`}
     >
       <button
         onClick={onNavigate}
-        className="flex items-center gap-2 min-w-0 flex-1"
+        className="flex items-center gap-2 min-w-0 flex-1 px-0.5"
       >
         <Icon size={14} className={active ? 'text-blue-600' : unreadCount && unreadCount > 0 ? 'text-slate-900' : 'text-slate-400'} />
-        <span className="truncate text-[13.5px]">{channel.name}</span>
+        <span className={`truncate text-[12.5px] tracking-tight ${active ? 'font-bold' : 'font-medium'}`}>
+          {channel.name}
+        </span>
         {unreadCount && unreadCount > 0 ? (
-          <span className="ml-auto bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+          <span className="ml-auto bg-blue-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full shadow-sm ring-2 ring-white">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         ) : null}
@@ -320,6 +327,7 @@ export const ModernChannelSidebar: React.FC = () => {
   const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'messages' | 'friends'>('messages');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [workspaceSearchQuery, setWorkspaceSearchQuery] = useState('');
 
   const currentWorkspaceId = useSelector((state: RootState) => state.workspace.currentWorkspaceId);
   const workspaceId = (params.workspaceId as string) || currentWorkspaceId;
@@ -334,6 +342,25 @@ export const ModernChannelSidebar: React.FC = () => {
     { skip: !workspaceId }
   );
   const [leaveChannel] = useLeaveChannelMutation();
+  const { data: unreadCounts } = useGetWorkspaceUnreadCountsQuery();
+
+  const filteredWorkspaces = useMemo(() =>
+    workspaces?.filter(ws => ws.name.toLowerCase().includes(workspaceSearchQuery.toLowerCase())) || [],
+    [workspaces, workspaceSearchQuery]
+  );
+  
+  const { totalUnread, currentUnread, otherUnread } = useMemo(() => {
+    if (!unreadCounts) return { totalUnread: 0, currentUnread: 0, otherUnread: 0 };
+    
+    const total = Object.values(unreadCounts).reduce((acc, curr) => acc + (curr || 0), 0);
+    const current = currentWorkspaceId ? (unreadCounts[currentWorkspaceId] || 0) : (unreadCounts['global'] || 0);
+    
+    return {
+      totalUnread: total,
+      currentUnread: current,
+      otherUnread: total - current
+    };
+  }, [unreadCounts, currentWorkspaceId]);
 
   const { data: groupChatsData } = useGetChatsQuery({ type: 'group', workspaceId });
   const { data: privatesData } = useGetChatsQuery({ type: 'private', workspaceId });
@@ -395,65 +422,173 @@ export const ModernChannelSidebar: React.FC = () => {
 
   return (
     <div className="w-[260px] flex flex-col bg-slate-50/50 border-r border-slate-100 h-screen shrink-0 pb-6">
-      {/* ── Header ── */}
-      <div className="p-4 flex flex-col gap-4 border-b border-slate-100 bg-white/50 backdrop-blur-sm">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 overflow-hidden">
-            <div className={`h-2.5 w-2.5 rounded-full shrink-0 ${isConnected ? 'bg-emerald-500' : 'bg-red-400 animate-pulse'}`} />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 hover:bg-slate-100 px-1.5 py-1 rounded-md transition-all group overflow-hidden">
-                  <Avatar className="h-6 w-6 rounded-lg shrink-0">
+      {/* ── Header: Integrated Workspace Identity & Actions ── */}
+      <div className="p-2 border-b border-slate-100 bg-white/70 backdrop-blur-md sticky top-0 z-10 flex flex-col gap-2">
+        <div className="flex items-center gap-1">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+            <button className="flex-1 flex items-center gap-2 hover:bg-slate-100/80 p-1.5 rounded-xl transition-all group overflow-hidden border border-transparent hover:border-slate-200">
+                <div className="relative shrink-0">
+                  <Avatar className="h-7 w-7 rounded-lg shadow-sm border border-slate-200">
                     <AvatarImage src={currentWorkspace?.icon ? getAvatarUrl(currentWorkspace.icon) : undefined} alt={currentWorkspace?.name} />
-                    <AvatarFallback className="bg-blue-600 text-white text-[10px] font-bold rounded-lg">
-                      {currentWorkspace?.name?.substring(0, 1).toUpperCase() || 'W'}
+                    <AvatarFallback className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white text-[9px] font-black rounded-lg">
+                      {(currentWorkspace?.name || "Nexus Global").substring(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  <h2 className="font-bold text-slate-900 text-sm truncate">
-                    {currentWorkspace?.name || "Chọn Workspace"}
-                  </h2>
-                  <ChevronDown size={14} className="text-slate-400 group-hover:text-slate-600 shrink-0" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-64 p-2 rounded-xl shadow-2xl border-slate-200">
-                <div className="px-3 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Chuyển Workspace</div>
-                {workspaces?.map((ws) => (
-                  <DropdownMenuItem
-                    key={ws.id}
-                    onClick={() => { dispatch(setWorkspace(ws.id)); router.push('/chat'); }}
-                    className={`rounded-lg py-2 cursor-pointer flex items-center gap-3 ${ws.id === currentWorkspaceId ? 'bg-blue-50 text-blue-700' : ''}`}
-                  >
-                    <Avatar className="h-8 w-8 rounded-lg shrink-0">
-                      <AvatarImage src={ws.icon ? getAvatarUrl(ws.icon) : undefined} alt={ws.name} />
-                      <AvatarFallback className="bg-blue-600 text-white font-bold text-xs rounded-lg">{ws.name.substring(0, 1).toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-sm truncate">{ws.name}</p>
-                      <p className="text-[10px] text-slate-500 truncate">{ws.id === currentWorkspaceId ? 'Đang truy cập' : 'Nhấn để chuyển'}</p>
+                  <div className={`absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border-2 border-white dark:border-slate-900 ${isConnected ? 'bg-emerald-500' : 'bg-red-400 animate-pulse'}`} />
+                  
+                  {/* Current Workspace Unread Badge (Red) */}
+                  {currentUnread > 0 && (
+                    <div className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] px-1 bg-red-500 border-2 border-white rounded-full flex items-center justify-center text-[8px] font-black text-white shadow-md animate-in zoom-in duration-300 z-10">
+                      {currentUnread > 99 ? '99+' : currentUnread}
                     </div>
-                    {ws.id === currentWorkspaceId && <Check size={16} className="text-blue-600" />}
-                  </DropdownMenuItem>
-                ))}
-                <DropdownMenuSeparator className="my-2" />
-                <RequirePermission anyRole={['SUPER_ADMIN', 'ADMIN', 'WORKSPACE_MANAGER']} silent>
-                  <DropdownMenuItem className="rounded-lg py-2 cursor-pointer text-blue-600" onClick={() => setIsCreateModalOpen(true)}>
-                    <Plus size={16} className="mr-3" />
-                    <span className="font-bold text-sm">Tạo Workspace mới</span>
-                  </DropdownMenuItem>
-                </RequirePermission>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  )}
+
+                  {/* Other Workspaces Activity Indicator (Blue Dot) */}
+                  {otherUnread > 0 && (
+                    <div className={`absolute ${currentUnread > 0 ? '-top-1.5 -left-1.5' : '-top-1.5 -right-1.5'} h-3 w-3 bg-blue-500 border-2 border-white rounded-full shadow-sm animate-bounce duration-1000`} title="Có tin nhắn ở Workspace khác" />
+                  )}
+                </div>
+                
+                <div className="flex flex-col items-start overflow-hidden flex-1">
+                  <h2 className="font-bold text-slate-900 text-xs truncate leading-tight w-full text-left">
+                    {currentWorkspace?.name || "Nexus Global"}
+                  </h2>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[9px] text-slate-500 font-medium uppercase tracking-tight">
+                      {isConnected ? 'Trực tuyến' : 'Kết nối...'}
+                    </span>
+                    <ChevronDown size={8} className="text-slate-400 group-hover:text-slate-600 transition-transform group-data-[state=open]:rotate-180" />
+                  </div>
+                </div>
+              </button>
+            </DropdownMenuTrigger>
+
+       
+
+              <DropdownMenuContent align="start" sideOffset={8} className="w-64 p-2 rounded-2xl shadow-2xl border-slate-200/60 backdrop-blur-xl bg-white/95">
+  <div className="px-3 py-2.5 text-[10px] font-black text-slate-400 uppercase tracking-[0.1em]">Không gian làm việc</div>
+  
+  <div className="px-2 mb-2">
+    <div className="relative" onPointerDown={(e) => e.stopPropagation()}>
+      <Search className="absolute left-2.5 top-2.5 h-3 w-3 text-slate-400" />
+      <Input
+        placeholder="Tìm nhanh..."
+        autoFocus
+        value={workspaceSearchQuery}
+        onChange={(e) => setWorkspaceSearchQuery(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') e.preventDefault();
+          e.stopPropagation();
+        }}
+        className="h-8 pl-8 text-[11px] bg-slate-100/50 border-transparent focus:bg-white focus:ring-1 focus:ring-blue-100 rounded-xl transition-all"
+      />
+    </div>
+  </div>
+
+  <div className="space-y-1 max-h-[300px] overflow-y-auto custom-scrollbar">
+    {/* Nexus Global Item */}
+    {(!workspaceSearchQuery || "nexus global".includes(workspaceSearchQuery.toLowerCase())) && (() => {
+      const globalUnread = unreadCounts?.['global'] || 0;
+      const isActive = !currentWorkspaceId;
+      return (
+        <DropdownMenuItem
+          onClick={() => { dispatch(setWorkspace(null)); router.push('/chat'); }}
+          className={`rounded-xl py-2.5 cursor-pointer flex items-center gap-3 transition-all ${isActive ? 'bg-blue-50/80 text-blue-700 border border-blue-100' : 'hover:bg-slate-50'}`}
+        >
+          <div className="relative shrink-0">
+            <div className={`h-8 w-8 flex items-center justify-center rounded-lg shadow-sm border border-slate-200 ${isActive ? 'bg-gradient-to-br from-blue-600 to-indigo-700 text-white' : 'bg-slate-100 text-slate-600'}`}>
+              <Globe size={16} strokeWidth={2.5} />
+            </div>
+            {globalUnread > 0 && (
+              <div className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 bg-red-500 border-2 border-white rounded-full flex items-center justify-center text-[9px] font-black text-white shadow-md animate-in zoom-in duration-300">
+                {globalUnread > 99 ? '99+' : globalUnread}
+              </div>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-xs truncate">Nexus Global</p>
+            <p className="text-[9px] text-slate-500 truncate">{isActive ? 'Đang hoạt động' : 'Không gian mặc định'}</p>
+          </div>
+          {isActive && <Check size={14} className="text-blue-600 shrink-0" />}
+        </DropdownMenuItem>
+      );
+    })()}
+
+    {filteredWorkspaces.map((ws) => {
+      const unreadCount = unreadCounts?.[ws.id] || 0;
+      const isActive = ws.id === currentWorkspaceId;
+
+      return (
+        <DropdownMenuItem
+          key={ws.id}
+          onClick={() => { dispatch(setWorkspace(ws.id)); router.push('/chat'); }}
+          className={`rounded-xl py-2.5 cursor-pointer flex items-center gap-3 transition-all ${isActive ? 'bg-blue-50/80 text-blue-700 border border-blue-100' : 'hover:bg-slate-50'}`}
+        >
+          <div className="relative shrink-0">
+            <Avatar className="h-8 w-8 rounded-lg shadow-sm">
+              <AvatarImage src={ws.icon ? getAvatarUrl(ws.icon) : undefined} alt={ws.name} />
+              <AvatarFallback className="bg-slate-100 text-slate-600 font-bold text-[10px] rounded-lg border border-slate-200">
+                {ws.name.substring(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+
+            {unreadCount > 0 && (
+              <div className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 bg-red-500 border-2 border-white rounded-full flex items-center justify-center text-[9px] font-black text-white shadow-md animate-in zoom-in duration-300">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </div>
+            )}
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-xs truncate">{ws.name}</p>
+            <p className="text-[9px] text-slate-500 truncate">{isActive ? 'Đang hoạt động' : 'Nhấn để chuyển'}</p>
+          </div>
+          
+          {isActive && <Check size={14} className="text-blue-600 shrink-0" />}
+        </DropdownMenuItem>
+      );
+    })}
+
+    {filteredWorkspaces.length === 0 && workspaceSearchQuery && (
+      <div className="py-8 flex flex-col items-center justify-center text-slate-400 gap-2">
+        <Globe size={24} className="opacity-20" />
+        <p className="text-[10px] font-medium">Không tìm thấy không gian</p>
+      </div>
+    )}
+  </div>
+              
+              <DropdownMenuSeparator className="my-2 bg-slate-100" />
+              
+              <RequirePermission anyRole={['SUPER_ADMIN', 'ADMIN', 'WORKSPACE_MANAGER']} silent>
+                <DropdownMenuItem className="rounded-xl py-2.5 cursor-pointer text-blue-600 hover:text-blue-700 hover:bg-blue-50/50 group" onClick={() => setIsCreateModalOpen(true)}>
+                  <div className="h-8 w-8 rounded-lg border-2 border-dashed border-blue-200 flex items-center justify-center mr-3 group-hover:border-blue-400 transition-colors">
+                    <Plus size={14} />
+                  </div>
+                  <span className="font-bold text-xs">Thêm không gian mới</span>
+                </DropdownMenuItem>
+              </RequirePermission>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <div className="flex items-center gap-0.5 pr-1">
             <Sheet>
               <SheetTrigger asChild>
-                <button className="h-8 w-8 relative rounded-md flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-all group">
-                  <Bell size={18} className="group-hover:text-blue-600 transition-colors" />
-                  {unreadCount > 0 && (
-                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white shadow-sm" />
+                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-blue-600 transition-all">
+                  <Search size={14} />
+                </Button>
+              </SheetTrigger>
+              {/* <DirectorySearchModal /> */}
+            </Sheet>
+            
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-blue-600 transition-all relative">
+                  <Bell size={14} />
+                  {notificationsData && notificationsData.unreadCount > 0 && (
+                    <span className="absolute top-1 right-1 h-1.5 w-1.5 bg-red-500 rounded-full border-2 border-white shadow-sm" />
                   )}
-                </button>
+                </Button>
               </SheetTrigger>
               <SheetContent side="left" className="p-0 w-[400px] border-r-0 shadow-2xl">
                 <NotificationsPanel />
@@ -463,82 +598,74 @@ export const ModernChannelSidebar: React.FC = () => {
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex bg-slate-100/50 p-1 rounded-lg">
+        <div className="flex bg-slate-200/50 p-0.5 rounded-xl mx-1">
           <button
             onClick={() => setActiveTab('messages')}
-            className={`flex-1 flex items-center justify-center gap-2 py-1.5 text-xs font-medium rounded-md transition-all ${activeTab === 'messages' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[10px] font-black uppercase tracking-tight rounded-lg transition-all ${activeTab === 'messages' ? 'bg-white text-blue-600 shadow-sm ring-1 ring-slate-200/50' : 'text-slate-500 hover:text-slate-700'}`}
           >
-            <MessageCircle size={14} /> Tin nhắn
+            <MessageCircle size={12} /> Tin nhắn
           </button>
           <button
             onClick={() => setActiveTab('friends')}
-            className={`flex-1 flex items-center justify-center gap-2 py-1.5 text-xs font-medium rounded-md transition-all ${activeTab === 'friends' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[10px] font-black uppercase tracking-tight rounded-lg transition-all ${activeTab === 'friends' ? 'bg-white text-blue-600 shadow-sm ring-1 ring-slate-200/50' : 'text-slate-500 hover:text-slate-700'}`}
           >
-            <Users size={14} /> Bạn bè
+            <Users size={12} /> Bạn bè
           </button>
         </div>
       </div>
 
       {/* ── Scrollable Body ── */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
         {activeTab === 'messages' ? (
           <>
             {/* ═══ CHANNELS SECTION (Slack style) ═══ */}
             {workspaceId ? (
-              <div className="px-2 pt-3">
+              <div className="px-2 pt-4">
                 {/* Section header with collapse + add */}
-                <div className="flex items-center justify-between px-1 mb-1">
+                <div className="flex items-center justify-between px-2 mb-1.5">
                   <button
                     onClick={() => setChannelsExpanded(!channelsExpanded)}
-                    className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-slate-400 hover:text-slate-600 transition-colors"
+                    className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.05em] text-slate-500 hover:text-blue-600 transition-colors"
                   >
                     {channelsExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                    Kênh
+                    Kênh thảo luận
                   </button>
                   <div className="flex items-center gap-1">
-                    {/* Manage channels — Admin/Owner only */}
                     <WorkspaceGuard allowedRoles={['WORKSPACE_OWNER', 'WORKSPACE_ADMIN']}>
-                      <>
+                      <div className="flex items-center gap-1">
                         <button
                           title="Tạo kênh mới"
                           onClick={() => setShowCreateChannelModal(true)}
-                          className="h-5 w-5 flex items-center justify-center rounded text-slate-400 hover:text-blue-600 hover:bg-slate-100 transition-all"
+                          className="h-6 w-6 flex items-center justify-center rounded-lg text-slate-400 hover:text-blue-600 hover:bg-white hover:shadow-sm border border-transparent hover:border-slate-100 transition-all"
                         >
-                          <Plus size={12} />
+                          <Plus size={14} />
                         </button>
-                        <Link href="/admin">
-                          <button
-                            title="Quản lý kênh"
-                            className="h-5 w-5 flex items-center justify-center rounded text-slate-400 hover:text-blue-600 hover:bg-slate-100 transition-all"
-                          >
-                            <Settings size={12} />
-                          </button>
-                        </Link>
-                      </>
+                      </div>
                     </WorkspaceGuard>
-                    {/* Browse channels — everyone */}
                     <button
                       title="Khám phá kênh"
                       onClick={() => setShowBrowseModal(true)}
-                      className="h-5 w-5 flex items-center justify-center rounded text-slate-400 hover:text-blue-600 hover:bg-slate-100 transition-all"
+                      className="h-6 w-6 flex items-center justify-center rounded-lg text-slate-400 hover:text-blue-600 hover:bg-white hover:shadow-sm border border-transparent hover:border-slate-100 transition-all"
                     >
-                      <Search size={12} />
+                      <Search size={13} />
                     </button>
                   </div>
                 </div>
 
                 {channelsExpanded && (
-                  <div className="space-y-0.5">
+                  <div className="space-y-0.5 px-1">
                     {filteredChannels.length === 0 && (
-                      <p className="px-3 py-2 text-xs text-muted-foreground italic">
-                        Chưa tham gia kênh nào.{' '}
+                      <div className="px-3 py-4 text-center rounded-xl bg-slate-100/50 border border-dashed border-slate-200 mx-1">
+                        <p className="text-[11px] text-slate-500 font-medium italic">
+                          Chưa có kênh nào.
+                        </p>
                         <button
                           onClick={() => setShowBrowseModal(true)}
-                          className="text-blue-600 underline hover:no-underline"
+                          className="text-[10px] text-blue-600 font-bold hover:underline mt-1"
                         >
-                          Khám phá kênh
+                          Khám phá ngay
                         </button>
-                      </p>
+                      </div>
                     )}
                     {filteredChannels.map((channel: any) => {
                       const chatObj = groupChatsData?.chats?.find((c: any) => c.id === channel.id);
@@ -559,21 +686,21 @@ export const ModernChannelSidebar: React.FC = () => {
             ) : null}
 
             {/* ═══ GROUPS SECTION ═══ */}
-            <div className="px-2 pt-4 border-t border-slate-100 mt-3">
-              <div className="flex items-center justify-between px-1 mb-1">
+            <div className="px-2 pt-6">
+              <div className="flex items-center justify-between px-2 mb-1.5">
                 <button
                   onClick={() => setGroupsExpanded(!groupsExpanded)}
-                  className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-slate-400 hover:text-slate-600 transition-colors"
+                  className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.05em] text-slate-500 hover:text-blue-600 transition-colors"
                 >
                   {groupsExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                  Nhóm chat
+                  Nhóm riêng tư
                 </button>
                 <button
                   title="Tạo nhóm chat"
                   onClick={() => setShowGroupModal(true)}
-                  className="h-5 w-5 flex items-center justify-center rounded text-slate-400 hover:text-blue-600 hover:bg-slate-100 transition-all"
+                  className="h-6 w-6 flex items-center justify-center rounded-lg text-slate-400 hover:text-blue-600 hover:bg-white hover:shadow-sm border border-transparent hover:border-slate-100 transition-all"
                 >
-                  <Plus size={12} />
+                  <Plus size={14} />
                 </button>
               </div>
               {groupsExpanded && (
@@ -652,9 +779,10 @@ export const ModernChannelSidebar: React.FC = () => {
               )}
             </div>
 
-            {/* ═══ Workspace Admin Link ═══ */}
-            <WorkspaceGuard allowedRoles={['WORKSPACE_OWNER', 'WORKSPACE_ADMIN']}>
-              <div className="px-2 pt-4 pb-2 border-t border-slate-100 mt-3">
+            {/* ═══ Management Links ═══ */}
+            <div className="px-2 pt-4 pb-2 border-t border-slate-100 mt-3 space-y-1">
+              {/* Workspace Specific Admin */}
+              <WorkspaceGuard allowedRoles={['WORKSPACE_OWNER', 'WORKSPACE_ADMIN']}>
                 <Link href="/workspace/settings">
                   <Button
                     variant="ghost"
@@ -665,12 +793,29 @@ export const ModernChannelSidebar: React.FC = () => {
                     Quản trị Workspace
                   </Button>
                 </Link>
-              </div>
-            </WorkspaceGuard>
+              </WorkspaceGuard>
+
+              {/* System Admin (Show in Default Workspace) */}
+              {!workspaceId && (
+                <RequirePermission anyRole={['SUPER_ADMIN', 'ADMIN']} silent>
+                  <Link href="/admin">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start gap-2 text-[12px] text-blue-600 bg-blue-50/50 hover:bg-blue-100"
+                    >
+                      <Shield className="w-3.5 h-3.5" />
+                      Quản trị Hệ thống
+                    </Button>
+                  </Link>
+                </RequirePermission>
+              )}
+            </div>
           </>
         ) : (
           <FriendsPanel
             onlineUsers={onlineUsers}
+            // workspaceId={workspaceId}
             onStartChat={(chatId) => {
               setActiveTab('messages');
               router.push(`/chat/${chatId}`);

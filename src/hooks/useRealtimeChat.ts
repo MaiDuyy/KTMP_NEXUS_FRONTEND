@@ -29,6 +29,8 @@ import { chatApi } from "@/src/redux/feature/chatApi";
 import { adminApi } from "@/src/redux/feature/adminApi";
 import { toast } from "sonner";
 import { store } from "@/src/redux/store";
+import { useGetUserWorkspacesQuery } from "@/src/redux/feature/workspaceApi";
+import { setWorkspace } from "../redux/feature/workspaceSlice";
 
 // ===== Context Types =====
 
@@ -58,6 +60,9 @@ const RealtimeChatContext = createContext<RealtimeChatContextValue>({
 export function RealtimeChatProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const dispatch = useDispatch<any>();
+  const { data: workspaces } = useGetUserWorkspacesQuery(undefined, {
+    skip: !useSelector((state: any) => state.auth?.isAuthenticated)
+  });
   const auth = useSelector((state: any) => state.auth);
   const isAuthenticated = auth?.isAuthenticated;
   const accessToken = auth?.token;
@@ -68,6 +73,26 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
   );
   const isConnectedRef = useRef(false);
   const typingTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const workspacesRef = useRef<any[]>([]);
+  const recentToasts = useRef<Set<string>>(new Set());
+
+  const showToastWithDeduplication = useCallback((content: string, showFn: () => void) => {
+    if (recentToasts.current.has(content)) return;
+    
+    recentToasts.current.add(content);
+    showFn();
+    
+    setTimeout(() => {
+      recentToasts.current.delete(content);
+    }, 3000); // 3 seconds window for deduplication
+  }, []);
+
+  // Keep workspaces ref in sync
+  useEffect(() => {
+    if (workspaces) {
+      workspacesRef.current = workspaces;
+    }
+  }, [workspaces]);
 
   // Remove typing user after timeout
   const removeTyping = useCallback((chatId: string, userId: string) => {
@@ -128,16 +153,41 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
         const authUser = store.getState().auth?.user;
         const senderId = data.message.senderId || data.message.sender?.id;
         const isMyMessage = senderId === authUser?.id;
+        
+        console.log(`[RealtimeChat] 📩 Processing message in chat ${data.chatId}, workspace: ${data.workspaceId || 'global'}, isMyMessage: ${isMyMessage}`);
 
         // Hiển thị toast thông báo nếu tin nhắn đến từ cuộc trò chuyện khác
         const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
         const isCurrentChat = currentPath.includes(data.chatId);
         
         if (!isCurrentChat && !isMyMessage) {
-           toast.info(`Tin nhắn mới từ ${data.message.sender?.name || 'Ai đó'}`, {
-               description: data.message.type === 'text' ? data.message.content : `[${data.message.type}]`,
-               duration: 4000,
-           });
+           const msgWorkspace = workspacesRef.current?.find((w: any) => w.id === data.workspaceId);
+           const workspaceName = msgWorkspace ? msgWorkspace.name : 'Nexus Global';
+
+           // Skip message toast if it's a mention (let onMention handle it)
+           const content = data.message.content || '';
+           const hasMention = /@\[([^\]]+)\]\(([a-zA-Z0-9_-]+)\)/.test(content) || /@(here|channel)\b/i.test(content);
+
+           if (!hasMention) {
+             const toastContent = `MSG:${data.chatId}:${data.message.id}`;
+             showToastWithDeduplication(toastContent, () => {
+               toast.info(`Tin nhắn từ ${data.message.sender?.name || 'Ai đó'}`, {
+                   description: `Tại ${workspaceName}: ${data.message.type === 'text' ? content : `[${data.message.type}]`}`,
+                   duration: 5000,
+                   action: {
+                     label: 'Xem ngay',
+                     onClick: () => {
+                       if (data.workspaceId) {
+                         dispatch(setWorkspace(data.workspaceId));
+                       } else {
+                         dispatch(setWorkspace(null));
+                       }
+                       router.push(`/chat/${data.chatId}`);
+                     }
+                   }
+               });
+             });
+           }
         }
 
         // Enrich message with isMe flag before pushing to cache
@@ -207,8 +257,21 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
           );
         });
 
+        // Optimistically update workspace unread counts if NOT in current chat
+        if (!isMyMessage && !isCurrentChat) {
+          dispatch(
+            chatApi.util.updateQueryData("getWorkspaceUnreadCounts", undefined, (draft) => {
+              const wsKey = data.workspaceId || 'global';
+              if (draft) {
+                draft[wsKey] = (draft[wsKey] || 0) + 1;
+              }
+            })
+          );
+        }
+
         // Invalidate ONLY the specific chat details tag if anyone is looking at it
-        dispatch(apiSlice.util.invalidateTags([{ type: "Chats", id: data.chatId }]));
+        // Also invalidate the LIST to ensure sidebar ordering and unread counts are fresh
+        dispatch(apiSlice.util.invalidateTags([{ type: "Chats", id: data.chatId }, { type: "Chats", id: "LIST" }]));
 
         // DISPATCH GLOBAL EVENT for local state sync
         window.dispatchEvent(new CustomEvent("chat:new_message", { 
@@ -275,21 +338,101 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
         }
       },
 
+      // onConnect: () => {
+      //   setIsConnected(true);
+      //   isConnectedRef.current = true;
+      // },
+      // onDisconnect: () => {
+      //   setIsConnected(false);
+      //   isConnectedRef.current = false;
+      // },
+      
       onNotification: (data: any) => {
         console.log("[RealtimeChat] 🔔 New notification:", data);
         
         // Invalidate notifications tags to update Bell count and panel
         dispatch(apiSlice.util.invalidateTags(["Notifications"] as any));
 
-        // Show toast for generic notifications that don't have their own specific handlers
-        // (Friend requests and workspace invites already have their own toasts)
-        const specificTypes = ['FRIEND_REQUEST', 'FRIEND_ACCEPTED', 'WORKSPACE_INVITE', 'NEW_MESSAGE'];
-        if (!specificTypes.includes(data.type)) {
-          toast.info(data.title || "Thông báo mới", {
-            description: data.body,
-            duration: 5000,
+        const specificTypes = [
+          'FRIEND_REQUEST', 
+          'FRIEND_ACCEPTED', 
+          'WORKSPACE_INVITE', 
+          'NEW_MESSAGE', 
+          'MENTION', 
+          'SYSTEM_BROADCAST'
+        ];
+        
+        // Extra safe check: If title/body mentions "nhắc đến" or "tin nhắn", it might be a duplicate mention/message
+        const isMentionOrMessage = 
+          data.type === 'MENTION' || 
+          data.type === 'NEW_MESSAGE' ||
+          (data.title && (data.title.includes('Nhắc đến') || data.title.includes('Tin nhắn')));
+
+        if (!specificTypes.includes(data.type) && !isMentionOrMessage) {
+          const toastContent = `${data.title}:${data.body}`;
+          showToastWithDeduplication(toastContent, () => {
+            toast.info(data.title || "Thông báo mới", {
+              description: data.body,
+              duration: 5000,
+            });
           });
         }
+      },
+
+      onMention: (data: any) => {
+        console.log("[RealtimeChat] @ New mention:", data);
+        
+        // Always show toast for mentions if not in the chat
+        const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
+        const isCurrentChat = currentPath.includes(data.chatId);
+
+        if (!isCurrentChat) {
+          const toastContent = `MENTION:${data.chatId}:${data.senderName}`;
+          showToastWithDeduplication(toastContent, () => {
+            toast.message(`${data.senderName || 'Ai đó'} đã nhắc đến bạn`, {
+              description: `Trong cuộc hội thoại: ${data.chatName || 'Chat'}`,
+              duration: 8000,
+              icon: '🔔',
+              action: {
+                label: 'Xem ngay',
+                onClick: () => {
+                  router.push(`/chat/${data.chatId}`);
+                }
+              }
+            });
+          });
+        }
+
+        // Refresh relevant data
+        dispatch(apiSlice.util.invalidateTags(["Notifications", "Chats"] as any));
+      },
+
+      onMentionBroadcast: (data: any) => {
+        console.log("[RealtimeChat] @ Mention broadcast:", data);
+        
+        const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
+        const isCurrentChat = currentPath.includes(data.chatId);
+
+        if (!isCurrentChat) {
+          const mentionLabel = data.types?.includes('CHANNEL') ? '@everyone' : '@here';
+          const toastContent = `BROADCAST:${data.chatId}:${mentionLabel}`;
+          
+          showToastWithDeduplication(toastContent, () => {
+            toast.message(`${data.senderName || 'Ai đó'} đã nhắc đến ${mentionLabel === '@everyone' ? 'mọi người' : 'tất cả'}`, {
+              description: `Trong cuộc hội thoại: ${data.chatName || 'Chat'}`,
+              duration: 8000,
+              icon: '🔔',
+              action: {
+                label: 'Xem ngay',
+                onClick: () => {
+                  router.push(`/chat/${data.chatId}`);
+                }
+              }
+            });
+          });
+        }
+
+        dispatch(apiSlice.util.invalidateTags(["Notifications", "Chats"] as any));
       },
 
       onMessageRead: (data) => {
@@ -323,8 +466,21 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
                 const chat = draft.chats.find((c: any) => c.id === data.chatId);
                 const authUser = store.getState().auth?.user;
                 if (chat && data.userId === authUser?.id) {
+                  const oldUnreadCount = chat.unreadCount || 0;
                   chat.unreadCount = 0;
                   chat.readed = true;
+
+                  // Also update workspace unread counts (decrement)
+                  if (oldUnreadCount > 0) {
+                    dispatch(
+                      chatApi.util.updateQueryData("getWorkspaceUnreadCounts", undefined, (wsDraft) => {
+                        const wsKey = data.workspaceId || 'global';
+                        if (wsDraft && wsDraft[wsKey]) {
+                          wsDraft[wsKey] = Math.max(0, wsDraft[wsKey] - oldUnreadCount);
+                        }
+                      })
+                    );
+                  }
                 }
               }
             })
@@ -355,15 +511,20 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
                     if (data.action === "added" || data.action === "changed" || !data.action) {
                       if (existReaction) {
                         if (!existReaction.users) existReaction.users = [];
-                        const udx = existReaction.users.findIndex((u) => u.id === data.userId || u.name === data.userName);
+                        const udx = existReaction.users.findIndex((u: any) => u.id === data.userId || u.name === data.userName);
                         if (udx === -1) {
                             existReaction.users.push({ id: data.userId || "me", name: data.userName || "User" });
+                        }
+                        // Use the total count from server for absolute accuracy
+                        if (data.count !== undefined) {
+                            existReaction.count = data.count;
+                        } else {
                             existReaction.count += 1;
                         }
                       } else {
                         msg.reactions.push({
                           emoji: data.emoji,
-                          count: 1,
+                          count: data.count || 1,
                           users: [{ id: data.userId || "me", name: data.userName || "User" }],
                         });
                       }
@@ -543,6 +704,17 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
       onTaskUpdated: (data) => {
         console.log("[RealtimeChat] ✅ Task updated:", data.chatId);
         dispatch(apiSlice.util.invalidateTags([{ type: "Tasks" as any, id: data.chatId }]));
+      },
+
+      onChatNew: (data) => {
+        console.log("[RealtimeChat] ✨ New chat created:", data.chatId);
+        // Invalidate "Chats" to refresh the sidebar list for all members
+        dispatch(apiSlice.util.invalidateTags([{ type: "Chats", id: "LIST" }, "Chats"]));
+        
+        // If it's a private chat, we might also want to invalidate specific user status
+        if (data.isGroup === false) {
+           dispatch(apiSlice.util.invalidateTags(["User"]));
+        }
       },
 
       // ====== Channel Events ======
@@ -809,6 +981,29 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
 
       onError: (error) => {
         console.error("[RealtimeChat] ❗ Error:", error.message);
+      },
+      
+      onIncomingCall: (data) => {
+        console.log("[RealtimeChat] 📞 Incoming call received:", data);
+        window.dispatchEvent(new CustomEvent("call:incoming", { detail: data }));
+      },
+      onCallRinging: (data) => {
+        window.dispatchEvent(new CustomEvent("call:ringing", { detail: data }));
+      },
+      onCallStartInfo: (data) => {
+        window.dispatchEvent(new CustomEvent("call:start_info", { detail: data }));
+      },
+      onCallDeclined: (data) => {
+        window.dispatchEvent(new CustomEvent("call:declined", { detail: data }));
+      },
+      onCallEnded: (data) => {
+        window.dispatchEvent(new CustomEvent("call:ended", { detail: data }));
+      },
+      onCallBusy: (data) => {
+        window.dispatchEvent(new CustomEvent("call:busy", { detail: data }));
+      },
+      onCallActiveSync: (data) => {
+        window.dispatchEvent(new CustomEvent("call:active_sync", { detail: data }));
       },
     };
 

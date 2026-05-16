@@ -5,23 +5,24 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { useGetAccountDetailsQuery, useUpdateOnlineStatusMutation } from '@/src/redux/feature/accountApi';
+import { useGetWorkspaceUnreadCountsQuery } from '@/src/redux/feature/chatApi';
 import { useLogoutMutation } from '@/src/redux/feature/authApi';
 import { apiSlice } from '@/src/redux/api/baseApi';
 import { performFullLogout } from '@/src/utils/auth-utils';
 import { toast } from 'sonner';
 import {
-  MessageSquare,
-  Files,
-  LayoutDashboard,
+  MessageCircle,
+  Library,
+  LayoutGrid,
   Hash,
   Settings,
   Plus,
   HelpCircle,
   Moon,
   Sun,
-  ShieldCheck,
-  Bot,
-  Briefcase,
+  Shield,
+  Sparkles,
+  Globe,
   Archive,
   LogOut
 } from 'lucide-react';
@@ -54,17 +55,31 @@ interface RailIconProps {
   active?: boolean;
   href?: string;
   onClick?: () => void;
+  unreadCount?: number;
 }
 
-const RailIcon: React.FC<RailIconProps> = ({ icon, label, active, href, onClick }) => {
+const RailIcon: React.FC<RailIconProps> = ({ icon, label, active, href, onClick, unreadCount }) => {
   const content = (
-    <button onClick={onClick} className={`p-3 rounded-xl transition-all duration-200 group relative ${active
-      ? 'bg-blue-600 dark:bg-blue-600 text-white shadow-lg shadow-blue-200 dark:shadow-blue-900/50'
-      : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200'
-      }`}>
-      {icon}
+    <button 
+      onClick={onClick} 
+      className={`p-2 rounded-xl transition-all duration-300 group relative active:scale-95 ${active
+        ? 'bg-gradient-to-tr from-blue-600 to-indigo-500 text-white shadow-[0_0_20px_rgba(37,99,235,0.4)] ring-2 ring-blue-400/20'
+        : 'text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-blue-600 dark:hover:text-blue-400'
+      }`}
+    >
+      <div className={`transition-all duration-300 ${active ? 'scale-110 rotate-0' : 'group-hover:scale-110 group-hover:-rotate-3'}`}>
+        {icon}
+      </div>
+      
       {active && (
-        <div className="absolute left-[-12px] top-1/2 -translate-y-1/2 w-1 h-6 bg-blue-600 rounded-r-md" />
+        <div className="absolute -left-[14px] top-1/2 -translate-y-1/2 w-1.5 h-6 bg-blue-600 rounded-r-full shadow-[4px_0_12px_rgba(37,99,235,0.8)] animate-pulse" />
+      )}
+
+      {/* Unread Badge */}
+      {unreadCount !== undefined && unreadCount > 0 && (
+        <div className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 border-2 border-white dark:border-slate-950 rounded-full flex items-center justify-center text-[9px] font-black text-white shadow-md ring-1 ring-red-500/20 animate-in zoom-in duration-300">
+          {unreadCount > 99 ? '99+' : unreadCount}
+        </div>
       )}
     </button>
   );
@@ -92,6 +107,7 @@ export default function ModernSidebarRail() {
 
   const currentWorkspaceId = useSelector((state: RootState) => state.workspace.currentWorkspaceId);
   const { data: workspaces } = useGetUserWorkspacesQuery();
+  const { data: unreadCounts } = useGetWorkspaceUnreadCountsQuery();
   const { data: accountData } = useGetAccountDetailsQuery();
   const user = accountData?.user;
   const [mounted, setMounted] = useState(false);
@@ -121,41 +137,49 @@ export default function ModernSidebarRail() {
   const imageUrl = getAvatarUrl(user?.avatar, user?.name);
 
   return (
-    <div className="w-[72px] flex flex-col items-center py-6 bg-white dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 h-screen shrink-0 relative z-20">
-      {/* Workspace Icons */}
-      <div className="flex flex-col gap-3 mb-8 overflow-y-auto no-scrollbar max-h-[40%] px-3">
+    <div className="w-[72px] flex flex-col items-center py-5 bg-white/70 dark:bg-slate-950/80 backdrop-blur-2xl border-r border-slate-200/80 dark:border-white/5 h-screen shrink-0 relative z-20 shadow-xl">
+      {/* Workspace Section */}
+      <div className="flex flex-col gap-4 mb-6 overflow-y-auto no-scrollbar max-h-[45%] px-3">
+        <div className="text-[10px] font-bold text-slate-400 dark:text-slate-600 uppercase tracking-widest text-center mb-1 scale-75 opacity-50">Work</div>
+
         <RailIcon
-          label="Tất cả Workspace"
-          icon={<Briefcase size={22} />}
+          label="Nexus Global"
+          icon={
+            <div className={`h-9 w-9 flex items-center justify-center rounded-xl transition-all ${!currentWorkspaceId ? 'bg-white/20' : 'bg-white dark:bg-slate-800 shadow-sm ring-1 ring-slate-200/50'}`}>
+              <Globe size={20} strokeWidth={2} />
+            </div>
+          }
           active={!currentWorkspaceId}
+          unreadCount={unreadCounts?.['global']}
           onClick={() => {
             dispatch(setWorkspace(null));
             router.push('/chat');
           }}
         />
 
-        <div className="w-8 h-[1px] bg-slate-200 dark:bg-slate-800 mx-auto my-1" />
+        <div className="w-8 h-[1.5px] bg-slate-200 dark:bg-slate-800/60 mx-auto my-1 rounded-full" />
 
         {/* {workspaces?.map((ws) => (
           <RailIcon
             key={ws.id}
             label={ws.name}
             active={currentWorkspaceId === ws.id}
+            unreadCount={unreadCounts?.[ws.id] || 0}
             onClick={() => {
               dispatch(setWorkspace(ws.id));
               router.push('/chat');
             }}
             icon={
               ws.icon ? (
-                <Avatar className="h-6 w-6">
-                  <AvatarImage src={ws.icon} />
-                  <AvatarFallback className="text-[10px] bg-slate-100 dark:bg-slate-800">
+                <Avatar className="h-9 w-9 rounded-xl shadow-sm ring-1 ring-slate-200/50 transition-all group-hover:scale-105 border-2 border-transparent group-hover:border-blue-500/30">
+                  <AvatarImage src={getAvatarUrl(ws.icon)} className="object-cover" />
+                  <AvatarFallback className="text-[10px] font-black bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300">
                     {ws.name.substring(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
               ) : (
-                <div className="font-bold text-sm">
-                  {ws.name.substring(0, 1).toUpperCase()}
+                <div className={`font-black text-[10px] h-9 w-9 flex items-center justify-center bg-white dark:bg-slate-800 rounded-xl shadow-sm ring-1 ring-slate-200/50 transition-all group-hover:scale-105 border-2 border-transparent ${currentWorkspaceId === ws.id ? 'border-blue-500 bg-blue-50 text-blue-600' : 'group-hover:border-blue-500/30'}`}>
+                  {ws.name.substring(0, 2).toUpperCase()}
                 </div>
               )
             }
@@ -163,44 +187,52 @@ export default function ModernSidebarRail() {
         ))} */}
 
 
-        <RequirePermission anyRole={['SUPER_ADMIN', 'ADMIN', 'WORKSPACE_MANAGER']} silent>
-          {/* <button
-            onClick={() => setIsCreateModalOpen(true)}
-            className="h-10 w-10 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 flex items-center justify-center text-slate-400 hover:border-blue-500 hover:text-blue-500 transition-all active:scale-95"
-          >
-            <Plus size={20} />
-          </button> */}
+        {currentWorkspaceId && (
+          <RequirePermission anyRole={['SUPER_ADMIN', 'ADMIN', 'WORKSPACE_MANAGER']} silent>
+            <RailIcon
+              label="Quản trị Workspace"
+              icon={
+                <div className={`h-9 w-9 flex items-center justify-center rounded-xl transition-all bg-white dark:bg-slate-800 shadow-sm ring-1 ring-slate-200/50'}`}>
+                  <Shield size={20} strokeWidth={2} />
+                </div>
+              }
+              active={pathname.startsWith('/workspace/settings')}
+              onClick={() => router.push('/workspace/settings')}
+            />
 
-          <RailIcon
-            label="Quản trị Workspace"
-            icon={<ShieldCheck size={22} />}
-            active={pathname.startsWith('/workspace/settings')}
-            onClick={() => router.push('/workspace/settings')}
-          />
-
-          <RailIcon
-            label="Kho lưu trữ (Dissolved)"
-            icon={<Archive size={22} />}
-            onClick={() => setIsDissolvedModalOpen(true)}
-          />
-        </RequirePermission>
+            <RailIcon
+              label="Kho lưu trữ (Dissolved)"
+              icon={
+                <div className={`h-9 w-9 flex items-center justify-center rounded-xl transition-all bg-white dark:bg-slate-800 shadow-sm ring-1 ring-slate-200/50'}`}>
+                  <Archive size={20} strokeWidth={2} />
+                </div>
+              }
+              onClick={() => setIsDissolvedModalOpen(true)}
+            />
+          </RequirePermission>
+        )}
       </div>
+
+      <div className="w-10 h-[1px] bg-gradient-to-r from-transparent via-slate-200 dark:via-slate-800 to-transparent mb-6" />
 
       {/* Main Navigation Modules */}
-      <div className="flex flex-col gap-2 flex-1">
-        <RailIcon href="/dashboard" icon={<LayoutDashboard size={22} />} label="Bảng điều khiển" active={pathname === '/dashboard' || pathname === '/'} />
-        <RailIcon href="/chat" icon={<MessageSquare size={22} />} label="Trò chuyện NEXUS" active={pathname?.startsWith('/chat')} />
-        <RailIcon href="/ai" icon={<Bot size={22} />} label="Trợ lý AI" active={pathname?.startsWith('/ai')} />
-        <RailIcon href="/knowledge" icon={<Files size={22} />} label="Kiến thức / Tài liệu" active={pathname?.startsWith('/knowledge')} />
-        {/* <RailIcon href="/security" icon={<ShieldCheck size={22} />} label="Security & Audit" active={pathname?.startsWith('/security')} /> */}
+      <div className="flex flex-col gap-3 flex-1">
+        <div className="text-[10px] font-bold text-slate-400 dark:text-slate-600 uppercase tracking-widest text-center mb-1 scale-75 opacity-50">Menu</div>
+        <RailIcon href="/dashboard" icon={<LayoutGrid size={20} strokeWidth={2} />} label="Bảng điều khiển" active={pathname === '/dashboard' || pathname === '/'} />
+        <RailIcon href="/chat" icon={<MessageCircle size={20} strokeWidth={2} />} label="Trò chuyện NEXUS" active={pathname?.startsWith('/chat')} />
+        <RailIcon href="/ai" icon={<Sparkles size={20} strokeWidth={2} />} label="Trợ lý AI" active={pathname?.startsWith('/ai')} />
+        <RailIcon href="/knowledge" icon={<Library size={20} strokeWidth={2} />} label="Kiến thức / Tài liệu" active={pathname?.startsWith('/knowledge')} />
       </div>
+
+      <div className="w-10 h-[1px] bg-gradient-to-r from-transparent via-slate-200 dark:via-slate-800 to-transparent mt-auto" />
+
 
       {/* Bottom Actions */}
       <div className="flex flex-col gap-2 mt-auto">
         {mounted && (
           <RailIcon
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            icon={theme === 'dark' ? <Sun size={22} /> : <Moon size={22} />}
+            icon={theme === 'dark' ? <Sun size={20} strokeWidth={2} /> : <Moon size={20} strokeWidth={2} />}
             label="Chế độ tối/sáng"
           />
         )}
@@ -228,7 +260,7 @@ export default function ModernSidebarRail() {
             <RequirePermission anyRole={['SUPER_ADMIN', 'ADMIN', 'WORKSPACE_MANAGER']} silent>
               <DropdownMenuItem asChild className="rounded-lg py-2 cursor-pointer">
                 <Link href="/workspace/settings" className="flex items-center">
-                  <Briefcase className="w-4 h-4 mr-3 text-blue-600" />
+                  <Shield className="w-4 h-4 mr-3 text-blue-600" />
                   <span className="font-bold text-sm text-blue-600">Quản trị Workspace</span>
                 </Link>
               </DropdownMenuItem>

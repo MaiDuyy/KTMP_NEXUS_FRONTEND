@@ -103,6 +103,7 @@ export const apiSlice = createApi({
     "Categories",
     "AIHistory",
     "SavedAnswers",
+    
     // Notifications
     "Notifications",
     // RBAC
@@ -132,7 +133,8 @@ export const apiSlice = createApi({
     // Workspace
     "WorkspaceInvites",
     "WorkspaceMembers",
-    "Organizations"
+    "Organizations",
+    "WorkspaceUnreadCounts"
   ],
   endpoints: () => ({}),
 });

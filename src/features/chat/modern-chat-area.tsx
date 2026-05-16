@@ -30,6 +30,13 @@ import { messageApi } from '@/src/redux/feature/messageApi';
 import { AIAssistantPanel } from './AIAssistantPanel';
 import { getAvatarUrl } from '@/src/utils/image-utils';
 import { useRouter } from 'next/navigation';
+import { MentionSelector } from './mention-selector';
+import FriendProfileSheet from './friend-profile-sheet';
+import { useLazyGetUserByIdQuery } from '@/src/redux/feature/userApi';
+import { PinnedBanner } from './pinned-banner';
+import { PinnedMessagesPanel } from './pinned-messages-panel';
+import { useTogglePinMessageMutation } from '@/src/redux/feature/messageApi';
+import { apiSlice } from '@/src/redux/api/baseApi';
 
 export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
   const [inputText, setInputText] = useState('');
@@ -44,7 +51,18 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [activeCall, setActiveCall] = useState<{ roomName: string; isVideo: boolean; callerName: string } | null>(null);
+  const [activeCall, setActiveCall] = useState<{ roomName: string; isVideo: boolean; callerName: string; callerAvatar?: string } | null>(null);
+  const [showPinnedPanel, setShowPinnedPanel] = useState(false);
+
+  // ──────── Mention system state ────────
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionPosition, setMentionPosition] = useState<{ start: number; end: number } | null>(null);
+  const [activeMentions, setActiveMentions] = useState<{ id: string; name: string }[]>([]);
+
+  // ──────── Profile sheet state ────────
+  const [profileUser, setProfileUser] = useState<any>(null);
+  const [showProfileSheet, setShowProfileSheet] = useState(false);
+  const [triggerGetUser] = useLazyGetUserByIdQuery();
 
   // ──────── AI Assistant Panel state ────────
   const [showAIPanel, setShowAIPanel] = useState(false);
@@ -85,6 +103,28 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
 
   // API - skip if no chatId
   const { data: chatData, isLoading: chatLoading } = useGetChatByIdQuery(chatId!, { skip: !chatId });
+  const chat = chatData?.chat;
+
+  // ──────── Permissions & Read-only Check ────────
+  const canPost = useMemo(() => {
+    if (!chat) return true;
+    if (!chat.isReadOnly) return true;
+    
+    // In read-only mode, check user's role
+    const myParticipant = chat.participants?.find(p => p.accountId === user?.id);
+    const myRole = myParticipant?.role;
+    
+    const privilegedRoles = ['CHANNEL_OWNER', 'CHANNEL_MODERATOR'];
+    
+    // Check Workspace Admin/Owner role from permissions or state if possible
+    // For now, prioritize Channel Owner/Moderator
+    if (privilegedRoles.includes(myRole as any)) return true;
+    if (isAdmin) return true; // Global/Workspace admins
+    
+    return false;
+  }, [chat, user?.id, isAdmin]);
+
+  const isBlocked = useMemo(() => chat?.isBlocked || false, [chat]);
 
   // Detect if current chat is a Workspace Channel
   const { data: channelData } = useGetChannelQuery(chatId!, { skip: !chatId });
@@ -93,8 +133,8 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
   const [triggerGetMessages, { isFetching }] = useLazyGetMessagesQuery();
   const { data: readReceipts } = useGetChatReadReceiptsQuery(chatId!, { skip: !chatId });
   const [sendMessage, { isLoading: sending }] = useSendMessageMutation();
+  const [togglePinMessage] = useTogglePinMessageMutation();
   const [uploadChatMedia] = useUploadChatMediaMutation();
-  const chat = chatData?.chat;
   const isDirectMessage = !chat?.isGroup;
 
   // Find partner for online status (enrichChatDetails already set chat.name/avatar)
@@ -236,8 +276,10 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
       const { chatId: targetChatId, messageId } = e.detail;
       if (targetChatId === chatId) {
         setAllMessages(prev => prev.map(m =>
-          m.id === messageId ? { ...m, content: 'Tin nhắn đã bị thu hồi', destroy: true } : m
+          m.id === messageId ? { ...m, content: 'Tin nhắn đã bị thu hồi', destroy: true, pin: false } : m
         ));
+        // Also refresh chat metadata in case this was a pinned message
+        dispatch(apiSlice.util.invalidateTags([{ type: 'Chats', id: chatId }]));
       }
     };
 
@@ -247,32 +289,45 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
         setAllMessages(prev => prev.map(m => {
           if (m.id !== data.messageId) return m;
 
-          let newReactions = [...(m.reactions || [])];
-          const existReaction = newReactions.find((r) => r.emoji === data.emoji);
+          let newReactions = JSON.parse(JSON.stringify(m.reactions || []));
+          const existReaction = newReactions.find((r: any) => r.emoji === data.emoji);
 
           if (data.action === "added" || data.action === "changed" || !data.action) {
             if (existReaction) {
-              const users = [...(existReaction.users || [])];
-              if (!users.some((u) => u.id === data.userId)) {
+              const users = existReaction.users || [];
+              if (!users.some((u: any) => u.id === data.userId)) {
                 users.push({ id: data.userId, name: data.userName || "User" });
-                existReaction.users = users;
-                existReaction.count = users.length;
               }
+              // Use total count from server for absolute accuracy in spam mode
+              if (data.count !== undefined) {
+                existReaction.count = data.count;
+              } else {
+                existReaction.count += 1;
+              }
+              existReaction.users = users;
             } else {
               newReactions.push({
                 emoji: data.emoji,
-                count: 1,
+                count: data.count || 1,
                 users: [{ id: data.userId, name: data.userName || "User" }],
               });
             }
           } else if (data.action === "removed") {
             if (existReaction) {
-              const users = (existReaction.users || []).filter((u) => u.id !== data.userId);
-              if (users.length === 0) {
-                newReactions = newReactions.filter((r) => r.emoji !== data.emoji);
-              } else {
+              const users = (existReaction.users || []).filter((u: any) => u.id !== data.userId);
+              if (data.count !== undefined) {
+                existReaction.count = data.count;
                 existReaction.users = users;
-                existReaction.count = users.length;
+                if (existReaction.count <= 0) {
+                    newReactions = newReactions.filter((r: any) => r.emoji !== data.emoji);
+                }
+              } else {
+                if (users.length === 0) {
+                    newReactions = newReactions.filter((r: any) => r.emoji !== data.emoji);
+                } else {
+                    existReaction.users = users;
+                    existReaction.count = users.length;
+                }
               }
             }
           }
@@ -287,6 +342,9 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
         setAllMessages(prev => prev.map(m =>
           m.id === data.messageId ? { ...m, pin: data.pin } : m
         ));
+        
+        // Refetch chat data to update pinnedMessages list in Chat object
+        dispatch(messageApi.util.invalidateTags([{ type: 'Chats', id: chatId }]));
       }
     };
 
@@ -433,13 +491,98 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
       isTypingRef.current = false;
       if (chatId) socketService.stopTyping(chatId);
     }, 1500);
+
+    // Mention detection
+    const value = e.target.value;
+    const selectionStart = e.target.selectionStart;
+    const textBeforeCursor = value.substring(0, selectionStart);
+    const lastAtSymbol = textBeforeCursor.lastIndexOf('@');
+
+    if (lastAtSymbol !== -1) {
+      // Check if @ is at start of line or preceded by a space
+      const charBeforeAt = lastAtSymbol > 0 ? textBeforeCursor[lastAtSymbol - 1] : ' ';
+      const isWordStart = charBeforeAt === ' ' || charBeforeAt === '\n';
+
+      if (isWordStart) {
+        const query = textBeforeCursor.substring(lastAtSymbol + 1);
+        // Check if there's a space after @ or if it's too long
+        if (!query.includes(' ') && query.length < 20) {
+          setMentionQuery(query);
+          setMentionPosition({ start: lastAtSymbol, end: selectionStart });
+        } else {
+          setMentionQuery(null);
+        }
+      } else {
+        setMentionQuery(null);
+      }
+    } else {
+      setMentionQuery(null);
+    }
+
+    // Cleanup active mentions that are no longer in the text
+    if (activeMentions.length > 0) {
+      setActiveMentions(prev => prev.filter(m => value.includes(`@${m.name}`)));
+    }
+  };
+
+  const handleMentionSelect = (participant: any) => {
+    if (!mentionPosition || !inputRef.current) return;
+
+    const before = inputText.substring(0, mentionPosition.start);
+    const after = inputText.substring(mentionPosition.end);
+    
+    let insertion = '';
+    if (participant.type === 'special') {
+      insertion = `@${participant.name} `;
+    } else {
+      const displayName = participant.name || participant.account?.name || 'User';
+      insertion = `@${displayName} `;
+      
+      // Track this mention for conversion on send
+      setActiveMentions(prev => {
+        if (prev.find(m => m.id === participant.accountId)) return prev;
+        return [...prev, { id: participant.accountId, name: displayName }];
+      });
+    }
+
+    const newText = before + insertion + after;
+    setInputText(newText);
+    setMentionQuery(null);
+    setMentionPosition(null);
+
+    // Refocus and set cursor position
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+        const newPos = mentionPosition.start + insertion.length;
+        inputRef.current.setSelectionRange(newPos, newPos);
+      }
+    }, 0);
   };
 
   // Send message via REST API (chat-service saves to DB + publishes NATS → WS Gateway broadcasts)
   const handleSend = async () => {
     if (!inputText.trim() || !chatId || !user) return;
+    
+    let content = inputText.trim();
 
-    const content = inputText.trim();
+    // Professional conversion: @Name -> @[Name](ID)
+    if (activeMentions.length > 0) {
+      // Sort by length descending to match longest names first (e.g. "@John Doe" before "@John")
+      const sortedMentions = [...activeMentions].sort((a, b) => b.name.length - a.name.length);
+      
+      sortedMentions.forEach(m => {
+        const mentionTag = `@${m.name}`;
+        // Create a regex to find @Name but avoid double-converting
+        // We look for @Name that is not followed by (id)
+        const escapedName = m.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`@${escapedName}(?!\\(${m.id}\\))`, 'g');
+        content = content.replace(regex, `@[${m.name}](${m.id})`);
+      });
+    }
+
+    // Clear active mentions for next message
+    setActiveMentions([]);
 
     // ── /ai slash command interception ──
     const AI_PREFIX_RE = /^\/ai\s+/i;
@@ -482,6 +625,30 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
     }
   };
 
+  const handleTogglePin = async (messageId: string) => {
+    if (!chatId) return;
+    try {
+      await togglePinMessage({ messageId, chatId }).unwrap();
+      toast.success("Đã cập nhật trạng thái ghim");
+    } catch (err: any) {
+      toast.error(err?.data?.message || "Lỗi khi ghim tin nhắn");
+    }
+  };
+
+  const handleJumpToMessage = (messageId: string) => {
+    // Find the message in the current list
+    const messageElement = document.getElementById(`message-${messageId}`);
+    if (messageElement) {
+      messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      messageElement.classList.add('bg-blue-50/50');
+      setTimeout(() => {
+        messageElement.classList.remove('bg-blue-50/50');
+      }, 2000);
+    } else {
+      toast.info("Tin nhắn đang nằm ở phần hội thoại cũ, vui lòng cuộn lên để tìm.");
+    }
+  };
+
   // Handle mark as read
   const [markAsRead] = useMarkChatAsReadMutation();
   useEffect(() => {
@@ -499,7 +666,12 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
       const data = e.detail;
       if (data.chatId === chatId) {
         if (data.isActive) {
-          setActiveCall({ roomName: data.roomName, isVideo: data.isVideo, callerName: data.callerName });
+          setActiveCall({ 
+            roomName: data.roomName, 
+            isVideo: data.isVideo, 
+            callerName: data.callerName,
+            callerAvatar: data.callerAvatar 
+          });
         } else {
           setActiveCall(null);
         }
@@ -510,7 +682,12 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
       const data = e.detail;
       if (data.chatId === chatId) {
         if (data.isActive) {
-          setActiveCall({ roomName: data.roomName, isVideo: data.isVideo, callerName: data.callerName });
+          setActiveCall({ 
+            roomName: data.roomName, 
+            isVideo: data.isVideo, 
+            callerName: data.callerName,
+            callerAvatar: data.callerAvatar 
+          });
         } else {
           setActiveCall(null);
         }
@@ -519,15 +696,38 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
 
     window.addEventListener("chat:call_status", handleCallStatus);
     window.addEventListener("call:active_status", handleActiveStatus);
+
+    const handleOpenProfile = async (e: any) => {
+      const { userId } = e.detail;
+      try {
+        const result = await triggerGetUser(userId).unwrap();
+        if (result.user) {
+          setProfileUser(result.user);
+          setShowProfileSheet(true);
+        }
+      } catch (err) {
+        console.error("Failed to fetch user for profile sheet:", err);
+        toast.error("Không thể tải thông tin người dùng");
+      }
+    };
+
+    window.addEventListener("chat:open_profile", handleOpenProfile);
+
     return () => {
       window.removeEventListener("chat:call_status", handleCallStatus);
       window.removeEventListener("call:active_status", handleActiveStatus);
+      window.removeEventListener("chat:open_profile", handleOpenProfile);
     };
-  }, [chatId]);
+  }, [chatId, triggerGetUser]);
 
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
+      // If mention selector is open, don't send message, let it handle selection
+      if (mentionQuery !== null) {
+        return;
+      }
+      
       e.preventDefault();
       handleSend();
     }
@@ -576,11 +776,26 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
     <div className="flex-1 flex h-screen bg-white relative overflow-hidden">
     {/* Main chat column */}
     <div className="flex flex-col flex-1 min-w-0 relative">
-      {isAdmin && isDirectMessage && (
-        <div className="bg-amber-100 text-amber-800 text-xs font-bold px-4 py-2 text-center border-b border-amber-200 shadow-sm z-10 w-full">
-          ⚠️ AUDITED ACCESS: You are viewing a direct message room under Admin privileges. Actions are logged.
-        </div>
-      )}
+        {isAdmin && isDirectMessage && (
+          <div className="bg-amber-100 text-amber-800 text-xs font-bold px-4 py-2 text-center border-b border-amber-200 shadow-sm z-10 w-full">
+            ⚠️ AUDITED ACCESS: You are viewing a direct message room under Admin privileges. Actions are logged.
+          </div>
+        )}
+
+        {/* Pinned Messages Banner */}
+        {chat?.pinnedMessages && chat.pinnedMessages.length > 0 && (
+          <PinnedBanner 
+            pinnedMessages={chat.pinnedMessages} 
+            onOpenSidebar={() => {
+              setShowPinnedPanel(true);
+              setShowInfoPanel(false);
+              setShowGroupSettings(false);
+            }}
+            onJumpToMessage={handleJumpToMessage}
+            onUnpin={handleTogglePin}
+            canUnpin={canPost}
+          />
+        )}
 
       {/* Connection indicator */}
       {!isConnected && (
@@ -645,7 +860,7 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
             </div>
           )}
         </div>
-
+{/* 
         <div className="flex-1 max-w-md mx-6 relative">
           <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-2 pointer-events-none">
             <Search className="h-4 w-4 text-slate-400" />
@@ -657,7 +872,7 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
           <div className="absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded border border-slate-200 text-[10px] text-slate-400 font-bold bg-white pointer-events-none">
             ⌘K
           </div>
-        </div>
+        </div> */}
 
         <div className="flex items-center gap-1.5">
           {activeCall && (
@@ -695,7 +910,7 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
       {/* Message Stream */}
       <div
         ref={chatContainerRef}
-        className="flex-1 overflow-y-auto px-6 py-4 space-y-4 custom-scrollbar bg-white scroll-smooth"
+        className="flex-1 overflow-y-auto px-4 py-2 space-y-1 custom-scrollbar bg-white scroll-smooth"
         style={{ overflowAnchor: 'none' }} // We handle anchoring manually for better control
       >
         {isInitialLoad ? (
@@ -727,13 +942,13 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
               </div>
             ) : (
               groupedMessages.map((group) => (
-                <div key={group.date} className="space-y-4">
-                  <div className="flex items-center justify-center gap-4 py-4">
-                    <div className="h-[1px] flex-1 bg-slate-50" />
-                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50/50 px-3 py-1 rounded-full border border-slate-100">
+                <div key={group.date} className="space-y-1">
+                  <div className="flex items-center justify-center gap-3 py-2">
+                    <div className="h-[1px] flex-1 bg-slate-100" />
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50/50 px-2 py-0.5 rounded-full border border-slate-100">
                       {group.date}
                     </span>
-                    <div className="h-[1px] flex-1 bg-slate-50" />
+                    <div className="h-[1px] flex-1 bg-slate-100" />
                   </div>
 
                   {group.messages.map((msg, idx) => {
@@ -856,23 +1071,59 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
                 : "Bạn không thể gửi tin nhắn cho người này vì trạng thái chặn."}
             </p>
           </div>
+        ) : !canPost ? (
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 text-center animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
+              <Lock size={20} />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-700">Kênh này đang ở chế độ chỉ đọc</p>
+              <p className="text-xs text-slate-500">Chỉ quản trị viên mới có thể gửi tin nhắn trong cuộc hội thoại này.</p>
+            </div>
+          </div>
         ) : (
-          <div className="bg-white border border-slate-200 rounded-xl shadow-sm focus-within:border-blue-300 focus-within:ring-4 focus-within:ring-blue-50 transition-all">
-            <div className="flex items-center gap-0.5 px-3 py-2 border-b border-slate-50 overflow-x-auto no-scrollbar">
-              {/* <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600"><Bold size={16} /></Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600"><Italic size={16} /></Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600"><Link2 size={16} /></Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600"><ListIcon size={16} /></Button> */}
-              {/* <div className="h-4 w-[1px] bg-slate-100 mx-1" /> */}
-              <div className="absolute flex-shrink-0 ">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-slate-400 hover:text-slate-600"
-                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                >
-                  <Smile size={16} />
-                </Button>
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm focus-within:border-blue-400 focus-within:ring-4 focus-within:ring-blue-50 transition-all duration-200">
+            {/* Input Area */}
+            <div className="p-3 min-h-[44px] relative">
+              <textarea
+                ref={inputRef}
+                value={inputText}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
+                placeholder={`Nhắn cho ${chatName}...`}
+                className="w-full resize-none border-0 focus:ring-0 text-[15px] text-slate-700 placeholder:text-slate-400 outline-none bg-transparent"
+                rows={1}
+                style={{ minHeight: '24px', maxHeight: '200px' }}
+              />
+              {mentionQuery !== null && (
+                <MentionSelector
+                  participants={chat?.participants || []}
+                  query={mentionQuery}
+                  onSelect={handleMentionSelect}
+                  onClose={() => setMentionQuery(null)}
+                  currentUserId={user?.id}
+                />
+              )}
+            </div>
+
+            {/* Bottom Toolbar */}
+            <div className="flex items-center justify-between px-2 pb-2">
+              <div className="flex items-center gap-0.5">
+                <div className="relative">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  >
+                    <Smile size={18} />
+                  </Button>
+                  {showEmojiPicker && (
+                    <div className="absolute bottom-full left-0 mb-3 z-50">
+                      <EmojiPicker onSelect={handleEmojiSelect} onClose={() => setShowEmojiPicker(false)} />
+                    </div>
+                  )}
+                </div>
 
                 <input
                   ref={imageInputRef}
@@ -888,68 +1139,52 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
                   className="hidden"
                   onChange={(e) => handleFileSelect(e, "file")}
                 />
+                
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="flex-shrink-0"
+                  className="h-8 w-8 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                   onClick={() => imageInputRef.current?.click()}
                   title="Gửi ảnh"
                 >
-                  <ImageIcon className="h-5 w-5 text-gray-500" />
+                  <ImageIcon size={18} />
                 </Button>
+                
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="flex-shrink-0"
+                  className="h-8 w-8 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                   onClick={() => fileInputRef.current?.click()}
                   title="Gửi file"
                 >
-                  <Paperclip className="h-5 w-5 text-gray-500" />
+                  <Paperclip size={18} />
                 </Button>
-                {showEmojiPicker && (
-                  <div className="absolute bottom-full left-0 mb-2 z-50">
-                    <EmojiPicker onSelect={handleEmojiSelect} onClose={() => setShowEmojiPicker(false)} />
-                  </div>
-                )}
+
+                <div className="h-4 w-[1px] bg-slate-200 mx-1.5" />
+
+                <button
+                  onClick={() => openAIPanel()}
+                  className={`flex items-center gap-1.5 px-3 py-1 text-[11px] font-bold rounded-full transition-all border ${
+                    showAIPanel
+                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-100'
+                      : 'bg-indigo-50 text-indigo-600 border-indigo-100 hover:bg-indigo-100 hover:border-indigo-200'
+                  }`}
+                >
+                  <Sparkles size={13} className={showAIPanel ? '' : 'animate-pulse text-indigo-500'} />
+                  AI Assistant
+                </button>
               </div>
 
-              <button
-                onClick={() => openAIPanel()}
-                className={`ml-auto flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-md transition-colors border ${
-                  showAIPanel
-                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                    : 'bg-indigo-50 text-indigo-600 border-indigo-100 hover:bg-indigo-100'
-                }`}
-              >
-                <Sparkles size={14} className={showAIPanel ? '' : 'animate-pulse'} />
-                Ask AI
-              </button>
-            </div>
-
-            <div className="p-4 min-h-[80px]">
-              <textarea
-                value={inputText}
-                onChange={handleInputChange}
-                onKeyDown={handleKeyDown}
-                placeholder={`Message ${chatName}`}
-                className="w-full resize-none border-0 focus:ring-0 text-[14px] text-slate-700 placeholder:text-slate-400 outline-none"
-                rows={2}
-              />
-            </div>
-
-            <div className="flex items-center justify-between px-4 py-3 bg-slate-50/50 rounded-b-xl border-t border-slate-50">
-              <div className="flex items-center gap-4 text-[11px] text-slate-400 font-medium">
-                <div className="flex items-center gap-1.5"><Mic size={14} /> Voice Clip</div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] text-slate-300 font-bold uppercase tracking-widest mr-2">Press ↵ to send</span>
+              <div className="flex items-center gap-3 pr-1">
+                <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider hidden sm:block">
+                  Nhấn Enter để gửi
+                </span>
                 <button
                   onClick={handleSend}
                   disabled={!inputText.trim() || sending}
-                  className="h-9 px-4 bg-[#135bec] hover:bg-[#0f4bbd] disabled:opacity-50 text-white rounded-lg font-bold text-sm flex items-center gap-2 shadow-lg shadow-blue-200 transition-all active:scale-95"
+                  className="h-9 w-9 flex items-center justify-center bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-xl shadow-lg shadow-blue-100 transition-all active:scale-90"
                 >
-                  Send
-                  <Send size={16} />
+                  <Send size={18} />
                 </button>
               </div>
             </div>
@@ -993,12 +1228,34 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
 
     {/* ── AI Assistant Side Panel (Phase 1) ── */}
     {showAIPanel && chatId && (
-      <AIAssistantPanel
-        chatId={chatId}
-        initialQuery={aiInitialQuery}
-        onClose={closeAIPanel}
-      />
-    )}
+        <AIAssistantPanel 
+          chatId={chatId}
+          onClose={closeAIPanel} 
+          initialQuery={aiInitialQuery}
+        />
+      )}
+
+      {/* Pinned Messages Panel */}
+      {showPinnedPanel && chat?.pinnedMessages && (
+        <PinnedMessagesPanel 
+          pinnedMessages={chat.pinnedMessages}
+          onClose={() => setShowPinnedPanel(false)}
+          onJumpToMessage={handleJumpToMessage}
+          onUnpin={handleTogglePin}
+          canUnpin={canPost}
+        />
+      )}
+
+    {/* ── Profile Sheet ── */}
+    <FriendProfileSheet
+      friend={profileUser}
+      isOpen={showProfileSheet}
+      onClose={() => setShowProfileSheet(false)}
+      onStartChat={(newChatId) => {
+        setShowProfileSheet(false);
+        router.push(`/chat/${newChatId}`);
+      }}
+    />
   </div>
   );
 };

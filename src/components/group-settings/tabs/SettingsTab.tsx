@@ -10,6 +10,7 @@ interface SettingsTabProps {
     isAdmin: boolean;
     isLeader: boolean;
     handleUpdateJoinPolicy: (policy: string) => void;
+    handleUpdateReadOnly: (isReadOnly: boolean) => void;
     onLeaveGroup: () => void;
     onDeleteGroup: () => void;
 }
@@ -75,6 +76,42 @@ export function SettingsTab({
                                 </div>
                                 <div>
                                     <p className={`text-sm font-bold ${chat?.joinPolicy === p.id ? "text-blue-700" : "text-gray-700"}`}>
+                                        {p.label}
+                                    </p>
+                                    <p className="text-[10px] text-gray-500">{p.desc}</p>
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Read-only toggle */}
+            {isAdmin && (
+                <div className="space-y-4 mt-6">
+                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Chế độ kênh</h3>
+                    <div className="flex flex-col gap-2">
+                        {[
+                            { value: false, label: "Thảo luận tự do", desc: "Mọi thành viên đều có thể gửi tin nhắn" },
+                            { value: true, label: "Chỉ thông báo (Read-only)", desc: "Chỉ Quản trị viên mới có thể gửi tin nhắn" },
+                        ].map((p) => (
+                            <button
+                                key={p.value.toString()}
+                                disabled={!isAdmin}
+                                onClick={() => handleUpdateReadOnly(p.value)}
+                                className={`p-3 rounded-2xl border text-left flex items-start gap-3 transition-all ${chat?.isReadOnly === p.value
+                                        ? "bg-indigo-50 border-indigo-200 ring-1 ring-indigo-100"
+                                        : "hover:bg-gray-50 border-gray-100"
+                                    }`}
+                            >
+                                <div
+                                    className={`mt-1 h-3.5 w-3.5 rounded-full border-2 flex items-center justify-center ${chat?.isReadOnly === p.value ? "border-indigo-500" : "border-gray-300"
+                                        }`}
+                                >
+                                    {chat?.isReadOnly === p.value && <div className="h-1.5 w-1.5 bg-indigo-500 rounded-full" />}
+                                </div>
+                                <div>
+                                    <p className={`text-sm font-bold ${chat?.isReadOnly === p.value ? "text-indigo-700" : "text-gray-700"}`}>
                                         {p.label}
                                     </p>
                                     <p className="text-[10px] text-gray-500">{p.desc}</p>

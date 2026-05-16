@@ -78,6 +78,17 @@ export interface ChatParticipant {
   };
 }
 
+export interface PinnedMessage {
+  id: string;
+  content: string;
+  senderName: string;
+  senderAvatar?: string | null;
+  pinnedBy: string;
+  pinnedByName: string;
+  pinnedAt: string;
+  type: string;
+}
+
 export interface JoinRequest {
   id: string;
   chatId: string;
@@ -102,6 +113,7 @@ export interface Chat {
   pin: boolean;
   notify: boolean;
   readed: boolean;
+  isReadOnly: boolean;
   participants: ChatParticipant[];
   participantCount: number;
   lastMessage?: {
@@ -118,7 +130,7 @@ export interface Chat {
   updatedAt: string;
   joinPolicy?: JoinPolicy;
   joinRequests?: JoinRequest[];
-
+  pinnedMessages?: PinnedMessage[];
 }
 
 export type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE" | "CANCELLED";

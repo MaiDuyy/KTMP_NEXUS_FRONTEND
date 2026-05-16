@@ -301,6 +301,16 @@ export default function GroupSettingsPanel({
         }
     };
 
+    const handleUpdateReadOnly = async (isReadOnly: boolean) => {
+        try {
+            await updateChat({ chatId, isReadOnly }).unwrap();
+            toast.success(isReadOnly ? "Đã bật chế độ Chỉ đọc" : "Đã tắt chế độ Chỉ đọc");
+            refetch();
+        } catch {
+            toast.error("Lỗi cập nhật chế độ kênh");
+        }
+    };
+
     const handleApproveJoin = async (targetId: string, approve: boolean) => {
         try {
             await approveJoinRequest({ chatId, targetAccountId: targetId, approve }).unwrap();
@@ -365,6 +375,7 @@ export default function GroupSettingsPanel({
         handleUpdateTaskStatus,
         handleDeleteTask,
         handleUpdateJoinPolicy,
+        handleUpdateReadOnly,
         handleApproveJoin,
         onMessageClick,
         setMemberToRemove,
