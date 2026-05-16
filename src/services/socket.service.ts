@@ -93,6 +93,8 @@ export interface SocketCallbacks {
   onUsersOnline?: (data: { userIds: string[] }) => void;
   onInitialOnlineUsers?: (userIds: string[]) => void;
   onNotification?: (data: Notification) => void;
+  onMention?: (data: any) => void;
+  onMentionBroadcast?: (data: any) => void;
   onError?: (error: { message: string }) => void;
   // Friend events
   onFriendRequestReceived?: (data: FriendRequestReceivedEvent) => void;
@@ -109,6 +111,7 @@ export interface SocketCallbacks {
   onChatMemberUpdated?: (data: { chatId: string; memberId: string; action: string; newRole?: string }) => void;
   onChatRoleUpdated?: (data: { chatId: string; memberId: string; newRole: string }) => void;
   onChatUpdated?: (data: { chatId: string; [key: string]: any }) => void;
+  onChatNew?: (data: { chatId: string; [key: string]: any }) => void;
   onChannelNew?: (data: { workspaceId: string; channel: any }) => void;
   onChannelUpdated?: (data: { channelId: string; workspaceId: string; [key: string]: any }) => void;
   onChannelDeleted?: (data: { channelId: string; workspaceId: string }) => void;
@@ -134,6 +137,13 @@ export interface SocketCallbacks {
   onWorkspaceOwnerTransferred?: (data: { workspaceId: string; oldOwnerId: string; newOwnerId: string }) => void;
   onWorkspaceUpdated?: (data: { workspaceId: string; updates: { name?: string; description?: string; icon?: string; isPublic?: boolean }; updatedBy?: string }) => void;
   onSystemBroadcast?: (data: { title: string; body: string; type: string; data?: any; timestamp: string }) => void;
+  onIncomingCall?: (data: any) => void;
+  onCallRinging?: (data: any) => void;
+  onCallStartInfo?: (data: any) => void;
+  onCallDeclined?: (data: any) => void;
+  onCallEnded?: (data: any) => void;
+  onCallBusy?: (data: any) => void;
+  onCallActiveSync?: (data: any) => void;
 }
 
 // Kết nối socket
@@ -259,10 +269,19 @@ export const connectSocket = (token: string, callbacks?: SocketCallbacks): Socke
     callbacks?.onUsersOnline?.(data);
   });
 
-  // Notification events
   socket.on("notification:new", (data) => {
     console.log("[Socket] 🔔 New notification:", data);
     callbacks?.onNotification?.(data);
+  });
+
+  socket.on("mention:new", (data) => {
+    console.log("[Socket] @ New mention:", data);
+    callbacks?.onMention?.(data);
+  });
+
+  socket.on("mention:broadcast", (data) => {
+    console.log("[Socket] @ Mention broadcast:", data);
+    callbacks?.onMentionBroadcast?.(data);
   });
 
   // Error events
@@ -341,6 +360,11 @@ export const connectSocket = (token: string, callbacks?: SocketCallbacks): Socke
   socket.on("chat:updated", (data) => {
     console.log("[Socket] 🔄 Chat updated:", data);
     callbacks?.onChatUpdated?.(data);
+  });
+
+  socket.on("chat:new", (data) => {
+    console.log("[Socket] ✨ New chat created:", data);
+    callbacks?.onChatNew?.(data);
   });
 
   // Channel lifecycle events
@@ -469,6 +493,37 @@ export const connectSocket = (token: string, callbacks?: SocketCallbacks): Socke
     callbacks?.onSystemBroadcast?.(data);
   });
 
+  // Call events
+  socket.on("call:incoming", (data) => {
+    console.log("[Socket] 📞 Incoming call:", data);
+    callbacks?.onIncomingCall?.(data);
+  });
+
+  socket.on("call:ringing", (data) => {
+    callbacks?.onCallRinging?.(data);
+  });
+
+  socket.on("call:start_info", (data) => {
+    callbacks?.onCallStartInfo?.(data);
+  });
+
+  socket.on("call:declined", (data) => {
+    callbacks?.onCallDeclined?.(data);
+  });
+
+  socket.on("call:ended", (data) => {
+    callbacks?.onCallEnded?.(data);
+  });
+
+  socket.on("call:busy", (data) => {
+    callbacks?.onCallBusy?.(data);
+  });
+
+  socket.on("call:active_sync", (data) => {
+    console.log("[Socket] 📞 Received call:active_sync:", data);
+    callbacks?.onCallActiveSync?.(data);
+  });
+
   return socket;
 };
 
@@ -542,9 +597,15 @@ export const leaveChat = (chatId: string) => {
   socket?.emit("chat:leave", { chatId });
 };
 
-// Check active call status
+// Check active call status for a specific chat
 export const checkCallStatus = (chatId: string) => {
   socket?.emit("call:check", { chatId });
+};
+
+// Check if there is ANY active call for the current user (Global Sync)
+export const checkActiveCall = () => {
+  console.log("[Socket] 📞 Emitting call:check_active for state sync...");
+  socket?.emit("call:check_active");
 };
 
 // Đăng ký listener cho tin nhắn mới
@@ -590,6 +651,7 @@ export const socketService = {
   joinChat,
   leaveChat,
   checkCallStatus,
+  checkActiveCall,
   onMessageNew,
   // AI Phase 1
   sendAIQuery,

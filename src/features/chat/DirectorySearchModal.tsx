@@ -44,7 +44,10 @@ export function DirectorySearchModal({ open, onOpenChange }: DirectorySearchModa
 
     const handleSelectUser = async (userId: string) => {
         try {
-            const result = await getOrCreateChat({ partnerId: userId }).unwrap();
+            const result = await getOrCreateChat({ 
+                partnerId: userId,
+                // workspaceId: currentWorkspaceId || undefined
+            }).unwrap();
             onOpenChange(false);
             if (result?.chat?.id) {
                 router.push(`/chat/${result.chat.id}`);

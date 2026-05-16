@@ -38,11 +38,12 @@ import { getAvatarUrl } from "@/src/utils/image-utils";
 interface FriendsPanelProps {
     onlineUsers: Set<string>;
     onStartChat: (chatId: string) => void;
+    workspaceId?: string;
 }
 
 type TabType = "all" | "online" | "requests" | "add";
 
-export default function FriendsPanel({ onlineUsers, onStartChat }: FriendsPanelProps) {
+export default function FriendsPanel({ onlineUsers, onStartChat, workspaceId }: FriendsPanelProps) {
     const [activeTab, setActiveTab] = useState<TabType>("all");
     const [searchQuery, setSearchQuery] = useState("");
     const [addQuery, setAddQuery] = useState("");
@@ -128,7 +129,10 @@ export default function FriendsPanel({ onlineUsers, onStartChat }: FriendsPanelP
     // Handle start chat
     const handleStartChat = async (friendId: string) => {
         try {
-            const result = await getOrCreateChat({ partnerId: friendId }).unwrap();
+            const result = await getOrCreateChat({ 
+                partnerId: friendId,
+                // workspaceId: workspaceId
+            }).unwrap();
             onStartChat(result.chat.id);
         } catch (error: any) {
             toast.error(error?.data?.message || "Lỗi tạo chat!");

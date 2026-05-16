@@ -86,6 +86,15 @@ export const userApi = apiSlice.injectEndpoints({
         };
       },
     }),
+    // Get multiple users by IDs
+    getUsersByIds: builder.query<{ users: User[] }, string[]>({
+      query: (ids) => `/users/batch?ids=${ids.join(",")}`,
+    }),
+
+    // Get user by ID
+    getUserById: builder.query<{ user: User }, string>({
+      query: (id) => `/users/${id}`,
+    }),
   }),
 });
 
@@ -97,4 +106,7 @@ export const {
   useChangePasswordMutation,
   useUploadFileMutation,
   useUploadFilesMutation,
+  useGetUserByIdQuery,
+  useLazyGetUserByIdQuery,
+  useGetUsersByIdsQuery,
 } = userApi;

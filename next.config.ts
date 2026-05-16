@@ -1,6 +1,13 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  output: 'standalone',
+  compiler: {
+    // Xóa tất cả console.* ngoại trừ console.error
+    removeConsole: process.env.NODE_ENV === "production" ? {
+      exclude: ['error'],
+    } : false,
+  },
   reactStrictMode: true,
   typescript: {
     // Pre-existing TS errors in legacy files — does not affect Phase 2 functionality

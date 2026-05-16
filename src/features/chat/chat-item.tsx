@@ -277,15 +277,19 @@ export const ChatItem = ({
             <div
                 onClick={handleSelectChat}
                 className={`
-          group relative flex items-center gap-3 p-3 cursor-pointer transition-all duration-200
-          hover:bg-blue-50 dark:hover:bg-gray-700
-          ${isSelected ? "bg-blue-100 dark:bg-gray-700 border-l-4 border-blue-500" : ""}
-          ${!chat.readed ? "bg-blue-50/50 dark:bg-gray-800/50" : ""}
+          group relative flex items-center gap-2.5 p-2 cursor-pointer transition-all duration-200 mx-1.5 my-0.25 rounded-xl
+          hover:bg-slate-200/60 dark:hover:bg-gray-700
+          ${isSelected ? "bg-blue-600/10 dark:bg-gray-700 shadow-sm border border-blue-200/30" : ""}
+          ${!chat.readed ? "bg-white dark:bg-gray-800" : ""}
         `}
             >
+                {/* Active Indicator Line */}
+                {isSelected && (
+                    <div className="absolute left-0 top-2 bottom-2 w-1 bg-blue-600 rounded-r-full" />
+                )}
                 {/* Avatar Section */}
                 <div className="relative flex-shrink-0">
-                    <Avatar className="h-12 w-12 ring-2 ring-white dark:ring-gray-800">
+                    <Avatar className="h-9 w-9 ring-1 ring-slate-100 dark:ring-gray-800">
                         <AvatarImage src={imageUrl} alt={displayName} />
                         <AvatarFallback
                             className={`${chat.isGroup
@@ -297,11 +301,11 @@ export const ChatItem = ({
                         </AvatarFallback>
                     </Avatar>
                     {!chat.isGroup && isOnline && (
-                        <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full" />
+                        <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full" />
                     )}
                     {chat.isGroup && (
-                        <span className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                            <Users className="w-3 h-3 text-white" />
+                        <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                            <Users className="w-2.5 h-2.5 text-white" />
                         </span>
                     )}
                 </div>
@@ -312,9 +316,9 @@ export const ChatItem = ({
                         <div className="flex items-center gap-1.5 min-w-0">
                             {chat.pin && <PinIcon className="w-3 h-3 text-blue-500 flex-shrink-0" />}
                             <span
-                                className={`font-semibold truncate ${!chat.readed
-                                    ? "text-gray-900 dark:text-white"
-                                    : "text-gray-700 dark:text-gray-300"
+                                className={`truncate text-[12.5px] tracking-tight ${!chat.readed
+                                    ? "text-slate-900 font-black"
+                                    : isSelected ? "text-blue-700 font-bold" : "text-slate-700 font-semibold"
                                     }`}
                             >
                                 {displayName}
@@ -337,7 +341,7 @@ export const ChatItem = ({
 
                     <div className="flex items-center justify-between gap-2">
                         <p
-                            className={`text-sm truncate flex-1 ${!chat.readed
+                            className={`text-[12px] truncate flex-1 ${!chat.readed
                                 ? "text-gray-800 dark:text-gray-200 font-medium"
                                 : "text-gray-500 dark:text-gray-400"
                                 }`}
@@ -380,7 +384,7 @@ export const ChatItem = ({
 
                         {/* Unread Badge - Ẩn nếu đang được chọn/đang chat */}
                         {chat.unreadCount > 0 && !isSelected && (
-                            <Badge className="bg-red-500 text-white text-xs px-1.5 py-0 h-5 min-w-[20px] flex items-center justify-center rounded-full animate-in zoom-in duration-300">
+                            <Badge className="bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 h-4.5 min-w-[18px] flex items-center justify-center rounded-full shadow-sm ring-2 ring-white animate-in zoom-in duration-300">
                                 {chat.unreadCount > 99 ? "99+" : chat.unreadCount}
                             </Badge>
                         )}

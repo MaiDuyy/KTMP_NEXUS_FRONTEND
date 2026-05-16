@@ -64,6 +64,13 @@ function enrichChatDetails(chat: ChatDetails): ChatDetails {
 export const chatApi = apiSlice.injectEndpoints({
   overrideExisting: true,
   endpoints: (builder) => ({
+    // Lấy tổng số tin nhắn chưa đọc theo từng workspace
+    getWorkspaceUnreadCounts: builder.query<Record<string, number>, void>({
+      query: () => "/chats/unread-counts",
+      transformResponse: (response: { success: boolean; counts: Record<string, number> }) => response.counts || {},
+      providesTags: ["WorkspaceUnreadCounts" as any],
+    }),
+
     // Lấy danh sách chat
     getChats: builder.query<ChatsResponse, { type?: "all" | "private" | "group"; workspaceId?: string | null } | void>({
       query: (params) => ({
@@ -122,7 +129,7 @@ export const chatApi = apiSlice.injectEndpoints({
     }),
 
     // Cập nhật nhóm
-    updateChat: builder.mutation<{ message: string; chat: Chat }, { chatId: string; name?: string; avatar?: string; joinPolicy?: string }>({
+    updateChat: builder.mutation<{ message: string; chat: Chat }, { chatId: string; name?: string; avatar?: string; joinPolicy?: string; isReadOnly?: boolean }>({
       query: ({ chatId, ...body }) => ({
         url: `/chats/${chatId}`,
         method: "PUT",
@@ -235,7 +242,10 @@ export const chatApi = apiSlice.injectEndpoints({
           patchPrivate.undo();
         }
       },
-      invalidatesTags: (_result, _error, chatId) => [{ type: "Chats", id: chatId }],
+      invalidatesTags: (_result, _error, chatId) => [
+        { type: "Chats", id: chatId },
+        "WorkspaceUnreadCounts" as any
+      ],
     }),
 
     // Lấy danh sách Read Receipts của chat
@@ -311,6 +321,7 @@ export const chatApi = apiSlice.injectEndpoints({
 });
 
 export const {
+  useGetWorkspaceUnreadCountsQuery,
   useGetChatsQuery,
   useGetChatByIdQuery,
   useGetOrCreatePrivateChatMutation,

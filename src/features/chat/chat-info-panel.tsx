@@ -31,9 +31,30 @@ import {
     Loader2,
     Download,
     ExternalLink,
+    Bell,
+    BellOff,
+    MoreHorizontal,
+    Phone,
+    MessageSquare,
+    Mail,
+    Clock,
+    MapPin,
+    Calendar,
+    Badge,
 } from "lucide-react";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
+import { getAvatarUrl } from "@/src/utils/image-utils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+    useGetChatByIdQuery,
+    useTogglePinChatMutation,
+    useToggleNotifyChatMutation,
+} from "@/src/redux/feature/chatApi";
+import { Separator } from "@/components/ui/separator";
+import { toast } from "sonner";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Users, File, Layers, Filter } from "lucide-react";
 
 interface ChatInfoPanelProps {
     chatId: string;
@@ -50,11 +71,12 @@ export default function ChatInfoPanel({
     onClose,
     onMessageClick,
 }: ChatInfoPanelProps) {
-    const [activeTab, setActiveTab] = useState<string>("pinned");
+    const [activeTab, setActiveTab] = useState<string>("about");
     const [searchQuery, setSearchQuery] = useState("");
     const [mediaFilter, setMediaFilter] = useState<"all" | "image" | "video" | "file">("all");
 
     // API calls
+    const { data: chatData, isLoading: chatLoading } = useGetChatByIdQuery(chatId, { skip: !isOpen });
     const { data: pinnedData, isLoading: pinnedLoading, refetch: refetchPinned } = useGetPinnedMessagesQuery(chatId, {
         skip: !isOpen,
     });
@@ -63,6 +85,12 @@ export default function ChatInfoPanel({
         { chatId, type: mediaFilter },
         { skip: !isOpen || activeTab !== "media" }
     );
+
+    const [togglePin] = useTogglePinChatMutation();
+    const [toggleNotify] = useToggleNotifyChatMutation();
+
+    const chat = chatData?.chat;
+    const partner = chat?.participants?.find(p => p.name === chatName);
 
     const pinnedMessages = pinnedData?.pinnedMessages || [];
     const searchResults = searchData?.messages || [];
@@ -252,31 +280,278 @@ export default function ChatInfoPanel({
         );
     };
 
+    const handleTogglePin = async () => {
+        try {
+            await togglePin({ chatId, pin: !chat?.pin }).unwrap();
+            toast.success(chat?.pin ? "Đã bỏ ghim cuộc trò chuyện" : "Đã ghim cuộc trò chuyện");
+        } catch (error) {
+            toast.error("Không thể thực hiện hành động này");
+        }
+    };
+
+    const handleToggleNotify = async () => {
+        try {
+            await toggleNotify({ chatId, notify: !chat?.notify }).unwrap();
+            toast.success(chat?.notify ? "Đã tắt thông báo" : "Đã bật thông báo");
+        } catch (error) {
+            toast.error("Không thể thực hiện hành động này");
+        }
+    };
+
     return (
         <Sheet open={isOpen} onOpenChange={onClose}>
-            <SheetContent className="w-full sm:w-[400px] p-0">
-                <SheetHeader className="p-4 border-b">
-                    <SheetTitle>Thông tin cuộc trò chuyện</SheetTitle>
-                    <p className="text-sm text-gray-500">{chatName}</p>
-                </SheetHeader>
+        <SheetContent className="w-full sm:w-[400px] p-0 flex flex-col h-full bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 shadow-2xl overflow-hidden">
+            <ScrollArea className="flex-1 h-full">
+                <div className="flex flex-col min-h-full">
+                    {/* Banner Section */}
+                    <div className="h-24 bg-gradient-to-r from-blue-600 to-indigo-700 w-full shrink-0 relative">
+                        <div className="absolute -bottom-10 left-6">
+                            <div className="relative group">
+                                <Avatar className="h-24 w-24 rounded-2xl ring-4 ring-white dark:ring-gray-900 shadow-xl transition-transform group-hover:scale-105 bg-white">
+                                    <AvatarImage src={getAvatarUrl(chat?.avatar, chatName)} alt={chatName} className="object-cover" />
+                                    <AvatarFallback className="text-2xl bg-blue-500 text-white font-bold">
+                                        {chatName.substring(0, 2).toUpperCase()}
+                                    </AvatarFallback>
+                                </Avatar>
+                                {partner?.isOnline && (
+                                    <div className="absolute bottom-1 right-1 h-5 w-5 bg-green-500 border-4 border-white dark:border-gray-900 rounded-full shadow-md z-10" />
+                                )}
+                            </div>
+                        </div>
+                    </div>
 
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-[calc(100vh-100px)]">
-                    <TabsList className="grid w-full grid-cols-3 mx-4 mt-4" style={{ width: 'calc(100% - 32px)' }}>
-                        <TabsTrigger value="pinned" className="flex items-center gap-1">
-                            <Pin className="h-4 w-4" />
-                            <span className="hidden sm:inline">Đã ghim</span>
-                        </TabsTrigger>
-                        <TabsTrigger value="search" className="flex items-center gap-1">
-                            <Search className="h-4 w-4" />
-                            <span className="hidden sm:inline">Tìm kiếm</span>
-                        </TabsTrigger>
-                        <TabsTrigger value="media" className="flex items-center gap-1">
-                            <ImageIcon className="h-4 w-4" />
-                            <span className="hidden sm:inline">Media</span>
-                        </TabsTrigger>
-                    </TabsList>
+                    {/* Profile Header Info */}
+                    <div className="pt-12 px-6 pb-4 space-y-4 shrink-0">
+                        <div className="space-y-1">
+                            <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                {chatName}
+                                {chat?.pin && <Pin className="h-4 w-4 text-blue-500 fill-current" />}
+                            </h2>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
+                                {chat?.isGroup ? `${chat.participantCount} thành viên` : partner?.isOnline ? "Đang hoạt động" : "Ngoại tuyến"}
+                            </p>
+                        </div>
 
-                    <TabsContent value="pinned" className="flex-1 overflow-y-auto p-4 space-y-3">
+                        {/* Quick Actions Row */}
+                        <div className="flex items-center gap-4 w-full pt-1">
+                            <div className="flex flex-col items-center gap-1.5">
+                                <Button 
+                                    size="icon" 
+                                    variant="outline" 
+                                    className={`h-11 w-11 rounded-full transition-all ${chat?.notify ? 'text-gray-600' : 'text-blue-600 bg-blue-50 border-blue-200'}`}
+                                    onClick={handleToggleNotify}
+                                >
+                                    {chat?.notify ? <Bell className="h-5 w-5" /> : <BellOff className="h-5 w-5" />}
+                                </Button>
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                                    {chat?.notify ? "Thông báo" : "Đã tắt"}
+                                </span>
+                            </div>
+
+                            <div className="flex flex-col items-center gap-1.5">
+                                <Button 
+                                    size="icon" 
+                                    variant="outline" 
+                                    className={`h-11 w-11 rounded-full transition-all ${chat?.pin ? 'text-blue-600 bg-blue-50 border-blue-200' : 'text-gray-600'}`}
+                                    onClick={handleTogglePin}
+                                >
+                                    <Pin className={`h-5 w-5 ${chat?.pin ? 'fill-current' : ''}`} />
+                                </Button>
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                                    {chat?.pin ? "Đã ghim" : "Ghim"}
+                                </span>
+                            </div>
+
+                            <div className="flex flex-col items-center gap-1.5">
+                                <Button size="icon" variant="outline" className="h-11 w-11 rounded-full text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-all">
+                                    <Search className="h-5 w-5" />
+                                </Button>
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Tìm kiếm</span>
+                            </div>
+
+                            <div className="flex flex-col items-center gap-1.5">
+                                <Button size="icon" variant="outline" className="h-11 w-11 rounded-full text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-all">
+                                    <MoreHorizontal className="h-5 w-5" />
+                                </Button>
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Thêm</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <Separator className="bg-gray-100 dark:bg-gray-800" />
+
+                    {/* Main Content Tabs */}
+                    <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1">
+                        <TabsList className="sticky top-0 z-20 flex w-full justify-start gap-6 px-6 h-14 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 shrink-0">
+
+                            <TabsTrigger 
+                                value="about" 
+                                className="relative h-14 rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:shadow-none text-gray-500 data-[state=active]:text-blue-600 font-bold text-sm px-0"
+                            >
+                                Giới thiệu
+                            </TabsTrigger>
+                            <TabsTrigger 
+                                value="pinned" 
+                                className="relative h-14 rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:shadow-none text-gray-500 data-[state=active]:text-blue-600 font-bold text-sm px-0"
+                            >
+                                Đã ghim
+                            </TabsTrigger>
+                            <TabsTrigger 
+                                value="media" 
+                                className="relative h-14 rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:shadow-none text-gray-500 data-[state=active]:text-blue-600 font-bold text-sm px-0"
+                            >
+                                Media
+                            </TabsTrigger>
+                            <TabsTrigger 
+                                value="search" 
+                                className="relative h-14 rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent data-[state=active]:shadow-none text-gray-500 data-[state=active]:text-blue-600 font-bold text-sm px-0"
+                            >
+                                Tìm kiếm
+                            </TabsTrigger>
+                        </TabsList>
+
+                    <TabsContent value="about" className="p-6 space-y-6">
+                        {/* Detail Info Section */}
+                        {!chat?.isGroup && (
+                            <div className="space-y-4">
+                                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest px-1">Thông tin chi tiết</h3>
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-4 group">
+                                        <div className="h-10 w-10 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors">
+                                            <Mail className="h-5 w-5" />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-500 font-medium">Email</p>
+                                            <p className="text-sm font-semibold text-gray-900 dark:text-white truncate max-w-[200px]">
+                                                {(partner as any)?.email || (partner as any)?.account?.email || "nguoidung@nexus.vn"}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-4 group">
+                                        <div className="h-10 w-10 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors">
+                                            <Clock className="h-5 w-5" />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-500 font-medium">Giờ địa phương</p>
+                                            <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                                                {format(new Date(), "HH:mm", { locale: vi })} (GMT+7)
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        <Separator className="bg-gray-100 dark:bg-gray-800" />
+
+                        {/* Media Preview Section */}
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest px-1">Media mới nhất</h3>
+                                <button onClick={() => setActiveTab('media')} className="text-xs text-blue-600 font-semibold hover:underline">Xem tất cả</button>
+                            </div>
+                            {mediaLoading ? (
+                                <Loader2 className="h-5 w-5 animate-spin text-slate-200 mx-auto" />
+                            ) : mediaMessages.length > 0 ? (
+                                <div className="grid grid-cols-4 gap-2">
+                                    {mediaMessages.filter(m => m.type === 'image').slice(0, 4).map((msg) => (
+                                        <div key={msg.id} className="aspect-square rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity" onClick={() => onMessageClick?.(msg.id)}>
+                                            <img src={normalizeUrl(msg.content || "")} alt="" className="w-full h-full object-cover" />
+                                        </div>
+                                    ))}
+                                    {mediaMessages.filter(m => m.type === 'image').length === 0 && (
+                                        <div className="col-span-4 text-center py-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                                            <p className="text-[10px] text-slate-400">Không có hình ảnh nào</p>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <p className="text-center py-4 text-xs text-slate-400 italic">Chưa có tệp tin nào được chia sẻ</p>
+                            )}
+                        </div>
+
+                        <Separator className="bg-gray-100 dark:bg-gray-800" />
+
+                        {/* Mutual Groups Preview */}
+                        {/* <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest px-1">Nhóm chung</h3>
+                                <div className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded-full">
+                                    <Users size={10} className="text-slate-400" />
+                                    <span className="text-[10px] font-bold text-slate-500">2</span>
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-all border border-transparent hover:border-slate-100 dark:hover:border-slate-700">
+                                    <div className="h-8 w-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 font-bold text-xs">
+                                        N
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-xs font-semibold truncate">Nexus Core Team</p>
+                                        <p className="text-[10px] text-slate-400">12 thành viên</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-all border border-transparent hover:border-slate-100 dark:hover:border-slate-700">
+                                    <div className="h-8 w-8 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 font-bold text-xs">
+                                        D
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-xs font-semibold truncate">Design System</p>
+                                        <p className="text-[10px] text-slate-400">5 thành viên</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div> */}
+
+                        <Separator className="bg-gray-100 dark:bg-gray-800" />
+
+                        {/* Pinned Preview Section */}
+                       <div>
+                                               <div className="flex items-center justify-between mb-2">
+                                                 <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Tin nhắn đã ghim</p>
+                                                 <Badge  className="h-4 px-1.5 text-[10px]">{pinnedData?.pinnedMessages?.length || 0}</Badge>
+                                               </div>
+                                               {pinnedLoading ? (
+                                                 <Loader2 className="w-4 h-4 animate-spin text-slate-200 mx-auto" />
+                                               ) : pinnedData?.pinnedMessages?.length ? (
+                                                 <div className="space-y-2">
+                                                   {pinnedData.pinnedMessages.slice(0, 3).map((msg) => (
+                                                     <div key={msg.id} className="p-2 rounded-lg bg-slate-50 border border-slate-100 relative group">
+                                                       <div className="flex items-center gap-2 mb-1">
+                                                          <Avatar className="h-4 w-4">
+                                                             <AvatarImage src={getAvatarUrl(msg.sender?.avatar, msg.sender?.name || '')} />
+                                                             <AvatarFallback className="text-[8px]">{msg.sender?.name?.[0]}</AvatarFallback>
+                                                          </Avatar>
+                                                          <span className="text-[10px] font-bold truncate">{msg.sender?.name}</span>
+                                                          <span className="text-[9px] text-slate-400 ml-auto">{msg.time ? format(new Date(msg.time), 'HH:mm') : '--:--'}</span>
+                                                       </div>
+                                                       <p className="text-[11px] text-slate-600 line-clamp-2 leading-relaxed">
+                                                         {msg.content || (msg.file ? '📎 Tệp đính kèm' : '...')}
+                                                       </p>
+                                                       <button 
+                                                        //  onClick={() => togglePin({ messageId: msg.id, chatId: channelId })}
+                                                         className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-slate-200 rounded"
+                                                       >
+                                                         <X size={10} className="text-slate-400" />
+                                                       </button>
+                                                     </div>
+                                                   ))}
+                                                   {pinnedData.pinnedMessages.length > 3 && (
+                                                     <p className="text-[10px] text-blue-600 font-medium cursor-pointer hover:underline text-center">
+                                                       Xem thêm {pinnedData.pinnedMessages.length - 3} tin nhắn...
+                                                     </p>
+                                                   )}
+                                                 </div>
+                                               ) : (
+                                                 <div className="text-center py-4 rounded-lg border border-dashed border-slate-200">
+                                                   <Pin size={16} className="mx-auto mb-1 text-slate-300" />
+                                                   <p className="text-[10px] text-slate-400">Chưa có tin nhắn nào được ghim</p>
+                                                 </div>
+                                               )}
+                                             </div>
+                    </TabsContent>
+
+                    <TabsContent value="pinned" className="p-4 space-y-3">
                         {pinnedLoading ? (
                             <div className="flex items-center justify-center py-8">
                                 <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
@@ -310,7 +585,7 @@ export default function ChatInfoPanel({
                                 )}
                             </Button>
                         </div>
-                        <div className="flex-1 overflow-y-auto space-y-3">
+                        <div className="space-y-3">
                             {searchLoading ? (
                                 <div className="flex items-center justify-center py-8">
                                     <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
@@ -359,16 +634,19 @@ export default function ChatInfoPanel({
                             ))}
                         </div>
 
-                        <div className="flex-1 overflow-y-auto">
+                        <div className="flex-1">
                             {mediaLoading ? (
-                                <div className="flex items-center justify-center py-8">
-                                    <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+                                <div className="flex items-center justify-center py-20">
+                                    <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
                                 </div>
                             ) : mediaMessages.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-12 text-center">
-                                    <ImageIcon className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-3" />
-                                    <p className="text-gray-500 dark:text-gray-400">
-                                        Chưa có {mediaFilter === "all" ? "media/file" : mediaFilter === "image" ? "ảnh" : mediaFilter === "video" ? "video" : "file"} nào
+                                <div className="flex flex-col items-center justify-center py-20 text-center px-6">
+                                    <div className="h-20 w-20 rounded-full bg-gray-50 dark:bg-gray-800 flex items-center justify-center mb-4">
+                                        <Layers className="h-10 w-10 text-gray-300" />
+                                    </div>
+                                    <h4 className="text-sm font-bold text-gray-900 dark:text-white">Không có tệp tin nào</h4>
+                                    <p className="text-xs text-gray-500 mt-1 max-w-[200px]">
+                                        Tất cả ảnh, video và tài liệu bạn chia sẻ sẽ xuất hiện ở đây.
                                     </p>
                                 </div>
                             ) : (
@@ -383,7 +661,9 @@ export default function ChatInfoPanel({
                             )}
                         </div>
                     </TabsContent>
-                </Tabs>
+                        </Tabs>
+                    </div>
+                </ScrollArea>
             </SheetContent>
         </Sheet>
     );

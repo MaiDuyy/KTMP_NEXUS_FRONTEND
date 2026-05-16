@@ -92,13 +92,55 @@ export const messageApi = apiSlice.injectEndpoints({
       }),
     }),
 
-    // React tin nhắn
-    reactMessage: builder.mutation<{ message: string; action: string; emoji?: string }, { messageId: string; emoji: string }>({
+    reactMessage: builder.mutation<{ message: string; action: string; emoji?: string }, { messageId: string; emoji: string; chatId: string }>({
       query: ({ messageId, emoji }) => ({
         url: `/messages/${messageId}/react`,
         method: "POST",
         body: { emoji },
       }),
+      async onQueryStarted({ messageId, emoji, chatId }, { dispatch, queryFulfilled }) {
+        const currentUserId = getCurrentUserId();
+        if (!currentUserId) return;
+
+        const updateArgs = [{ chatId, limit: 50 }, { chatId }];
+        const patches = updateArgs.map(args => 
+          dispatch(
+            messageApi.util.updateQueryData("getMessages", args as any, (draft) => {
+              if (draft && draft.messages) {
+                const msg = draft.messages.find((m) => m.id === messageId);
+                if (msg) {
+                  if (!msg.reactions) msg.reactions = [];
+                  const existIdx = msg.reactions.findIndex((r) => r.emoji === emoji);
+                  
+                  if (existIdx !== -1) {
+                    const reaction = msg.reactions[existIdx];
+                    if (!reaction.users) reaction.users = [];
+                    const userIdx = reaction.users.findIndex(u => u.id === currentUserId);
+                    
+                    if (userIdx === -1) {
+                      reaction.users.push({ id: currentUserId, name: "Me" });
+                    }
+                    reaction.count++;
+                  } else {
+                    // Create new emoji group
+                    msg.reactions.push({
+                      emoji,
+                      count: 1,
+                      users: [{ id: currentUserId, name: "Me" }]
+                    });
+                  }
+                }
+              }
+            })
+          )
+        );
+
+        try {
+          await queryFulfilled;
+        } catch {
+          patches.forEach(patch => patch.undo());
+        }
+      },
     }),
 
     // Ghim/bỏ ghim tin nhắn

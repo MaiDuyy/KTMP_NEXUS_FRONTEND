@@ -83,7 +83,8 @@ export default function MessageBubble({
     readReceipts,
 }: MessageBubbleProps) {
     const isMe = message.isMe;
-    const isAI = message.senderId === '00000000-0000-0000-0000-000000000000' || message.sender?.id === '00000000-0000-0000-0000-000000000000';
+    const isCall = message.type.startsWith('call_');
+    const isAI = isCall || message.senderId === '00000000-0000-0000-0000-000000000000' || message.sender?.id === '00000000-0000-0000-0000-000000000000';
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const [showRecallDialog, setShowRecallDialog] = useState(false);
     const [showReactions, setShowReactions] = useState(false);
@@ -134,7 +135,7 @@ export default function MessageBubble({
         try {
             // Sử dụng socket để realtime với người khác
             socketService.reactMessage(message.id, chatId, emoji);
-            await reactMessage({ messageId: message.id, emoji }).unwrap();
+            await reactMessage({ messageId: message.id, emoji, chatId }).unwrap();
             setShowReactions(false);
             toast.success(`Đã thêm ${emoji}`);
             onMessageUpdated?.(message.id);
@@ -256,12 +257,20 @@ export default function MessageBubble({
                 const name = match[1];
                 const userId = match[2];
 
+                const handleMentionClick = (e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    window.dispatchEvent(new CustomEvent("chat:open_profile", { detail: { userId } }));
+                };
+
                 parts.push(
                     <span 
                         key={`${userId}-${match.index}`} 
+                        onClick={handleMentionClick}
                         className={cn(
-                            "font-bold cursor-pointer hover:underline",
-                            isMe ? "text-blue-100" : "text-blue-600 dark:text-blue-400"
+                            "font-bold cursor-pointer hover:underline px-1 rounded-md transition-colors",
+                            isMe 
+                                ? "text-blue-100 bg-blue-400/30 hover:bg-blue-400/50" 
+                                : "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50"
                         )}
                     >
                         @{name}
@@ -409,6 +418,75 @@ export default function MessageBubble({
                     </p>
                 );
 
+            case "call_started":
+            case "call_ended":
+            case "call_missed":
+            case "call_declined":
+            case "call_cancelled": {
+                let callMeta: { isVideo?: boolean; duration?: number; callerName?: string } = {};
+                try { callMeta = msg.content ? JSON.parse(msg.content) : {}; } catch { }
+                const isVideoCall = callMeta.isVideo ?? false;
+                const durationSec = callMeta.duration ?? 0;
+                const durationStr = durationSec > 0 ? `${Math.floor(durationSec / 60)}:${(durationSec % 60).toString().padStart(2, "0")}` : null;
+
+                const isMissed = msg.type === "call_missed" || msg.type === "call_declined";
+
+                const handleCallback = () => {
+                    const partner = message.senderId === '00000000-0000-0000-0000-000000000000' 
+                        ? null // In group call, we might not have a single target easily from system msg
+                        : message.sender;
+
+                    window.dispatchEvent(
+                        new CustomEvent("open-call-modal", {
+                            detail: {
+                                chatId: chatId,
+                                isVideo: isVideoCall,
+                                chatName: partner?.name || "Cuộc gọi",
+                                chatAvatar: partner?.avatar,
+                                targetUserId: partner?.id,
+                                callType: isGroup ? "group" : "private",
+                            },
+                        })
+                    );
+                };
+
+                let label = "";
+                let IconComponent = Phone;
+                let colorClass = "text-blue-600";
+
+                if (msg.type === "call_started") { label = isVideoCall ? "Cuộc gọi video mới" : "Cuộc gọi thoại mới"; IconComponent = isVideoCall ? Video : Phone; }
+                else if (msg.type === "call_ended") { label = isVideoCall ? "Cuộc gọi video" : "Cuộc gọi thoại"; IconComponent = isVideoCall ? Video : Phone; colorClass = "text-emerald-600"; }
+                else if (msg.type === "call_missed") { label = "Cuộc gọi nhỡ"; IconComponent = PhoneMissed; colorClass = "text-red-600"; }
+                else if (msg.type === "call_declined") { label = "Cuộc gọi bị từ chối"; IconComponent = PhoneOff; colorClass = "text-orange-600"; }
+                else if (msg.type === "call_cancelled") { label = "Cuộc gọi đã hủy"; IconComponent = PhoneOff; colorClass = "text-slate-600"; }
+
+                return (
+                    <div className="flex flex-col gap-2 py-1">
+                        <div className="flex items-center gap-3">
+                            <div className={cn("w-8 h-8 rounded-full flex items-center justify-center bg-white shadow-sm ring-1 ring-slate-100", colorClass)}>
+                                <IconComponent size={16} />
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-[13px] font-bold text-slate-800">{label}</span>
+                                {durationStr && <span className="text-[10px] text-slate-500 font-medium">Thời gian: {durationStr}</span>}
+                            </div>
+                        </div>
+                        
+                        {isMissed && (
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={handleCallback}
+                                className="h-7 px-3 text-[11px] font-bold bg-white/50 hover:bg-blue-50 text-blue-600 border-blue-100 rounded-lg w-fit flex items-center gap-1.5 transition-all active:scale-95 shadow-sm"
+                            >
+                                {isVideoCall ? <Video size={12} /> : <Phone size={12} />}
+                                Gọi lại ngay
+                            </Button>
+                        )}
+                    </div>
+                );
+            }
+
             default:
                 return <p className="text-xs italic opacity-70">[{msg.type}]</p>;
         }
@@ -425,85 +503,6 @@ export default function MessageBubble({
         );
     }
 
-    // ── CALL EVENT MESSAGES ──
-    if (message.type === "call_started" || message.type === "call_ended" || message.type === "call_missed" || message.type === "call_declined" || message.type === "call_cancelled") {
-        // Parse call metadata from content (JSON: {isVideo, duration, callerName})
-        let callMeta: { isVideo?: boolean; duration?: number; callerName?: string } = {};
-        try {
-            callMeta = message.content ? JSON.parse(message.content) : {};
-        } catch {
-            // content might be plain text fallback
-        }
-
-        const isVideoCall = callMeta.isVideo ?? false;
-        const durationSec = callMeta.duration ?? 0;
-        const mins = Math.floor(durationSec / 60);
-        const secs = durationSec % 60;
-        const durationStr = durationSec > 0 ? `${mins}:${secs.toString().padStart(2, "0")}` : null;
-
-        let label = "";
-        let IconComponent = Phone;
-        let iconColor = "text-emerald-500";
-        let bgColor = "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800";
-
-        if (message.type === "call_participant_joined") {
-            label = `${callMeta.callerName || "Thành viên"} đã tham gia cuộc gọi`;
-            IconComponent = isVideoCall ? Video : Phone;
-            iconColor = "text-blue-500";
-            bgColor = "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800";
-        } else if (message.type === "call_participant_left") {
-            label = `${callMeta.callerName || "Thành viên"} đã rời cuộc gọi`;
-            IconComponent = PhoneOff;
-            iconColor = "text-gray-500";
-            bgColor = "bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800";
-        } else if (message.type === "call_started") {
-            label = isVideoCall ? "Cuộc gọi video mới" : "Cuộc gọi thoại mới";
-            IconComponent = isVideoCall ? Video : Phone;
-            iconColor = "text-blue-500";
-            bgColor = "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800";
-        } else if (message.type === "call_ended") {
-            label = isVideoCall ? "Cuộc gọi video" : "Cuộc gọi thoại";
-            IconComponent = isVideoCall ? Video : Phone;
-            iconColor = "text-emerald-500";
-            bgColor = "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800";
-        } else if (message.type === "call_missed") {
-            label = isVideoCall ? "Cuộc gọi video nhỡ" : "Cuộc gọi nhỡ";
-            IconComponent = PhoneMissed;
-            iconColor = "text-red-500";
-            bgColor = "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800";
-        } else if (message.type === "call_declined") {
-            label = isVideoCall ? "Cuộc gọi video bị từ chối" : "Cuộc gọi bị từ chối";
-            IconComponent = PhoneOff;
-            iconColor = "text-orange-500";
-            bgColor = "bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800";
-        } else if (message.type === "call_cancelled") {
-            label = isVideoCall ? "Cuộc gọi video đã hủy" : "Cuộc gọi đã hủy";
-            IconComponent = PhoneOff;
-            iconColor = "text-gray-500";
-            bgColor = "bg-gray-50 dark:bg-gray-900/20 border-gray-200 dark:border-gray-800";
-        }
-
-        return (
-            <div className="flex justify-center my-3">
-                <div className={`flex items-center gap-3 px-4 py-2.5 rounded-xl border ${bgColor} max-w-xs`}>
-                    <div className={`w-9 h-9 rounded-full flex items-center justify-center bg-white dark:bg-gray-800 shadow-sm`}>
-                        <IconComponent className={`h-4.5 w-4.5 ${iconColor}`} />
-                    </div>
-                    <div className="flex flex-col">
-                        <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{label}</span>
-                        <div className="flex items-center gap-2">
-                            {durationStr && (
-                                <span className="text-xs text-gray-500 dark:text-gray-400">{durationStr}</span>
-                            )}
-                            <span className="text-[10px] text-gray-400 dark:text-gray-500">
-                                {format(new Date(message.time), "HH:mm")}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    }
 
     const imageUrl = getAvatarUrl(message.sender?.avatar, message.sender?.name);
 
@@ -512,17 +511,21 @@ export default function MessageBubble({
             <ContextMenu>
                 <ContextMenuTrigger>
                     <div
+                        id={`message-${message.id}`}
                         className={`flex items-end gap-2 group ${isMe ? "flex-row-reverse" : "flex-row"
                             }`}
                     >
                         {/* Avatar */}
                         {!isMe && (
-                            <div className="w-8 flex-shrink-0">
+                            <div className="w-7 flex-shrink-0">
                                 {showAvatar ? (
-                                    <Avatar className="h-8 w-8">
+                                    <Avatar className="h-7 w-7">
                                         <AvatarImage src={imageUrl || undefined} />
-                                        <AvatarFallback className="bg-gradient-to-br from-purple-400 to-purple-600 text-white text-xs">
-                                            {initials(message.sender?.name)}
+                                        <AvatarFallback className={cn(
+                                            "text-white text-[10px]",
+                                            isAI ? "bg-gradient-to-br from-indigo-500 to-indigo-700" : "bg-gradient-to-br from-purple-400 to-purple-600"
+                                        )}>
+                                            {isAI ? <Sparkles size={10} /> : initials(message.sender?.name)}
                                         </AvatarFallback>
                                     </Avatar>
                                 ) : null}
@@ -531,11 +534,11 @@ export default function MessageBubble({
 
                         {/* Message bubble */}
                         <div
-                            className={`max-w-[70%] ${isMe
-                                ? "bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl rounded-br-md mb-1"
+                            className={`max-w-[85%] ${isMe
+                                ? "bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl rounded-br-md mb-0.5"
                                 : isAI
-                                    ? "bg-gradient-to-br from-indigo-50 to-white border border-indigo-100 text-slate-800 rounded-2xl rounded-bl-md shadow-sm mb-1"
-                                    : "bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-2xl rounded-bl-md shadow-sm mb-1"
+                                    ? "bg-gradient-to-br from-indigo-50 to-white border border-indigo-100 text-slate-800 rounded-2xl rounded-bl-md shadow-sm mb-0.5"
+                                    : "bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-2xl rounded-bl-md shadow-sm mb-0.5"
                                 }`}
                         >
                             {/* Reply preview */}
@@ -565,14 +568,14 @@ export default function MessageBubble({
                             )}
 
                             {/* Content */}
-                            <div className="px-3 py-2">{renderContent(message, false)}</div>
+                            <div className="px-2.5 py-1.5 text-[13px] tracking-tight">{renderContent(message, false)}</div>
 
                             {/* Time & reactions */}
                             <div
-                                className={`px-3 pb-2 flex items-center gap-2 ${isMe ? "justify-end" : "justify-start"
+                                className={`px-2.5 pb-1.5 flex items-center gap-1.5 ${isMe ? "justify-end" : "justify-start"
                                     }`}
                             >
-                                <span className={`text-[10px] ${isMe ? "text-blue-200" : "text-gray-400"}`}>
+                                <span className={`text-[9px] font-medium ${isMe ? "text-blue-100/80" : "text-slate-400"}`}>
                                     {format(new Date(message.time), "HH:mm")}
                                 </span>
 
