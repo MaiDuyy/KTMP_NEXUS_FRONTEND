@@ -9,6 +9,8 @@ export interface Citation {
   section?: string;
   relevanceScore: number;
   chunk?: string;
+  /** Wiki slug — nếu có, CitationList sẽ link tới /wiki/[slug] */
+  slug?: string;
 }
 
 export interface Conversation {

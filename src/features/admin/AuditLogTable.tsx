@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useDispatch } from 'react-redux';
 import { socketManager } from '@/src/lib/socket';
+import { WikiPagination } from '@/app/wiki/components/WikiPagination';
 import { auditApi } from '@/src/redux/feature/auditApi';
 import {
     useGetAuditLogsQuery,
@@ -46,27 +47,50 @@ import {
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
+// High-Density Dark Mode Resilient Badges mapping (compliance with Purple Ban)
 const actionColors: Record<string, string> = {
-    CREATE: 'bg-green-100 text-green-700',
-    UPDATE: 'bg-blue-100 text-blue-700',
-    DELETE: 'bg-red-100 text-red-700',
-    LOGIN: 'bg-purple-100 text-purple-700',
-    LOGOUT: 'bg-gray-100 text-gray-700',
-    ACCESS: 'bg-amber-100 text-amber-700',
+    CREATE: 'bg-green-100/80 text-green-700 dark:bg-green-950/30 dark:text-green-400 border border-green-200/50 dark:border-green-900/30',
+    UPDATE: 'bg-blue-100/80 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400 border border-blue-200/50 dark:border-blue-900/30',
+    DELETE: 'bg-red-100/80 text-red-700 dark:bg-red-950/30 dark:text-red-400 border border-red-200/50 dark:border-red-900/30',
+    LOGIN: 'bg-indigo-100/80 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-400 border border-indigo-200/50 dark:border-indigo-900/30', // Purple Ban: changed from purple to indigo
+    LOGOUT: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400 border border-slate-200/50 dark:border-slate-700/50',
+    ACCESS: 'bg-amber-100/80 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-200/50 dark:border-amber-900/30',
 };
 
 const statusColors: Record<string, string> = {
-    SUCCESS: 'bg-green-100 text-green-700',
-    FAILURE: 'bg-red-100 text-red-700',
+    SUCCESS: 'bg-green-100/80 text-green-700 dark:bg-green-950/30 dark:text-green-400 border border-green-200/50 dark:border-green-900/30',
+    FAILURE: 'bg-red-100/80 text-red-700 dark:bg-red-950/30 dark:text-red-400 border border-red-200/50 dark:border-red-900/30',
 };
 
 export function AuditLogTable() {
     const [filters, setFilters] = useState<AuditFilters>({ limit: 20 });
+    const [page, setPage] = useState(0);
+    const [size, setSize] = useState(20);
     const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
     const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
     const [showFilters, setShowFilters] = useState(false);
     const dispatch = useDispatch();
-    const { data, isLoading } = useGetAuditLogsQuery(filters);
+
+    // Debounce search term to protect performance and reset page to 0 immediately
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearchQuery(searchQuery);
+            setPage(0);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
+    const queryFilters = useMemo<AuditFilters>(() => {
+        return {
+            page: page + 1, // backend is 1-based
+            limit: size,
+            action: filters.action,
+            resource: filters.resource,
+        };
+    }, [page, size, filters.action, filters.resource]);
+
+    const { data, isLoading } = useGetAuditLogsQuery(queryFilters);
 
     useEffect(() => {
         // Listen for real-time audit log events
@@ -80,6 +104,16 @@ export function AuditLogTable() {
     }, [dispatch]);
 
     const logs = data?.items || [];
+    const totalElements = data?.total || 0;
+    const totalPages = Math.ceil(totalElements / size);
+
+    // Auto-decrement page if the current page becomes empty
+    useEffect(() => {
+        const maxPage = Math.max(0, totalPages - 1);
+        if (page > maxPage && !isLoading) {
+            setPage(maxPage);
+        }
+    }, [totalPages, page, isLoading]);
 
     const handleSearch = (value: string) => {
         setSearchQuery(value);
@@ -90,6 +124,7 @@ export function AuditLogTable() {
             ...prev,
             action: action === 'all' ? undefined : action,
         }));
+        setPage(0);
     };
 
     const handleResourceFilter = (resource: string) => {
@@ -97,157 +132,165 @@ export function AuditLogTable() {
             ...prev,
             resource: resource === 'all' ? undefined : resource,
         }));
+        setPage(0);
     };
 
-    const filteredLogs = logs.filter((log: AuditLog) => {
-        if (!searchQuery) return true;
-        const query = searchQuery.toLowerCase();
-        return (
-            log.action.toLowerCase().includes(query) ||
-            log.resource.toLowerCase().includes(query) ||
-            log.userName?.toLowerCase().includes(query)
-        );
-    });
+    const filteredLogs = useMemo(() => {
+        if (!debouncedSearchQuery) return logs;
+        const query = debouncedSearchQuery.toLowerCase();
+        return logs.filter((log: AuditLog) => {
+            return (
+                log.action.toLowerCase().includes(query) ||
+                log.resource.toLowerCase().includes(query) ||
+                (log.userName && log.userName.toLowerCase().includes(query)) ||
+                (log.userId && log.userId.toLowerCase().includes(query))
+            );
+        });
+    }, [logs, debouncedSearchQuery]);
 
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center h-64">
-                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            <div className="flex flex-col items-center justify-center h-48 gap-2">
+                <Loader2 className="w-6 h-6 animate-spin text-primary/60" />
+                <p className="text-[11px] text-muted-foreground animate-pulse">Đang tải nhật ký hệ thống...</p>
             </div>
         );
     }
 
     return (
-        <div className="space-y-4">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <div className="relative w-72">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <div className="space-y-3">
+            {/* Action Bar */}
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-wrap items-center gap-2">
+                    <div className="relative w-full sm:w-64">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                         <Input
-                            placeholder="Search logs..."
+                            placeholder="Tìm kiếm nhật ký..."
                             value={searchQuery}
                             onChange={(e) => handleSearch(e.target.value)}
-                            className="pl-9"
+                            className="pl-8 h-8 text-xs rounded-lg bg-transparent border-border focus-visible:ring-1 focus-visible:ring-primary"
                         />
                     </div>
                     <Button
                         variant="outline"
                         size="sm"
                         onClick={() => setShowFilters(!showFilters)}
+                        className={cn("h-8 text-xs rounded-lg px-2.5 border-border bg-secondary/30", showFilters && "bg-secondary text-primary")}
                     >
-                        <Filter className="w-4 h-4 mr-2" />
-                        Filters
+                        <Filter className="w-3.5 h-3.5 mr-1.5" />
+                        Bộ lọc
                     </Button>
                 </div>
-                <Button variant="outline" size="sm">
-                    <Download className="w-4 h-4 mr-2" />
-                    Export
+                <Button variant="outline" size="sm" className="h-8 text-xs rounded-lg px-2.5 border-border bg-secondary/30">
+                    <Download className="w-3.5 h-3.5 mr-1.5" />
+                    Xuất CSV
                 </Button>
             </div>
 
-            {/* Filters */}
+            {/* Expanded Filters */}
             {showFilters && (
-                <div className="flex gap-4 p-4 bg-muted/50 rounded-lg">
+                <div className="flex flex-wrap gap-3 p-3 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-border/50">
                     <div className="space-y-1">
-                        <label className="text-xs font-medium">Action</label>
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase">Hành động</label>
                         <Select onValueChange={handleActionFilter}>
-                            <SelectTrigger className="w-36">
-                                <SelectValue placeholder="All actions" />
+                            <SelectTrigger className="w-36 h-8 text-xs rounded-lg border-border">
+                                <SelectValue placeholder="Tất cả" />
                             </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All actions</SelectItem>
-                                <SelectItem value="CREATE">Create</SelectItem>
-                                <SelectItem value="UPDATE">Update</SelectItem>
-                                <SelectItem value="DELETE">Delete</SelectItem>
-                                <SelectItem value="LOGIN">Login</SelectItem>
-                                <SelectItem value="ACCESS">Access</SelectItem>
+                            <SelectContent className="text-xs">
+                                <SelectItem value="all">Tất cả hành động</SelectItem>
+                                <SelectItem value="CREATE">Tạo mới (Create)</SelectItem>
+                                <SelectItem value="UPDATE">Cập nhật (Update)</SelectItem>
+                                <SelectItem value="DELETE">Xóa (Delete)</SelectItem>
+                                <SelectItem value="LOGIN">Đăng nhập</SelectItem>
+                                <SelectItem value="ACCESS">Truy cập</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
                     <div className="space-y-1">
-                        <label className="text-xs font-medium">Resource</label>
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase">Tài nguyên</label>
                         <Select onValueChange={handleResourceFilter}>
-                            <SelectTrigger className="w-36">
-                                <SelectValue placeholder="All resources" />
+                            <SelectTrigger className="w-36 h-8 text-xs rounded-lg border-border">
+                                <SelectValue placeholder="Tất cả" />
                             </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All resources</SelectItem>
-                                <SelectItem value="user">User</SelectItem>
-                                <SelectItem value="role">Role</SelectItem>
-                                <SelectItem value="channel">Channel</SelectItem>
-                                <SelectItem value="message">Message</SelectItem>
-                                <SelectItem value="document">Document</SelectItem>
+                            <SelectContent className="text-xs">
+                                <SelectItem value="all">Tất cả tài nguyên</SelectItem>
+                                <SelectItem value="user">Thành viên (User)</SelectItem>
+                                <SelectItem value="role">Vai trò (Role)</SelectItem>
+                                <SelectItem value="channel">Kênh chat (Channel)</SelectItem>
+                                <SelectItem value="message">Tin nhắn (Message)</SelectItem>
+                                <SelectItem value="document">Tài liệu (Document)</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
                 </div>
             )}
 
-            {/* Table */}
-            <div className="border rounded-lg">
+            {/* Table Container */}
+            <div className="rounded-xl border border-border bg-card text-card-foreground shadow-sm overflow-hidden">
                 <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead className="w-[180px]">Timestamp</TableHead>
-                            <TableHead>User</TableHead>
-                            <TableHead>Action</TableHead>
-                            <TableHead>Resource</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="w-[60px]"></TableHead>
+                    <TableHeader className="bg-slate-50/40 dark:bg-slate-900/10 border-b border-border">
+                        <TableRow className="hover:bg-transparent">
+                            <TableHead className="text-[10px] uppercase font-bold text-muted-foreground py-2 px-3 h-auto w-[160px]">Thời gian</TableHead>
+                            <TableHead className="text-[10px] uppercase font-bold text-muted-foreground py-2 px-3 h-auto">Người thực hiện</TableHead>
+                            <TableHead className="text-[10px] uppercase font-bold text-muted-foreground py-2 px-3 h-auto w-[100px]">Hành động</TableHead>
+                            <TableHead className="text-[10px] uppercase font-bold text-muted-foreground py-2 px-3 h-auto">Tài nguyên</TableHead>
+                            <TableHead className="text-[10px] uppercase font-bold text-muted-foreground py-2 px-3 h-auto w-[100px]">Trạng thái</TableHead>
+                            <TableHead className="w-[48px] py-2 px-3 h-auto"></TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {filteredLogs.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                                    No audit logs found
+                                <TableCell colSpan={6} className="text-center py-6 text-xs text-muted-foreground">
+                                    Không có nhật ký hoạt động nào
                                 </TableCell>
                             </TableRow>
                         ) : (
                             filteredLogs.map((log: AuditLog) => (
-                                <TableRow key={log.id}>
-                                    <TableCell>
-                                        <div className="flex items-center gap-2 text-sm">
-                                            <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
-                                            {format(new Date(log.timestamp), 'MMM d, HH:mm:ss')}
+                                <TableRow key={log.id} className="hover:bg-slate-50/40 dark:hover:bg-slate-800/40 border-b border-border/50 last:border-0">
+                                    <TableCell className="py-2 px-3">
+                                        <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
+                                            <Calendar className="w-3 h-3 text-slate-400" />
+                                            {format(new Date(log.timestamp), 'dd/MM/yyyy HH:mm:ss')}
                                         </div>
                                     </TableCell>
-                                    <TableCell>
-                                        <span className="text-sm">{log.userName || log.userId}</span>
+                                    <TableCell className="py-2 px-3">
+                                        <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">
+                                            {log.userName || log.userId}
+                                        </span>
                                     </TableCell>
-                                    <TableCell>
+                                    <TableCell className="py-2 px-3">
                                         <Badge
                                             variant="secondary"
-                                            className={cn('text-xs', actionColors[log.action] || '')}
+                                            className={cn('text-[10px] px-1.5 py-0.5 rounded-md font-semibold border shadow-none', actionColors[log.action] || '')}
                                         >
                                             {log.action}
                                         </Badge>
                                     </TableCell>
-                                    <TableCell>
-                                        <span className="text-sm font-medium">{log.resource}</span>
+                                    <TableCell className="py-2 px-3">
+                                        <span className="text-xs font-medium text-slate-800 dark:text-slate-200">{log.resource}</span>
                                         {log.resourceId && (
-                                            <span className="text-xs text-muted-foreground ml-1">
+                                            <span className="text-[10px] text-muted-foreground font-mono ml-1">
                                                 #{log.resourceId.slice(0, 8)}
                                             </span>
                                         )}
                                     </TableCell>
-                                    <TableCell>
+                                    <TableCell className="py-2 px-3">
                                         <Badge
                                             variant="secondary"
-                                            className={cn('text-xs', statusColors[log.status] || '')}
+                                            className={cn('text-[10px] px-1.5 py-0.5 rounded-md font-semibold border shadow-none', statusColors[log.status] || '')}
                                         >
                                             {log.status}
                                         </Badge>
                                     </TableCell>
-                                    <TableCell>
+                                    <TableCell className="py-2 px-3 text-right">
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="h-8 w-8"
+                                            className="h-7 w-7 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800"
                                             onClick={() => setSelectedLog(log)}
                                         >
-                                            <Eye className="w-4 h-4" />
+                                            <Eye className="w-3.5 h-3.5 text-slate-500" />
                                         </Button>
                                     </TableCell>
                                 </TableRow>
@@ -258,96 +301,88 @@ export function AuditLogTable() {
             </div>
 
             {/* Pagination */}
-            {data && data.total > 20 && (
-                <div className="flex items-center justify-between">
-                    <p className="text-sm text-muted-foreground">
-                        Showing {filteredLogs.length} of {data.total} logs
-                    </p>
-                    <div className="flex gap-2">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={!filters.cursor}
-                            onClick={() => setFilters((prev: AuditFilters) => ({ ...prev, cursor: undefined }))}
-                        >
-                            <ChevronLeft className="w-4 h-4" />
-                        </Button>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={!data.nextCursor}
-                            onClick={() => setFilters((prev: AuditFilters) => ({ ...prev, cursor: data.nextCursor }))}
-                        >
-                            <ChevronRight className="w-4 h-4" />
-                        </Button>
-                    </div>
-                </div>
+            {data && (
+                <WikiPagination
+                    page={page}
+                    size={size}
+                    totalPages={totalPages}
+                    totalElements={totalElements}
+                    setPage={setPage}
+                    setSize={setSize}
+                />
             )}
 
             {/* Detail Dialog */}
             <Dialog open={!!selectedLog} onOpenChange={() => setSelectedLog(null)}>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="rounded-xl max-w-xl border-border bg-card text-xs">
                     <DialogHeader>
-                        <DialogTitle>Audit Log Details</DialogTitle>
+                        <DialogTitle className="text-sm font-semibold text-slate-900 dark:text-slate-100 border-b border-border pb-2">
+                            Chi tiết nhật ký hoạt động
+                        </DialogTitle>
                     </DialogHeader>
                     {selectedLog && (
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-3 pt-1">
+                            <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="text-xs text-muted-foreground">Timestamp</label>
-                                    <p className="font-medium">
-                                        {format(new Date(selectedLog.timestamp), 'PPpp')}
+                                    <label className="text-[10px] font-bold text-muted-foreground uppercase">Thời gian</label>
+                                    <p className="font-semibold text-slate-900 dark:text-slate-100 mt-0.5">
+                                        {format(new Date(selectedLog.timestamp), 'dd MMMM yyyy, HH:mm:ss')}
                                     </p>
                                 </div>
                                 <div>
-                                    <label className="text-xs text-muted-foreground">User</label>
-                                    <p className="font-medium">{selectedLog.userName || selectedLog.userId}</p>
+                                    <label className="text-[10px] font-bold text-muted-foreground uppercase">Người thực hiện</label>
+                                    <p className="font-semibold text-slate-900 dark:text-slate-100 mt-0.5">
+                                        {selectedLog.userName || selectedLog.userId}
+                                    </p>
                                 </div>
                                 <div>
-                                    <label className="text-xs text-muted-foreground">Action</label>
-                                    <Badge className={actionColors[selectedLog.action]}>
-                                        {selectedLog.action}
-                                    </Badge>
+                                    <label className="text-[10px] font-bold text-muted-foreground uppercase">Hành động</label>
+                                    <div className="mt-0.5">
+                                        <Badge className={cn('text-[10px] px-1.5 py-0.5 rounded-md font-semibold border shadow-none', actionColors[selectedLog.action] || '')}>
+                                            {selectedLog.action}
+                                        </Badge>
+                                    </div>
                                 </div>
                                 <div>
-                                    <label className="text-xs text-muted-foreground">Resource</label>
-                                    <p className="font-medium">
+                                    <label className="text-[10px] font-bold text-muted-foreground uppercase">Tài nguyên tác động</label>
+                                    <p className="font-semibold text-slate-900 dark:text-slate-100 mt-0.5">
                                         {selectedLog.resource}
                                         {selectedLog.resourceId && (
-                                            <span className="text-xs text-muted-foreground ml-1">
+                                            <span className="text-[10px] text-muted-foreground font-mono ml-1">
                                                 ({selectedLog.resourceId})
                                             </span>
                                         )}
                                     </p>
                                 </div>
                                 <div>
-                                    <label className="text-xs text-muted-foreground">Status</label>
-                                    <Badge className={statusColors[selectedLog.status]}>
-                                        {selectedLog.status}
-                                    </Badge>
+                                    <label className="text-[10px] font-bold text-muted-foreground uppercase">Trạng thái</label>
+                                    <div className="mt-0.5">
+                                        <Badge className={cn('text-[10px] px-1.5 py-0.5 rounded-md font-semibold border shadow-none', statusColors[selectedLog.status] || '')}>
+                                            {selectedLog.status}
+                                        </Badge>
+                                    </div>
                                 </div>
+                                {selectedLog.ipAddress && (
+                                    <div>
+                                        <label className="text-[10px] font-bold text-muted-foreground uppercase">Địa chỉ IP</label>
+                                        <p className="font-mono text-slate-800 dark:text-slate-350 font-semibold mt-0.5">{selectedLog.ipAddress}</p>
+                                    </div>
+                                )}
                             </div>
 
                             {selectedLog.details && (
-                                <div>
-                                    <label className="text-xs text-muted-foreground">Details</label>
-                                    <pre className="mt-1 p-3 bg-muted rounded-md text-xs overflow-auto">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-muted-foreground uppercase">Dữ liệu chi tiết (JSON)</label>
+                                    <pre className="p-2.5 bg-slate-950 dark:bg-slate-900 text-slate-200 rounded-lg text-[10px] font-mono overflow-auto max-h-40 border border-slate-800">
                                         {JSON.stringify(selectedLog.details, null, 2)}
                                     </pre>
                                 </div>
                             )}
 
-                            {selectedLog.ipAddress && (
-                                <div>
-                                    <label className="text-xs text-muted-foreground">IP Address</label>
-                                    <p className="font-medium font-mono">{selectedLog.ipAddress}</p>
-                                </div>
-                            )}
-
                             {selectedLog.userAgent && (
                                 <div>
-                                    <label className="text-xs text-muted-foreground">User Agent</label>
-                                    <p className="text-sm text-muted-foreground">{selectedLog.userAgent}</p>
+                                    <label className="text-[10px] font-bold text-muted-foreground uppercase">User Agent (Trình duyệt)</label>
+                                    <p className="text-[11px] text-muted-foreground mt-0.5 leading-normal">{selectedLog.userAgent}</p>
                                 </div>
                             )}
                         </div>

@@ -67,6 +67,7 @@ export interface AuditFilters {
   endDate?: string;
   cursor?: string;
   limit?: number;
+  page?: number;
 }
 
 export interface DMAccessFilters {

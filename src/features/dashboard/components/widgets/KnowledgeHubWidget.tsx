@@ -8,7 +8,15 @@ export const KnowledgeHubWidget: React.FC = () => {
   const { data: recentFiles, isLoading, isError, refetch } = useGetDocumentsQuery();
 
   const status = isError ? 'error' : isLoading ? 'loading' : 'success';
-  const completedFiles = recentFiles?.filter(doc => doc.status === 'COMPLETED');
+
+  const allFiles = React.useMemo(() => {
+    if (!recentFiles) return [];
+    return Array.isArray(recentFiles)
+      ? recentFiles
+      : ('content' in recentFiles ? (recentFiles as any).content : []) as any[];
+  }, [recentFiles]);
+
+  const completedFiles = allFiles.filter(doc => doc.status === 'COMPLETED');
   return (
     <WidgetWrapper
       title="Recent Shared Files"
@@ -42,7 +50,7 @@ export const KnowledgeHubWidget: React.FC = () => {
           ))}
 
           {/* Empty state UI if no files exist */}
-          {!isLoading && (!recentFiles || recentFiles.length === 0) && (
+          {!isLoading && allFiles.length === 0 && (
             <div className="col-span-2 text-center py-6 text-zinc-500 text-xs italic bg-zinc-900/50 rounded-sm border border-zinc-800/50">
               Chưa có tài liệu nào được chia sẻ gần đây.
             </div>

@@ -32,26 +32,25 @@ interface StatCardProps {
 }
 
 const StatCard = ({ title, value, icon: Icon, color, subValue, subLabel }: StatCardProps) => (
-  <Card className="hover:shadow-md transition-shadow overflow-hidden group border-none shadow-sm bg-white dark:bg-slate-900">
-    <CardContent className="p-6 relative">
+  <Card className="border border-border/60 hover:shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[1.5px_1.5px_0px_0px_rgba(255,255,255,0.15)] transition-all bg-card rounded-md">
+    <CardContent className="p-3.5 relative overflow-hidden">
       <div className="flex items-center justify-between relative z-10">
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{title}</p>
-          <p className="text-3xl font-bold text-slate-900 dark:text-white">
+        <div className="space-y-0.5">
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{title}</p>
+          <p className="text-xl font-bold text-foreground">
             {typeof value === 'number' ? value.toLocaleString() : value}
           </p>
           {subValue !== undefined && subLabel && (
-            <p className="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1">
-              <span className="font-bold text-slate-600 dark:text-slate-300">{subValue}</span> {subLabel}
+            <p className="text-[10px] text-muted-foreground/80 flex items-center gap-1">
+              <span className="font-bold text-foreground">{subValue}</span> {subLabel}
             </p>
           )}
         </div>
-        <div className={`p-4 rounded-2xl ${color} shadow-lg transition-transform group-hover:scale-110`}>
-          <Icon className="h-6 w-6 text-white" />
+        <div className={`p-2 rounded ${color} text-white shrink-0 transition-transform group-hover:scale-105`}>
+          <Icon className="h-4 w-4" />
         </div>
       </div>
-      {/* Subtle background decoration */}
-      <div className={cn("absolute -right-4 -bottom-4 w-24 h-24 rounded-full opacity-10", color)} />
+      <div className={cn("absolute -right-3 -bottom-3 w-16 h-16 rounded-full opacity-[0.03]", color)} />
     </CardContent>
   </Card>
 );
@@ -88,17 +87,17 @@ export function OverViewTab() {
     
     return statsData.recentActivity.map((activity, idx) => {
       let icon = Activity;
-      let color = "bg-slate-100 text-slate-600";
+      let color = "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300";
 
       if (activity.type.includes('user')) {
         icon = UserPlus;
-        color = "bg-blue-100 text-blue-600";
+        color = "bg-blue-100 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400";
       } else if (activity.type.includes('message') || activity.type.includes('chat')) {
         icon = FileText;
-        color = "bg-orange-100 text-orange-600";
+        color = "bg-amber-100 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400";
       } else if (activity.type.includes('workspace')) {
         icon = Building2;
-        color = "bg-emerald-100 text-emerald-600";
+        color = "bg-emerald-100 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400";
       }
 
       return {
@@ -128,113 +127,111 @@ export function OverViewTab() {
     {
       icon: Download,
       label: "Xuất báo cáo",
-      color: "text-purple-500",
+      color: "text-amber-500",
       onClick: () => router.push('/admin/dashboard?tab=reports'),
     },
     {
       icon: SettingsIcon,
       label: "Cài đặt",
-      color: "text-gray-500",
+      color: "text-zinc-500",
       onClick: () => router.push('/admin/dashboard?tab=settings'),
     },
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       {/* Welcome Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-border/40 pb-3">
         <div>
-          <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+          <h2 className="text-lg font-bold tracking-tight text-foreground">
             Xin chào, {user?.name || "Admin"}! 👋
           </h2>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-xs text-muted-foreground mt-0.5">
             Hệ thống đang hoạt động ổn định • {format(new Date(), "EEEE, dd MMMM yyyy", { locale: vi })}
           </p>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3.5">
         <StatCard
           title="Tổng người dùng"
           value={stats.totalUsers}
           icon={Users}
-          color="bg-blue-600"
+          color="bg-blue-600 dark:bg-blue-700"
         />
         <StatCard
           title="Tin nhắn"
           value={stats.totalMessages}
           icon={FileText}
-          color="bg-emerald-600"
+          color="bg-emerald-600 dark:bg-emerald-700"
           subValue={stats.activeUsers}
-          subLabel="người dùng hoạt động"
+          subLabel="hoạt động"
         />
         <StatCard
           title="Workspaces"
           value={stats.totalWorkspaces}
           icon={Building2}
-          color="bg-violet-600"
+          color="bg-sky-600 dark:bg-sky-700"
         />
         <StatCard
           title="Dung lượng File"
           value={`${(stats.fileUsage / (1024 * 1024)).toFixed(1)} MB`}
           icon={FileText}
-          color="bg-orange-600"
+          color="bg-amber-600 dark:bg-amber-700"
           subValue={stats.pendingInvitations}
-          subLabel="lời mời chờ duyệt"
+          subLabel="chờ duyệt"
         />
       </div>
 
       {/* Alerts Section */}
       {(stats.pendingInvitations > 0) && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {stats.pendingInvitations > 0 && (
-            <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-900/30">
-              <CardContent className="p-4 flex items-center gap-4">
-                <div className="p-2 rounded-xl bg-blue-100 dark:bg-blue-900/50">
-                  <Clock className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-bold text-blue-900 dark:text-blue-100">
-                    {stats.pendingInvitations} lời mời đang chờ chấp nhận
-                  </p>
-                  <p className="text-sm text-blue-700 dark:text-blue-300/70">Cần theo dõi tiến độ tham gia</p>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="bg-white dark:bg-slate-900 border-blue-300 text-blue-700 hover:bg-blue-100"
-                  onClick={() => router.push('/admin/dashboard?tab=invitations')}
-                >
-                  Xem ngay
-                </Button>
-              </CardContent>
-            </Card>
-          )}
+        <div className="grid grid-cols-1 gap-3">
+          <Card className="border border-blue-200/50 bg-blue-50/40 dark:bg-blue-950/20 dark:border-blue-900/30 rounded-md">
+            <CardContent className="p-2.5 flex items-center gap-3">
+              <div className="p-1.5 rounded bg-blue-100 dark:bg-blue-900/40 shrink-0">
+                <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-xs text-blue-900 dark:text-blue-100 truncate">
+                  {stats.pendingInvitations} lời mời đang chờ chấp nhận
+                </p>
+                <p className="text-[10px] text-blue-700/80 dark:text-blue-300/60 truncate">Cần theo dõi tiến độ tham gia của thành viên mới</p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-background border-blue-200 hover:bg-blue-50 dark:hover:bg-blue-950/40 text-blue-700 dark:text-blue-300 h-7 text-xs rounded"
+                onClick={() => router.push('/admin/dashboard?tab=invitations')}
+              >
+                Xem ngay
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       )}
 
       {/* Charts / Activity Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <Card className="border-none shadow-sm bg-white dark:bg-slate-900 overflow-hidden">
-          <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Activity className="h-5 w-5 text-primary" />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card className="border border-border/60 bg-card rounded-md shadow-sm overflow-hidden">
+          <CardHeader className="pb-2 border-b border-border/40 p-3">
+            <CardTitle className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-foreground">
+              <Activity className="h-3.5 w-3.5 text-primary" />
               Hoạt động gần đây
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="divide-y divide-slate-100 dark:divide-slate-800">
+            <div className="divide-y divide-border/40 max-h-64 overflow-y-auto">
               {recentActivities.map((activity) => {
                 const Icon = activity.icon;
                 return (
-                  <div key={activity.id} className="flex items-center gap-4 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                    <div className={`p-2 rounded-xl ${activity.color}`}>
-                      <Icon className="h-4 w-4" />
+                  <div key={activity.id} className="flex items-center gap-2.5 p-2.5 hover:bg-secondary/40 transition-colors">
+                    <div className={`p-1.5 rounded shrink-0 ${activity.color}`}>
+                      <Icon className="h-3.5 w-3.5" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold truncate text-slate-900 dark:text-slate-100">{activity.message}</p>
-                      <p className="text-xs text-slate-400 dark:text-slate-500">
+                      <p className="text-xs font-semibold truncate text-foreground">{activity.message}</p>
+                      <p className="text-[10px] text-muted-foreground/80">
                         {formatDistanceToNow(activity.time, { addSuffix: true, locale: vi })}
                       </p>
                     </div>
@@ -242,11 +239,11 @@ export function OverViewTab() {
                 );
               })}
             </div>
-            <div className="p-4 bg-slate-50/50 dark:bg-slate-800/30 text-center">
+            <div className="p-2 bg-secondary/15 border-t border-border/40 text-center">
                 <Button
                     variant="ghost"
                     size="sm"
-                    className="text-primary font-bold"
+                    className="text-primary font-semibold text-xs h-7 py-1"
                     onClick={() => router.push('/admin/dashboard?tab=activity')}
                 >
                     Xem tất cả hoạt động
@@ -255,28 +252,28 @@ export function OverViewTab() {
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-sm bg-white dark:bg-slate-900">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Thao tác nhanh</CardTitle>
-            <CardDescription>Các chức năng quản trị thường dùng nhất</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4">
+        <Card className="border border-border/60 bg-card rounded-md shadow-sm p-3 flex flex-col justify-between">
+          <div className="space-y-1">
+            <CardTitle className="text-xs font-bold uppercase tracking-wider text-foreground">Thao tác nhanh</CardTitle>
+            <CardDescription className="text-[10px] text-muted-foreground">Các chức năng quản trị thường dùng nhất</CardDescription>
+          </div>
+          <CardContent className="p-0 mt-3 flex-1 flex flex-col justify-center">
+            <div className="grid grid-cols-2 gap-2.5 w-full">
               {quickActions.map((action, index) => {
                 const Icon = action.icon;
                 return (
                   <Button
                     key={index}
                     variant="outline"
-                    className="h-auto p-6 flex-col gap-3 relative hover:border-primary/50 hover:bg-primary/5 group transition-all"
+                    className="h-auto py-2.5 px-3 flex-col gap-2 relative hover:border-primary/50 hover:bg-primary/5 dark:hover:bg-primary/10 group transition-all rounded-md"
                     onClick={action.onClick}
                   >
-                    <div className={`p-3 rounded-2xl bg-slate-100 dark:bg-slate-800 group-hover:bg-white dark:group-hover:bg-slate-700 transition-colors`}>
-                        <Icon className={`h-6 w-6 ${action.color}`} />
+                    <div className={`p-1.5 rounded bg-secondary group-hover:bg-background transition-colors`}>
+                        <Icon className={`h-4 w-4 ${action.color}`} />
                     </div>
-                    <span className="text-sm font-bold">{action.label}</span>
+                    <span className="text-xs font-semibold text-foreground">{action.label}</span>
                     {action.badge && (
-                      <span className="absolute top-3 right-3 bg-red-500 text-white text-[10px] font-bold rounded-full h-5 px-1.5 flex items-center justify-center border-2 border-white dark:border-slate-900 shadow-lg">
+                      <span className="absolute top-2 right-2 bg-red-600 text-white text-[8px] font-bold rounded-full h-4 px-1 flex items-center justify-center border border-background shadow">
                         {action.badge}
                       </span>
                     )}

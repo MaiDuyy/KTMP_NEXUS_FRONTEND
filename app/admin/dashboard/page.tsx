@@ -19,6 +19,8 @@ import {
 } from "@/src/features/admin";
 import { Megaphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import CompilationPlansPage from "@/app/wiki/plans/page";
+import WikiReviewConsole from "@/app/wiki/review/page";
 
 export default function AdminDashboardPage() {
   const searchParams = useSearchParams();
@@ -41,6 +43,10 @@ export default function AdminDashboardPage() {
         return <DepartmentManagement />;
       case "documents":
         return <DocumentManagement />;
+      case "wiki-plans":
+        return <CompilationPlansPage isEmbedded={true} />;
+      case "wiki-drafts":
+        return <WikiReviewConsole isEmbedded={true} />;
       case "audit-logs":
         return <AuditLogTable />;
       case "health":

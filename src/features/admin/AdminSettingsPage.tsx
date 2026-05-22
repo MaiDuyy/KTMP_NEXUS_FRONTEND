@@ -1,410 +1,270 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { cn } from '@/lib/utils';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import {
     Settings,
     Bell,
     Shield,
     Globe,
-    Mail,
-    Database,
     Palette,
-    Key,
     Save,
     RefreshCw,
-    AlertTriangle,
-    CheckCircle,
-    Moon,
-    Sun,
-    Monitor,
-    Languages,
     Loader2,
+    Brain,
 } from 'lucide-react';
-import { useGetOrgSettingsQuery, useUpdateOrgSettingsMutation } from '@/src/redux/feature/adminApi';
+import {
+    useGetOrgSettingsQuery,
+    useUpdateOrgSettingsMutation,
+    useGetAiSettingsQuery,
+    useUpdateAiSettingsMutation,
+    useGetLlmCatalogQuery,
+} from '@/src/redux/feature/adminApi';
 import { toast } from 'sonner';
 
-export function AdminSettingsPage() {
-    const { data, isLoading, refetch } = useGetOrgSettingsQuery();
-    const [updateSettings, { isLoading: isUpdating }] = useUpdateOrgSettingsMutation();
+// Import subcomponents
+import { GeneralSettings } from './settings-components/GeneralSettings';
+import { NotificationSettings } from './settings-components/NotificationSettings';
+import { SecuritySettings } from './settings-components/SecuritySettings';
+import { AppearanceSettings } from './settings-components/AppearanceSettings';
+import { AiSettings } from './settings-components/AiSettings';
 
-    const [settings, setSettings] = useState({
-        // General Settings
+export function AdminSettingsPage() {
+    // Org Settings Hooks
+    const { data: orgData, isLoading: isLoadingOrg, refetch: refetchOrg } = useGetOrgSettingsQuery();
+    const [updateOrgSettings, { isLoading: isUpdatingOrg }] = useUpdateOrgSettingsMutation();
+
+    // AI Settings Hooks
+    const { data: aiConfig, isLoading: isLoadingAi, refetch: refetchAi } = useGetAiSettingsQuery();
+    const [updateAiSettings, { isLoading: isUpdatingAi }] = useUpdateAiSettingsMutation();
+    const { data: llmCatalog } = useGetLlmCatalogQuery();
+
+    const [activeTab, setActiveTab] = useState('general');
+
+    // Org Settings State
+    const [orgSettings, setOrgSettings] = useState({
         siteName: '',
         siteDescription: '',
         maintenanceMode: false,
-
-        // Notification Settings
         emailNotifications: true,
         pushNotifications: true,
         allowUserInvite: true,
         allowGuestInvite: false,
-
-        // Security Settings
         twoFactorAuth: false,
         sessionTimeout: 30,
         maxLoginAttempts: 5,
         passwordExpiry: 90,
-
-        // Appearance
         theme: 'system',
         language: 'vi',
         dateFormat: 'DD/MM/YYYY',
         timeFormat: '24h',
     });
 
-    useEffect(() => {
-        if (data?.settings) {
-            setSettings(prev => ({ ...prev, ...data.settings }));
-        }
-    }, [data]);
+    // AI Settings State
+    const [aiSettings, setAiSettings] = useState({
+        llm_provider: 'openai',
+        llm_api_key: '',
+        llm_model: 'gpt-4o-mini',
+        llm_base_url: '',
+        embedding_provider: 'openai',
+        embedding_api_key: '',
+        embedding_model: 'text-embedding-3-small',
+        mrp_auto_approve: 'false',
+        chunk_size: '1000',
+        chunk_overlap: '200',
+    });
 
-    const handleChange = (key: string, value: any) => {
-        setSettings(prev => ({ ...prev, [key]: value }));
+    // API Key show/hide states
+    const [showLlmKey, setShowLlmKey] = useState(false);
+    const [showEmbedKey, setShowEmbedKey] = useState(false);
+
+    // Sync Org Settings from API
+    useEffect(() => {
+        if (orgData?.settings) {
+            setOrgSettings(prev => ({ ...prev, ...orgData.settings }));
+        }
+    }, [orgData]);
+
+    // Sync AI Settings from API
+    useEffect(() => {
+        if (aiConfig) {
+            setAiSettings({
+                llm_provider: aiConfig.llm_provider || 'openai',
+                llm_api_key: aiConfig.llm_api_key_configured ? '••••••••••••••••••••' : '',
+                llm_model: aiConfig.llm_model || 'gpt-4o-mini',
+                llm_base_url: aiConfig.llm_base_url || '',
+                embedding_provider: aiConfig.embedding_provider || 'openai',
+                embedding_api_key: aiConfig.embedding_api_key_configured ? '••••••••••••••••••••' : '',
+                embedding_model: aiConfig.embedding_model || 'text-embedding-3-small',
+                mrp_auto_approve: String(aiConfig.mrp_auto_approve || 'false'),
+                chunk_size: String(aiConfig.chunk_size || '1000'),
+                chunk_overlap: String(aiConfig.chunk_overlap || '200'),
+            });
+        }
+    }, [aiConfig]);
+
+    const handleOrgChange = (key: string, value: any) => {
+        setOrgSettings(prev => ({ ...prev, [key]: value }));
     };
 
-    const handleSave = async () => {
+    const handleAiChange = (key: string, value: any) => {
+        setAiSettings(prev => ({ ...prev, [key]: value }));
+    };
+
+    // Save Org Settings
+    const handleSaveOrg = async () => {
         try {
-            await updateSettings(settings).unwrap();
-            toast.success('Đã lưu cài đặt tổ chức thành công!');
+            await updateOrgSettings(orgSettings).unwrap();
+            toast.success('Đã lưu cấu hình tổ chức thành công!');
         } catch (error) {
-            toast.error('Có lỗi xảy ra khi lưu cài đặt');
+            toast.error('Có lỗi xảy ra khi lưu cấu hình tổ chức');
+        }
+    };
+
+    // Save AI Settings
+    const handleSaveAi = async () => {
+        try {
+            const payload: Record<string, string> = {
+                llm_provider: aiSettings.llm_provider || '',
+                llm_model: aiSettings.llm_model || '',
+                llm_base_url: aiSettings.llm_base_url || '',
+                embedding_provider: aiSettings.embedding_provider || '',
+                embedding_model: aiSettings.embedding_model || '',
+                mrp_auto_approve: aiSettings.mrp_auto_approve,
+                chunk_size: aiSettings.chunk_size,
+                chunk_overlap: aiSettings.chunk_overlap,
+            };
+
+            // Only send API keys if they have been edited
+            if (aiSettings.llm_api_key && aiSettings.llm_api_key !== '••••••••••••••••••••') {
+                payload.llm_api_key = aiSettings.llm_api_key;
+            }
+            if (aiSettings.embedding_api_key && aiSettings.embedding_api_key !== '••••••••••••••••••••') {
+                payload.embedding_api_key = aiSettings.embedding_api_key;
+            }
+
+            await updateAiSettings({ settings: payload }).unwrap();
+            toast.success('Đã lưu cấu hình AI & Tri thức thành công!');
+            refetchAi();
+        } catch (error: any) {
+            toast.error(`Lỗi lưu cấu hình AI: ${error.message || 'Không xác định'}`);
         }
     };
 
     const handleReset = () => {
-        refetch();
-        toast.info('Đã tải lại cài đặt từ máy chủ');
+        if (activeTab === 'ai') {
+            refetchAi();
+            toast.info('Đã tải lại cấu hình AI từ máy chủ');
+        } else {
+            refetchOrg();
+            toast.info('Đã tải lại cài đặt tổ chức từ máy chủ');
+        }
     };
 
-    const SettingRow = ({ icon: Icon, label, description, children }: { icon?: any, label: string, description?: string, children: React.ReactNode }) => (
-        <div className="flex items-center justify-between py-4 group">
-            <div className="flex items-start gap-3">
-                {Icon && <div className="p-2 rounded-lg bg-slate-100 text-slate-500 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                    <Icon className="w-5 h-5" />
-                </div>}
-                <div className="pt-1">
-                    <Label className="text-sm font-bold text-slate-900 leading-none">{label}</Label>
-                    {description && (
-                        <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">{description}</p>
-                    )}
-                </div>
-            </div>
-            <div className="flex-shrink-0 ml-4">{children}</div>
-        </div>
-    );
+    const isLoading = isLoadingOrg || isLoadingAi;
 
     if (isLoading) {
         return (
-            <div className="flex flex-col items-center justify-center h-96 gap-4">
-                <Loader2 className="w-10 h-10 animate-spin text-primary/40" />
-                <p className="text-sm text-muted-foreground animate-pulse font-medium">Đang tải cấu hình hệ thống...</p>
+            <div className="flex flex-col items-center justify-center h-80 gap-3">
+                <Loader2 className="w-8 h-8 animate-spin text-primary/60" />
+                <p className="text-xs text-muted-foreground animate-pulse font-medium">Đang tải cấu hình hệ thống...</p>
             </div>
         );
     }
 
     return (
-        <div className="container mx-auto p-6 space-y-8 max-w-5xl">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="container mx-auto p-4 space-y-4 w-full h-full">
+            {/* Header */}
+            <div className="flex flex-col  w-full h-full gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-border/60 pb-3">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-                        <Settings className="w-8 h-8 text-primary" />
-                        Cài đặt tổ chức
+                    <h1 className="text-lg font-bold tracking-tight flex items-center gap-2 text-foreground">
+                        <Settings className="w-5 h-5 text-primary" />
+                        Cài đặt hệ thống
                     </h1>
-                    <p className="text-muted-foreground mt-1">
-                        Quản lý cấu hình toàn cầu và chính sách bảo mật cho tổ chức
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                        Quản lý cấu hình toàn cục, bảo mật và thiết lập AI & Tri thức cho toàn hệ thống
                     </p>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline" onClick={handleReset} className="rounded-xl h-11 px-6">
-                        <RefreshCw className="w-4 h-4 mr-2" />
+                    <Button variant="outline" size="sm" onClick={handleReset} className="rounded-lg h-8 text-xs">
+                        <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
                         Làm mới
                     </Button>
-                    <Button onClick={handleSave} disabled={isUpdating} className="rounded-xl h-11 px-8 shadow-lg shadow-primary/20">
-                        {isUpdating ? (
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    <Button
+                        size="sm"
+                        onClick={activeTab === 'ai' ? handleSaveAi : handleSaveOrg}
+                        disabled={activeTab === 'ai' ? isUpdatingAi : isUpdatingOrg}
+                        className="rounded-lg h-8 text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm active:scale-[0.98]"
+                    >
+                        {(activeTab === 'ai' ? isUpdatingAi : isUpdatingOrg) ? (
+                            <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
                         ) : (
-                            <Save className="w-4 h-4 mr-2" />
+                            <Save className="w-3.5 h-3.5 mr-1.5" />
                         )}
-                        {isUpdating ? 'Đang lưu...' : 'Lưu cài đặt'}
+                        {(activeTab === 'ai' ? isUpdatingAi : isUpdatingOrg) ? 'Đang lưu...' : 'Lưu cài đặt'}
                     </Button>
                 </div>
             </div>
 
-            <Tabs defaultValue="general" className="space-y-6">
-                <div className="bg-slate-100/50 p-1 rounded-2xl w-fit">
-                    <TabsList className="bg-transparent h-10 gap-1">
-                        <TabsTrigger value="general" className="rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm px-6 h-8">
-                            <Globe className="w-3.5 h-3.5 mr-2" />
+            <Tabs defaultValue="general" value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+                <div className="bg-slate-100/60 dark:bg-slate-800/60 p-0.5 rounded-lg w-fit border border-border/40">
+                    <TabsList className="bg-transparent h-8 gap-0.5 p-0">
+                        <TabsTrigger value="general" className="rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm px-4 h-7 text-xs font-medium">
+                            <Globe className="w-3.5 h-3.5 mr-1.5" />
                             Chung
                         </TabsTrigger>
-                        <TabsTrigger value="notifications" className="rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm px-6 h-8">
-                            <Bell className="w-3.5 h-3.5 mr-2" />
+                        <TabsTrigger value="notifications" className="rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm px-4 h-7 text-xs font-medium">
+                            <Bell className="w-3.5 h-3.5 mr-1.5" />
                             Thông báo
                         </TabsTrigger>
-                        <TabsTrigger value="security" className="rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm px-6 h-8">
-                            <Shield className="w-3.5 h-3.5 mr-2" />
+                        <TabsTrigger value="security" className="rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm px-4 h-7 text-xs font-medium">
+                            <Shield className="w-3.5 h-3.5 mr-1.5" />
                             Bảo mật
                         </TabsTrigger>
-                        <TabsTrigger value="appearance" className="rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm px-6 h-8">
-                            <Palette className="w-3.5 h-3.5 mr-2" />
+                        <TabsTrigger value="appearance" className="rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm px-4 h-7 text-xs font-medium">
+                            <Palette className="w-3.5 h-3.5 mr-1.5" />
                             Giao diện
+                        </TabsTrigger>
+                        <TabsTrigger value="ai" className="rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm px-4 h-7 text-xs font-medium">
+                            <Brain className="w-3.5 h-3.5 mr-1.5" />
+                            AI & Tri thức
                         </TabsTrigger>
                     </TabsList>
                 </div>
 
                 {/* General Settings */}
                 <TabsContent value="general" className="focus-visible:outline-none">
-                    <Card className="border-none shadow-sm ring-1 ring-slate-100 rounded-3xl overflow-hidden">
-                        <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                            <CardTitle className="text-xl font-bold">Cài đặt chung</CardTitle>
-                            <CardDescription>Thông tin nhận diện và trạng thái hệ thống</CardDescription>
-                        </CardHeader>
-                        <CardContent className="p-8 space-y-8">
-                            <div className="grid gap-6 max-w-2xl">
-                                <div className="space-y-2">
-                                    <Label htmlFor="siteName" className="font-bold">Tên tổ chức / Hệ thống</Label>
-                                    <Input
-                                        id="siteName"
-                                        value={settings.siteName}
-                                        onChange={(e) => handleChange('siteName', e.target.value)}
-                                        placeholder="NEXUS Enterprise"
-                                        className="h-11 rounded-xl"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="siteDescription" className="font-bold">Mô tả</Label>
-                                    <Input
-                                        id="siteDescription"
-                                        value={settings.siteDescription}
-                                        onChange={(e) => handleChange('siteDescription', e.target.value)}
-                                        placeholder="Hệ thống giao tiếp nội bộ mạnh mẽ"
-                                        className="h-11 rounded-xl"
-                                    />
-                                </div>
-                            </div>
-
-                            <Separator className="bg-slate-100" />
-
-                            <SettingRow
-                                icon={AlertTriangle}
-                                label="Chế độ bảo trì"
-                                description="Khi bật, chỉ Admin mới có thể truy cập hệ thống. Người dùng khác sẽ thấy thông báo bảo trì."
-                            >
-                                <Switch
-                                    checked={settings.maintenanceMode}
-                                    onCheckedChange={(checked) => handleChange('maintenanceMode', checked)}
-                                    className="data-[state=checked]:bg-amber-500"
-                                />
-                            </SettingRow>
-                        </CardContent>
-                    </Card>
+                    <GeneralSettings orgSettings={orgSettings} handleOrgChange={handleOrgChange} />
                 </TabsContent>
 
                 {/* Notification Settings */}
                 <TabsContent value="notifications" className="focus-visible:outline-none">
-                    <Card className="border-none shadow-sm ring-1 ring-slate-100 rounded-3xl overflow-hidden">
-                        <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                            <CardTitle className="text-xl font-bold">Quản lý quyền & Thông báo</CardTitle>
-                            <CardDescription>Cấu hình luồng mời và thông báo hệ thống</CardDescription>
-                        </CardHeader>
-                        <CardContent className="p-8 divide-y divide-slate-100">
-                            <SettingRow
-                                icon={Mail}
-                                label="Hệ thống Email"
-                                description="Sử dụng dịch vụ email để gửi mã OTP và lời mời"
-                            >
-                                <Switch
-                                    checked={settings.emailNotifications}
-                                    onCheckedChange={(checked) => handleChange('emailNotifications', checked)}
-                                />
-                            </SettingRow>
-
-                            <SettingRow
-                                icon={Bell}
-                                label="Thông báo đẩy (Push)"
-                                description="Tự động gửi thông báo đến ứng dụng Web và Mobile"
-                            >
-                                <Switch
-                                    checked={settings.pushNotifications}
-                                    onCheckedChange={(checked) => handleChange('pushNotifications', checked)}
-                                />
-                            </SettingRow>
-
-                            <SettingRow
-                                label="Cho phép Người dùng mời"
-                                description="Người dùng thông thường có quyền mời thành viên mới vào tổ chức"
-                            >
-                                <Switch
-                                    checked={settings.allowUserInvite}
-                                    onCheckedChange={(checked) => handleChange('allowUserInvite', checked)}
-                                />
-                            </SettingRow>
-
-                            <SettingRow
-                                label="Cho phép Khách (Guest)"
-                                description="Hỗ trợ mời người dùng bên ngoài vào các workspace cụ thể"
-                            >
-                                <Switch
-                                    checked={settings.allowGuestInvite}
-                                    onCheckedChange={(checked) => handleChange('allowGuestInvite', checked)}
-                                />
-                            </SettingRow>
-                        </CardContent>
-                    </Card>
+                    <NotificationSettings orgSettings={orgSettings} handleOrgChange={handleOrgChange} />
                 </TabsContent>
 
                 {/* Security Settings */}
                 <TabsContent value="security" className="focus-visible:outline-none">
-                    <Card className="border-none shadow-sm ring-1 ring-slate-100 rounded-3xl overflow-hidden">
-                        <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                            <CardTitle className="text-xl font-bold">Chính sách bảo mật</CardTitle>
-                            <CardDescription>Cấu hình các quy tắc an toàn và kiểm soát truy cập</CardDescription>
-                        </CardHeader>
-                        <CardContent className="p-8 divide-y divide-slate-100">
-                            <SettingRow
-                                icon={Key}
-                                label="Bắt buộc Xác thực 2 bước (2FA)"
-                                description="Yêu cầu tất cả tài khoản Admin phải bật 2FA để đăng nhập"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <Switch
-                                        checked={settings.twoFactorAuth}
-                                        onCheckedChange={(checked) => handleChange('twoFactorAuth', checked)}
-                                    />
-                                    {settings.twoFactorAuth && (
-                                        <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none rounded-full px-3">
-                                            Bảo mật cao
-                                        </Badge>
-                                    )}
-                                </div>
-                            </SettingRow>
-
-                            <SettingRow
-                                label="Thời gian hết hạn phiên (Session)"
-                                description="Tự động đăng xuất sau khi không hoạt động"
-                            >
-                                <Select
-                                    value={settings.sessionTimeout.toString()}
-                                    onValueChange={(value) => handleChange('sessionTimeout', parseInt(value))}
-                                >
-                                    <SelectTrigger className="w-36 h-10 rounded-xl">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="15">15 phút</SelectItem>
-                                        <SelectItem value="30">30 phút</SelectItem>
-                                        <SelectItem value="60">1 giờ</SelectItem>
-                                        <SelectItem value="120">2 giờ</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </SettingRow>
-
-                            <SettingRow
-                                label="Giới hạn đăng nhập sai"
-                                description="Tạm thời khóa tài khoản sau quá nhiều lần thử thất bại"
-                            >
-                                <Select
-                                    value={settings.maxLoginAttempts.toString()}
-                                    onValueChange={(value) => handleChange('maxLoginAttempts', parseInt(value))}
-                                >
-                                    <SelectTrigger className="w-36 h-10 rounded-xl">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="3">3 lần</SelectItem>
-                                        <SelectItem value="5">5 lần</SelectItem>
-                                        <SelectItem value="10">10 lần</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </SettingRow>
-                        </CardContent>
-                    </Card>
+                    <SecuritySettings orgSettings={orgSettings} handleOrgChange={handleOrgChange} />
                 </TabsContent>
 
                 {/* Appearance Settings */}
                 <TabsContent value="appearance" className="focus-visible:outline-none">
-                    <Card className="border-none shadow-sm ring-1 ring-slate-100 rounded-3xl overflow-hidden">
-                        <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                            <CardTitle className="text-xl font-bold">Giao diện & Địa phương</CardTitle>
-                            <CardDescription>Tùy chỉnh phong cách hiển thị và định dạng vùng</CardDescription>
-                        </CardHeader>
-                        <CardContent className="p-8 divide-y divide-slate-100">
-                            <SettingRow
-                                icon={Palette}
-                                label="Chế độ hiển thị"
-                                description="Giao diện mặc định cho tổ chức"
-                            >
-                                <div className="flex p-1 bg-slate-100 rounded-2xl gap-1">
-                                    {[
-                                        { value: 'light', icon: Sun, label: 'Sáng' },
-                                        { value: 'dark', icon: Moon, label: 'Tối' },
-                                        { value: 'system', icon: Monitor, label: 'Hệ thống' },
-                                    ].map(({ value, icon: Icon, label }) => (
-                                        <Button
-                                            key={value}
-                                            variant={settings.theme === value ? 'default' : 'ghost'}
-                                            size="sm"
-                                            onClick={() => handleChange('theme', value)}
-                                            className={cn(
-                                                "gap-1.5 rounded-xl h-8 px-4 text-xs font-bold",
-                                                settings.theme === value ? "bg-white shadow-sm hover:bg-white text-primary" : "text-slate-500 hover:bg-slate-200"
-                                            )}
-                                        >
-                                            <Icon className="w-3.5 h-3.5" />
-                                            {label}
-                                        </Button>
-                                    ))}
-                                </div>
-                            </SettingRow>
+                    <AppearanceSettings orgSettings={orgSettings} handleOrgChange={handleOrgChange} />
+                </TabsContent>
 
-                            <SettingRow
-                                icon={Languages}
-                                label="Ngôn ngữ chính"
-                                description="Ngôn ngữ mặc định khi tạo tài khoản mới"
-                            >
-                                <Select
-                                    value={settings.language}
-                                    onValueChange={(value) => handleChange('language', value)}
-                                >
-                                    <SelectTrigger className="w-44 h-10 rounded-xl">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="vi">🇻🇳 Tiếng Việt</SelectItem>
-                                        <SelectItem value="en">🇺🇸 English</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </SettingRow>
-
-                            <SettingRow
-                                label="Định dạng thời gian"
-                                description="Quy chuẩn hiển thị giờ trong hệ thống"
-                            >
-                                <Select
-                                    value={settings.timeFormat}
-                                    onValueChange={(value) => handleChange('timeFormat', value)}
-                                >
-                                    <SelectTrigger className="w-44 h-10 rounded-xl">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="24h">24 giờ (14:30)</SelectItem>
-                                        <SelectItem value="12h">12 giờ (2:30 PM)</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </SettingRow>
-                        </CardContent>
-                    </Card>
+                {/* AI & Knowledge Settings */}
+                <TabsContent value="ai" className="focus-visible:outline-none">
+                    <AiSettings
+                        aiSettings={aiSettings}
+                        handleAiChange={handleAiChange}
+                        llmCatalog={llmCatalog}
+                        aiConfig={aiConfig}
+                        showLlmKey={showLlmKey}
+                        setShowLlmKey={setShowLlmKey}
+                        showEmbedKey={showEmbedKey}
+                        setShowEmbedKey={setShowEmbedKey}
+                    />
                 </TabsContent>
             </Tabs>
         </div>

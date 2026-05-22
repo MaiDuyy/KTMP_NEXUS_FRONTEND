@@ -24,7 +24,8 @@ import {
   Sparkles,
   Globe,
   Archive,
-  LogOut
+  LogOut,
+  BookOpen
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/src/redux/store';
@@ -222,6 +223,7 @@ export default function ModernSidebarRail() {
         <RailIcon href="/chat" icon={<MessageCircle size={20} strokeWidth={2} />} label="Trò chuyện NEXUS" active={pathname?.startsWith('/chat')} />
         <RailIcon href="/ai" icon={<Sparkles size={20} strokeWidth={2} />} label="Trợ lý AI" active={pathname?.startsWith('/ai')} />
         <RailIcon href="/knowledge" icon={<Library size={20} strokeWidth={2} />} label="Kiến thức / Tài liệu" active={pathname?.startsWith('/knowledge')} />
+        <RailIcon href="/wiki" icon={<BookOpen size={20} strokeWidth={2} />} label="Wiki" active={pathname?.startsWith('/wiki')} />
       </div>
 
       <div className="w-10 h-[1px] bg-gradient-to-r from-transparent via-slate-200 dark:via-slate-800 to-transparent mt-auto" />
