@@ -134,7 +134,9 @@ export const apiSlice = createApi({
     "WorkspaceInvites",
     "WorkspaceMembers",
     "Organizations",
-    "WorkspaceUnreadCounts"
+    "WorkspaceUnreadCounts",
+    // AI Knowledge
+    "AISettings",
   ],
   endpoints: () => ({}),
 });

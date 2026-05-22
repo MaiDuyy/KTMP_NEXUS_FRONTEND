@@ -20,9 +20,11 @@ import { useGetAccountDetailsQuery } from "@/src/redux/feature/accountApi";
 import { useRouter } from "next/navigation";
 import { useAppDispatch } from "@/src/redux/hooks";
 import { performFullLogout } from "@/src/utils/auth-utils";
+import { cn } from "@/lib/utils";
 
 export function NavUser() {
-  const { isMobile } = useSidebar();
+  const { isMobile, state } = useSidebar();
+  const isCollapsed = state === "collapsed";
   const { data: accountData } = useGetAccountDetailsQuery();
   const user = accountData?.user;
   const router = useRouter();
@@ -45,46 +47,53 @@ export function NavUser() {
     <div className="flex flex-col gap-1">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="flex items-center gap-3 w-full p-2 rounded-lg hover:bg-accent transition-colors text-left">
-            <Avatar className="h-8 w-8 rounded-lg">
+          <button className={cn(
+            "flex items-center w-full p-1.5 rounded transition-colors text-left focus:outline-none",
+            isCollapsed ? "justify-center hover:bg-secondary/60" : "gap-2 hover:bg-secondary/60"
+          )}>
+            <Avatar className="h-7 w-7 rounded">
               <AvatarImage src={user.avatar} alt={user.name} />
-              <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-bold text-xs">
+              <AvatarFallback className="rounded bg-primary/10 text-primary font-bold text-[10px]">
                 {initials}
               </AvatarFallback>
             </Avatar>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold truncate">{user.name}</p>
-              <p className="text-xs text-muted-foreground truncate">{user.email}</p>
-            </div>
-            <MoreVertical className="w-4 h-4 text-muted-foreground" />
+            {!isCollapsed && (
+              <>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold truncate text-foreground">{user.name}</p>
+                  <p className="text-[10px] text-muted-foreground truncate">{user.email}</p>
+                </div>
+                <MoreVertical className="w-3.5 h-3.5 text-muted-foreground" />
+              </>
+            )}
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          className="w-56 rounded-lg"
+          className="w-52 rounded border border-border/60 bg-popover text-popover-foreground shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] dark:shadow-[1.5px_1.5px_0px_0px_rgba(255,255,255,0.15)]"
           side={isMobile ? "bottom" : "right"}
           align="end"
-          sideOffset={4}
+          sideOffset={8}
         >
           <DropdownMenuLabel className="p-0 font-normal">
-            <div className="flex items-center gap-2 px-2 py-1.5 text-left text-sm">
-              <Avatar className="h-8 w-8 rounded-lg">
+            <div className="flex items-center gap-2 px-2.5 py-2 text-left text-xs border-b border-border/40">
+              <Avatar className="h-7 w-7 rounded">
                 <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback className="rounded-lg bg-primary/10 text-primary font-bold text-xs">
+                <AvatarFallback className="rounded bg-primary/10 text-primary font-bold text-[10px]">
                     {initials}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold truncate">{user.name}</p>
-                <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                <p className="text-xs font-semibold truncate text-foreground">{user.name}</p>
+                <p className="text-[10px] text-muted-foreground truncate">{user.email}</p>
               </div>
             </div>
           </DropdownMenuLabel>
-          <DropdownMenuItem className="cursor-pointer">
-            <UserCircle className="w-4 h-4 mr-3" />
+          <DropdownMenuItem className="cursor-pointer text-xs py-1.5 focus:bg-secondary focus:text-foreground">
+            <UserCircle className="w-3.5 h-3.5 mr-2" />
             Trang cá nhân
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50">
-            <LogOut className="w-4 h-4 mr-3" />
+          <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-xs py-1.5 text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/20">
+            <LogOut className="w-3.5 h-3.5 mr-2" />
             Đăng xuất
           </DropdownMenuItem>
         </DropdownMenuContent>

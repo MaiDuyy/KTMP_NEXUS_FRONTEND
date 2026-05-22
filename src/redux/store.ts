@@ -8,6 +8,7 @@ import "./feature/threadApi";
 import "./feature/rbacApi";
 import "./feature/auditApi";
 import "./feature/knowledgeApi";
+import "./feature/mrpApi";
 import "./feature/adminApi";
 import "./feature/messageApi";
 import "./feature/chatApi";

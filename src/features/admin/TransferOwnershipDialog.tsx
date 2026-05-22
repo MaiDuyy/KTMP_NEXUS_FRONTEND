@@ -118,7 +118,7 @@ export function TransferOwnershipDialog({ workspace, open, onOpenChange }: Trans
                                             "w-full flex items-center justify-between p-2 rounded-lg transition-colors text-left",
                                             selectedUserId === member.user.id
                                                 ? "bg-primary/10 border-primary/20 border"
-                                                : "hover:bg-slate-50 border border-transparent"
+                                                : "hover:bg-secondary/60 border border-transparent"
                                         )}
                                     >
                                         <div className="flex items-center gap-3">
@@ -141,7 +141,7 @@ export function TransferOwnershipDialog({ workspace, open, onOpenChange }: Trans
                     </div>
                 ) : (
                     <div className="py-6 space-y-4">
-                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-amber-800 text-sm">
+                        <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4 text-amber-600 dark:text-amber-400 text-xs">
                             <p className="font-bold mb-1">⚠️ Cảnh báo quan trọng:</p>
                             <p>Bạn đang chuyển quyền sở hữu Workspace cho <strong>{selectedUser?.name}</strong>.</p>
                             <ul className="list-disc ml-4 mt-2 space-y-1">

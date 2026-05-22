@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { WikiPagination } from '@/app/wiki/components/WikiPagination';
 import {
     useListUsersQuery,
     useDeleteUserMutation,
@@ -84,14 +85,14 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 const ROLE_COLORS: Record<string, string> = {
-    SUPER_ADMIN: 'bg-purple-100 text-purple-700 border-purple-200',
-    ADMIN: 'bg-indigo-100 text-indigo-700 border-indigo-200',
-    WORKSPACE_MANAGER: 'bg-orange-100 text-orange-700 border-orange-200',
-    WORKSPACE_OWNER: 'bg-amber-100 text-amber-700 border-amber-200',
-    WORKSPACE_ADMIN: 'bg-blue-100 text-blue-700 border-blue-200',
-    WORKSPACE_MEMBER: 'bg-slate-100 text-slate-700 border-slate-200',
-    WORKSPACE_GUEST: 'bg-gray-100 text-gray-700 border-gray-200',
-    EMPLOYEE: 'bg-green-100 text-green-700 border-green-200',
+    SUPER_ADMIN: 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-950/30 dark:text-purple-400 dark:border-purple-900/30',
+    ADMIN: 'bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-950/30 dark:text-indigo-400 dark:border-indigo-900/30',
+    WORKSPACE_MANAGER: 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-950/30 dark:text-orange-400 dark:border-orange-900/30',
+    WORKSPACE_OWNER: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900/30',
+    WORKSPACE_ADMIN: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-900/30',
+    WORKSPACE_MEMBER: 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800/40 dark:text-slate-300 dark:border-slate-700/50',
+    WORKSPACE_GUEST: 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800/30 dark:text-gray-400 dark:border-gray-700/50',
+    EMPLOYEE: 'bg-green-100 text-green-700 border-green-200 dark:bg-green-950/30 dark:text-green-400 dark:border-green-900/30',
 };
 
 function UserRow({ user, isOnline, currentUser, onEdit, onRole, onQuota, onSuspend, onUnsuspend, onDelete }: any) {
@@ -101,103 +102,103 @@ function UserRow({ user, isOnline, currentUser, onEdit, onRole, onQuota, onSuspe
     };
 
     return (
-        <TableRow className="hover:bg-slate-50/50 transition-colors">
-            <TableCell>
-                <div className="flex items-center gap-3">
+        <TableRow className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors border-b border-border">
+            <TableCell className="py-2.5">
+                <div className="flex items-center gap-2">
                     <div className="relative">
-                        <Avatar className="h-10 w-10 border-2 border-white shadow-sm">
+                        <Avatar className="h-8 w-8 border border-border shadow-sm">
                             <AvatarImage src={getAvatarUrl(user.avatar, user.name)} alt={user.name} />
-                            <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                            <AvatarFallback className="text-xs">{getInitials(user.name)}</AvatarFallback>
                         </Avatar>
                         {isOnline && (
-                            <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-white" />
+                            <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-green-500 border border-white dark:border-slate-950" />
                         )}
                     </div>
                     <div className="flex flex-col">
-                        <p className="font-semibold text-slate-900">{user.name}</p>
-                        <p className="text-xs text-muted-foreground">{user.email}</p>
+                        <p className="font-semibold text-xs text-foreground leading-tight">{user.name}</p>
+                        <p className="text-[10px] text-muted-foreground leading-none mt-0.5">{user.email}</p>
                     </div>
                 </div>
             </TableCell>
-            <TableCell>
+            <TableCell className="py-2.5">
                 {user.role ? (
                     <Badge
                         variant="outline"
-                        className={cn("font-medium", ROLE_COLORS[user.role] || "bg-slate-50 text-slate-600")}
+                        className={cn("font-medium text-[10px] py-0 px-1.5 rounded-md", ROLE_COLORS[user.role] || "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400")}
                     >
                         {ROLE_LABELS[user.role] || user.role}
                     </Badge>
                 ) : (
-                    <span className="text-sm text-slate-400">-</span>
+                    <span className="text-xs text-slate-400">-</span>
                 )}
             </TableCell>
-            <TableCell>
+            <TableCell className="py-2.5">
                 <Badge
                     variant="outline"
                     className={cn(
-                        "font-medium px-2.5 py-0.5 rounded-full",
+                        "font-semibold text-[10px] px-1.5 py-0 rounded-md",
                         user.isActive && !user.isSuspended
-                            ? "bg-green-50 text-green-700 border-green-200"
-                            : "bg-red-50 text-red-700 border-red-200"
+                            ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/30 dark:text-green-400 dark:border-green-900/30"
+                            : "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-400 dark:border-red-900/30"
                     )}
                 >
                     {user.isSuspended ? 'Đã đình chỉ' : user.isActive ? 'Đang hoạt động' : 'Ngưng hoạt động'}
                 </Badge>
             </TableCell>
-            <TableCell>
-                <div className="flex flex-col gap-1">
-                    <span className="text-xs font-medium text-slate-500">
+            <TableCell className="py-2.5">
+                <div className="flex flex-col">
+                    <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
                         {isOnline ? 'Đang trực tuyến' : user.lastSeen
-                            ? `Truy cập lần cuối ${format(new Date(user.lastSeen), 'HH:mm dd/MM')}`
-                            : 'Chưa từng truy cập'
+                            ? `Lần cuối ${format(new Date(user.lastSeen), 'HH:mm dd/MM')}`
+                            : 'Chưa truy cập'
                         }
                     </span>
                 </div>
             </TableCell>
-            <TableCell>
-                <span className="text-sm text-slate-500 font-medium">
+            <TableCell className="py-2.5">
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
                     {format(new Date(user.createdAt), 'dd/MM/yyyy')}
                 </span>
             </TableCell>
-            <TableCell>
+            <TableCell className="py-2.5">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-slate-100 rounded-full">
-                            <MoreHorizontal className="h-4 w-4" />
+                        <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
+                            <MoreHorizontal className="h-3.5 w-3.5" />
                         </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuLabel>Thao tác</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => onEdit(user)}>
-                            <Edit className="w-4 h-4 mr-2" />
+                    <DropdownMenuContent align="end" className="w-48 bg-card border border-border">
+                        <DropdownMenuLabel className="text-xs">Thao tác</DropdownMenuLabel>
+                        <DropdownMenuSeparator className="bg-border" />
+                        <DropdownMenuItem onClick={() => onEdit(user)} className="text-xs py-1.5 cursor-pointer">
+                            <Edit className="w-3.5 h-3.5 mr-2" />
                             Chỉnh sửa hồ sơ
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onRole(user)}>
-                            <Shield className="w-4 h-4 mr-2" />
+                        <DropdownMenuItem onClick={() => onRole(user)} className="text-xs py-1.5 cursor-pointer">
+                            <Shield className="w-3.5 h-3.5 mr-2" />
                             Quản lý vai trò
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onQuota(user)}>
-                            <Building2 className="w-4 h-4 mr-2" />
+                        <DropdownMenuItem onClick={() => onQuota(user)} className="text-xs py-1.5 cursor-pointer">
+                            <Building2 className="w-3.5 h-3.5 mr-2" />
                             Quản lý định mức
                         </DropdownMenuItem>
-                        <DropdownMenuSeparator />
+                        <DropdownMenuSeparator className="bg-border" />
                         {user.isSuspended ? (
-                            <DropdownMenuItem onClick={() => onUnsuspend(user)}>
-                                <UserCheck className="w-4 h-4 mr-2 text-green-600" />
+                            <DropdownMenuItem onClick={() => onUnsuspend(user)} className="text-xs py-1.5 text-green-600 dark:text-green-400 cursor-pointer">
+                                <UserCheck className="w-3.5 h-3.5 mr-2" />
                                 Kích hoạt lại
                             </DropdownMenuItem>
                         ) : (
-                            <DropdownMenuItem onClick={() => onSuspend(user)}>
-                                <Ban className="w-4 h-4 mr-2 text-amber-600" />
+                            <DropdownMenuItem onClick={() => onSuspend(user)} className="text-xs py-1.5 text-amber-600 dark:text-amber-400 cursor-pointer">
+                                <Ban className="w-3.5 h-3.5 mr-2" />
                                 Tạm đình chỉ
                             </DropdownMenuItem>
                         )}
                         <DropdownMenuItem
-                            className="text-red-600 focus:text-red-600"
+                            className="text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400 text-xs py-1.5 cursor-pointer"
                             onClick={() => onDelete(user)}
                         >
-                            <Trash2 className="w-4 h-4 mr-2" />
+                            <Trash2 className="w-3.5 h-3.5 mr-2" />
                             Xóa người dùng
                         </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -217,6 +218,9 @@ export function UserTable({ onInviteUser, onEditUser }: UserTableProps) {
     const currentUser = useAppSelector((state) => state.auth.user);
     const [filters, setFilters] = useState<UserFilters>({ limit: 10 });
     const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+    const [page, setPage] = useState(0);
+    const [size, setSize] = useState(10);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const [showRoleDialog, setShowRoleDialog] = useState(false);
@@ -234,9 +238,20 @@ export function UserTable({ onInviteUser, onEditUser }: UserTableProps) {
     const [deleteMode, setDeleteMode] = useState<'anonymize' | 'hard'>('anonymize');
     const [deleteConfirmEmail, setDeleteConfirmEmail] = useState('');
 
+    // useEffect to debounce search query
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearchQuery(searchQuery);
+            setPage(0); // Reset to page 0 when query changes
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
     const { data: usersData, isLoading, isFetching } = useListUsersQuery({
-        ...filters,
-        search: searchQuery || undefined,
+        role: filters.role,
+        limit: size,
+        page: page + 1, // Backend page index is 1-based
+        search: debouncedSearchQuery || undefined,
     });
     const { data: rolesData } = useGetRolesQuery();
     const [deleteUser, { isLoading: isDeleting }] = useDeleteUserMutation();
@@ -248,9 +263,15 @@ export function UserTable({ onInviteUser, onEditUser }: UserTableProps) {
     const users = usersData?.items || [];
     const roles = Array.isArray(rolesData) ? rolesData : (rolesData as any)?.roles || [];
 
+    // Edge Case 1: Auto-decrement page if the current page is empty after user deletion/suspension
+    useEffect(() => {
+        if (users.length === 0 && page > 0 && !isLoading) {
+            setPage(prev => Math.max(0, prev - 1));
+        }
+    }, [users.length, page, isLoading]);
+
     const handleSearch = (value: string) => {
         setSearchQuery(value);
-        setFilters(prev => ({ ...prev, cursor: undefined }));
     };
 
     const handleDeleteUser = async () => {
@@ -360,50 +381,53 @@ export function UserTable({ onInviteUser, onEditUser }: UserTableProps) {
     return (
         <div className="space-y-4">
             {/* Header & Filters */}
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-2 flex-1">
                     <div className="relative w-full max-w-sm">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                         <Input
                             placeholder="Tìm kiếm người dùng..."
                             value={searchQuery}
                             onChange={(e) => handleSearch(e.target.value)}
-                            className="pl-9 h-10"
+                            className="pl-8 h-8 text-xs rounded-lg"
                         />
                     </div>
                     <Select
                         value={filters.role || 'all'}
-                        onValueChange={(val) => setFilters(prev => ({ ...prev, role: val === 'all' ? undefined : val }))}
+                        onValueChange={(val) => {
+                            setFilters(prev => ({ ...prev, role: val === 'all' ? undefined : val }));
+                            setPage(0);
+                        }}
                     >
-                        <SelectTrigger className="w-[150px] h-10">
-                            <Filter className="w-3.5 h-3.5 mr-2" />
+                        <SelectTrigger className="w-[140px] h-8 text-xs rounded-lg">
+                            <Filter className="w-3 h-3 mr-1.5" />
                             <SelectValue placeholder="Vai trò" />
                         </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Tất cả vai trò</SelectItem>
+                        <SelectContent className="bg-card border border-border">
+                            <SelectItem value="all" className="text-xs">Tất cả vai trò</SelectItem>
                             {roles.map((r: any) => (
-                                <SelectItem key={r.id} value={r.name}>{r.displayName}</SelectItem>
+                                <SelectItem key={r.id} value={r.name} className="text-xs">{r.displayName}</SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
                 </div>
-                <Button onClick={() => setShowInviteDialog(true)} className="h-10">
-                    <UserPlus className="w-4 h-4 mr-2" />
+                <Button onClick={() => setShowInviteDialog(true)} className="h-8 text-xs rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
+                    <UserPlus className="w-3.5 h-3.5 mr-1.5" />
                     Mời người dùng
                 </Button>
             </div>
 
             {/* Table */}
-            <div className="border rounded-xl overflow-hidden bg-white shadow-sm">
+            <div className="border border-border rounded-xl overflow-hidden bg-background shadow-sm">
                 <Table>
-                    <TableHeader className="bg-slate-50/50">
+                    <TableHeader className="bg-slate-50/50 dark:bg-slate-800/30 border-b border-border">
                         <TableRow>
-                            <TableHead className="w-[300px]">Người dùng</TableHead>
-                            <TableHead>Vai trò</TableHead>
-                            <TableHead>Trạng thái</TableHead>
-                            <TableHead>Hoạt động</TableHead>
-                            <TableHead>Ngày tham gia</TableHead>
-                            <TableHead className="w-[50px]"></TableHead>
+                            <TableHead className="w-[280px] h-8 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Người dùng</TableHead>
+                            <TableHead className="h-8 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Vai trò</TableHead>
+                            <TableHead className="h-8 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Trạng thái</TableHead>
+                            <TableHead className="h-8 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Hoạt động</TableHead>
+                            <TableHead className="h-8 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Ngày tham gia</TableHead>
+                            <TableHead className="w-[50px] h-8"></TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -441,34 +465,15 @@ export function UserTable({ onInviteUser, onEditUser }: UserTableProps) {
             </div>
 
             {/* Pagination */}
-            {usersData && usersData.total > 10 && (
-                <div className="flex items-center justify-between px-2">
-                    <p className="text-sm text-muted-foreground font-medium">
-                        Hiển thị <span className="text-slate-900">{users.length}</span> trong số <span className="text-slate-900">{usersData.total}</span> người dùng
-                    </p>
-                    <div className="flex gap-2">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8"
-                            disabled={!filters.cursor}
-                            onClick={() => setFilters(prev => ({ ...prev, cursor: undefined }))}
-                        >
-                            <ChevronLeft className="w-4 h-4" />
-                            Trước
-                        </Button>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8"
-                            disabled={!usersData.nextCursor}
-                            onClick={() => setFilters(prev => ({ ...prev, cursor: usersData.nextCursor }))}
-                        >
-                            Sau
-                            <ChevronRight className="w-4 h-4" />
-                        </Button>
-                    </div>
-                </div>
+            {usersData && (
+                <WikiPagination
+                    page={page}
+                    size={size}
+                    totalPages={Math.ceil((usersData.total || 0) / size)}
+                    totalElements={usersData.total || 0}
+                    setPage={setPage}
+                    setSize={setSize}
+                />
             )}
 
             {/* Delete Confirmation Dialog */}
@@ -488,47 +493,51 @@ export function UserTable({ onInviteUser, onEditUser }: UserTableProps) {
                     </DialogHeader>
 
                     <div className="py-4 space-y-6">
-                        <RadioGroup value={deleteMode} onValueChange={(val: any) => setDeleteMode(val)} className="space-y-3">
+                        <RadioGroup value={deleteMode} onValueChange={(val: any) => setDeleteMode(val)} className="space-y-2">
                             <div className={cn(
-                                "flex items-start gap-3 p-3 rounded-lg border transition-colors",
-                                deleteMode === 'anonymize' ? "bg-slate-50 border-slate-200" : "border-transparent"
+                                "flex items-start gap-2.5 p-2.5 rounded-lg border transition-colors cursor-pointer",
+                                deleteMode === 'anonymize' 
+                                    ? "bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700" 
+                                    : "border-transparent border-slate-100 dark:border-slate-800/50"
                             )}>
                                 <RadioGroupItem value="anonymize" id="anonymize" className="mt-1" />
                                 <Label htmlFor="anonymize" className="flex-1 cursor-pointer">
-                                    <span className="block font-semibold text-slate-900">Vô danh hóa (Khuyên dùng)</span>
-                                    <span className="block text-xs text-muted-foreground mt-1 leading-relaxed">
-                                        Giữ lại các tin nhắn và dữ liệu workspace nhưng thay thế thông tin cá nhân bằng "Deleted User". Đảm bảo tính toàn vẹn của các cuộc hội thoại cũ.
+                                    <span className="block text-xs font-bold text-foreground">Vô danh hóa (Khuyên dùng)</span>
+                                    <span className="block text-[10px] text-muted-foreground mt-0.5 leading-normal">
+                                        Giữ lại các tin nhắn và dữ liệu nhưng thay thế thông tin cá nhân bằng "Deleted User". Đảm bảo tính toàn vẹn của cuộc hội thoại cũ.
                                     </span>
                                 </Label>
                             </div>
 
                             <div className={cn(
-                                "flex items-start gap-3 p-3 rounded-lg border transition-colors",
-                                deleteMode === 'hard' ? "bg-red-50 border-red-200" : "border-transparent"
+                                "flex items-start gap-2.5 p-2.5 rounded-lg border transition-colors cursor-pointer",
+                                deleteMode === 'hard' 
+                                    ? "bg-red-50/60 dark:bg-red-950/20 border-red-200 dark:border-red-900/30" 
+                                    : "border-transparent border-slate-100 dark:border-slate-800/50"
                             )}>
                                 <RadioGroupItem value="hard" id="hard" className="mt-1" />
                                 <Label htmlFor="hard" className="flex-1 cursor-pointer">
-                                    <span className="block font-semibold text-red-700">Xóa vĩnh viễn</span>
-                                    <span className="block text-xs text-red-600/70 mt-1 leading-relaxed">
-                                        Xóa bỏ hoàn toàn mọi dữ liệu liên quan. Có thể gây ra lỗi hiển thị trong các cuộc hội thoại nhóm hoặc workspace mà người dùng này từng tham gia.
+                                    <span className="block text-xs font-bold text-red-600 dark:text-red-400">Xóa vĩnh viễn</span>
+                                    <span className="block text-[10px] text-red-600/70 dark:text-red-400/70 mt-0.5 leading-normal">
+                                        Xóa bỏ hoàn toàn mọi dữ liệu liên quan. Có thể gây ra lỗi hiển thị trong các cuộc hội thoại hoặc không gian làm việc cũ.
                                     </span>
                                 </Label>
                             </div>
                         </RadioGroup>
 
-                        <div className="space-y-3 p-4 bg-amber-50 border border-amber-100 rounded-lg">
-                            <div className="flex items-center gap-2 text-amber-800 font-medium text-sm">
-                                <Info className="w-4 h-4" />
+                        <div className="space-y-2 p-3 bg-amber-50/60 dark:bg-amber-950/10 border border-amber-200 dark:border-amber-900/30 rounded-lg">
+                            <div className="flex items-center gap-1.5 text-amber-800 dark:text-amber-400 font-bold text-xs">
+                                <Info className="w-3.5 h-3.5" />
                                 Xác nhận danh tính người dùng
                             </div>
-                            <p className="text-xs text-amber-700">
+                            <p className="text-[11px] text-amber-700 dark:text-amber-300">
                                 Nhập chính xác email <strong>{selectedUser?.email}</strong> để xác nhận.
                             </p>
                             <Input
                                 placeholder="Nhập email để xác nhận..."
                                 value={deleteConfirmEmail}
                                 onChange={(e) => setDeleteConfirmEmail(e.target.value)}
-                                className="bg-white"
+                                className="bg-white dark:bg-slate-900 h-8 text-xs rounded-lg"
                             />
                         </div>
                     </div>
@@ -624,19 +633,19 @@ export function UserTable({ onInviteUser, onEditUser }: UserTableProps) {
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="py-4 space-y-4">
-                        <div className="p-3 bg-green-50 border border-green-100 rounded-lg space-y-1">
-                            <p className="text-xs font-semibold text-green-800">Thông tin đình chỉ trước đó:</p>
-                            <p className="text-xs text-green-700 italic">"{selectedUser?.suspendReason || 'Không có dữ liệu'}"</p>
+                    <div className="py-3 space-y-3">
+                        <div className="p-2.5 bg-green-50/60 dark:bg-green-950/10 border border-green-200 dark:border-green-900/30 rounded-lg space-y-0.5">
+                            <p className="text-[11px] font-bold text-green-800 dark:text-green-400">Thông tin đình chỉ trước đó:</p>
+                            <p className="text-[11px] text-green-700 dark:text-green-300 italic">"{selectedUser?.suspendReason || 'Không có dữ liệu'}"</p>
                         </div>
 
-                        <div className="space-y-2">
-                            <Label>Lý do mở khóa (Bắt buộc)</Label>
+                        <div className="space-y-1.5">
+                            <Label className="text-xs">Lý do mở khóa (Bắt buộc)</Label>
                             <Textarea
                                 placeholder="Nhập lý do cho việc khôi phục tài khoản này..."
                                 value={unsuspendReason}
                                 onChange={(e) => setUnsuspendReason(e.target.value)}
-                                className="min-h-[100px] resize-none border-green-200 focus-visible:ring-green-500"
+                                className="min-h-[80px] resize-none text-xs rounded-lg border-green-200 dark:border-green-900/40 focus-visible:ring-green-500 bg-white dark:bg-slate-900"
                             />
                         </div>
                     </div>
@@ -710,21 +719,21 @@ export function UserTable({ onInviteUser, onEditUser }: UserTableProps) {
                             Thiết lập số lượng Workspace tối đa mà <strong>{selectedUser?.name}</strong> có thể tạo.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="py-6 space-y-4">
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Giới hạn số lượng (Workspaces)</label>
+                    <div className="py-4 space-y-3">
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-foreground">Giới hạn số lượng (Workspaces)</label>
                             <Input
                                 type="number"
                                 value={quotaValue}
                                 onChange={(e) => setQuotaValue(parseInt(e.target.value))}
                                 min={1}
                                 max={100}
-                                className="h-11"
+                                className="h-9 text-xs rounded-lg"
                             />
                         </div>
-                        <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg flex gap-3">
-                            <Building2 className="w-5 h-5 text-blue-500 shrink-0" />
-                            <p className="text-xs text-blue-700 leading-relaxed">
+                        <div className="p-2.5 bg-blue-50/60 dark:bg-blue-950/10 border border-blue-200 dark:border-blue-900/30 rounded-lg flex gap-2">
+                            <Building2 className="w-4 h-4 text-blue-500 dark:text-blue-400 shrink-0 mt-0.5" />
+                            <p className="text-[10px] text-blue-700 dark:text-blue-300 leading-normal">
                                 Giới hạn này sẽ ghi đè lên giới hạn mặc định của hệ thống hoặc của tổ chức (nếu có).
                             </p>
                         </div>

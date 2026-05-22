@@ -22,21 +22,18 @@ interface AIMessageBubbleProps {
     error?: boolean;
 }
 
-
-
 function parseAIResponse(content: string) {
     try {
         const jsonStart = content.indexOf('{');
         if (jsonStart === -1) return null;
-
         const jsonEnd = content.lastIndexOf('}') + 1;
         if (jsonEnd <= jsonStart) return null;
-
         return JSON.parse(content.slice(jsonStart, jsonEnd));
     } catch {
         return null;
     }
 }
+
 export function AIMessageBubble({
     role,
     content,
@@ -52,41 +49,43 @@ export function AIMessageBubble({
     const [copied, setCopied] = useState(false);
     const isAssistant = role === 'assistant';
     const parsed = isAssistant ? parseAIResponse(content) : null;
-    
+
     const handleCopy = async () => {
         await navigator.clipboard.writeText(content);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
 
-    const hasInsufficientSources = content.toLowerCase().includes('insufficient') ||
+    const hasInsufficientSources =
+        content.toLowerCase().includes('insufficient') ||
         (isAssistant && citations.length === 0 && !isStreaming && content.length > 0);
 
     return (
         <div
             className={cn(
-                'group flex gap-4 w-full py-4 transition-all duration-300 ease-in-out',
+                'group flex gap-3 w-full py-3 transition-colors duration-200',
                 isAssistant ? 'flex-row' : 'flex-row-reverse',
-                isAssistant ? 'hover:bg-slate-50/50' : '',
+                isAssistant ? 'hover:bg-muted/30 rounded-xl px-2' : 'px-2',
                 className
             )}
         >
-            {/* Avatar Section */}
+            {/* Avatar */}
             <div className="flex-shrink-0 flex flex-col items-center">
                 <div
                     className={cn(
-                        'w-9 h-9 rounded-xl flex items-center justify-center shadow-sm transition-transform group-hover:scale-105',
+                        'w-8 h-8 rounded-lg flex items-center justify-center shadow-sm',
+                        'transition-colors duration-150',
                         isAssistant
                             ? mode === 'agent'
-                                ? 'bg-gradient-to-tr from-orange-400 via-amber-400 to-yellow-300 text-white shadow-orange-100'
-                                : 'bg-gradient-to-tr from-indigo-600 via-violet-600 to-purple-500 text-white shadow-indigo-100'
-                            : 'bg-white border border-slate-200 text-slate-600'
+                                ? 'bg-amber-500 text-white'
+                                : 'bg-primary text-primary-foreground'
+                            : 'bg-card border border-border text-muted-foreground'
                     )}
                 >
                     {isAssistant ? (
-                        mode === 'agent' ? <Zap className="w-5 h-5 fill-current" /> : <Bot className="w-5 h-5" />
+                        mode === 'agent' ? <Zap className="w-4 h-4 fill-current" /> : <Bot className="w-4 h-4" />
                     ) : (
-                        <User className="w-5 h-5" />
+                        <User className="w-4 h-4" />
                     )}
                 </div>
             </div>
@@ -98,67 +97,78 @@ export function AIMessageBubble({
                     isAssistant ? 'items-start' : 'items-end'
                 )}
             >
+                {/* Name + timestamp row */}
                 <div className="flex items-center gap-2 mb-1.5 px-1">
-                     {isAssistant ? (
+                    {isAssistant ? (
                         <div className="flex items-center gap-2">
-                             <span className="text-xs font-semibold text-slate-900 tracking-tight">
-                                 {mode === 'agent' ? 'AI Agent' : 'Trợ lý NEXUS'}
-                             </span>
-                             {mode && (
-                                <span className={cn(
-                                    'px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider',
-                                    mode === 'agent'
-                                        ? 'bg-amber-100 text-amber-700'
-                                        : 'bg-indigo-50 text-indigo-700'
-                                )}>
+                            <span className="text-xs font-semibold text-foreground tracking-tight">
+                                {mode === 'agent' ? 'AI Agent' : 'Trợ lý NEXUS'}
+                            </span>
+                            {mode && (
+                                <span
+                                    className={cn(
+                                        'px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider',
+                                        mode === 'agent'
+                                            ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                                            : 'bg-primary/10 text-primary'
+                                    )}
+                                >
                                     {mode}
                                 </span>
-                             )}
+                            )}
                         </div>
-                     ) : (
-                        <span className="text-xs font-semibold text-slate-900 tracking-tight">Bạn</span>
-                     )}
-                     {timestamp && (
-                        <span className="text-[10px] text-slate-400 font-medium">{timestamp}</span>
-                     )}
+                    ) : (
+                        <span className="text-xs font-semibold text-foreground tracking-tight">Bạn</span>
+                    )}
+                    {timestamp && (
+                        <span className="text-[10px] text-muted-foreground font-medium">{timestamp}</span>
+                    )}
                 </div>
 
                 {/* Message Body */}
                 <div
                     className={cn(
-                        'relative transition-all duration-300',
+                        'relative transition-all duration-200 w-full',
                         isAssistant
                             ? error
-                                ? 'text-red-600 bg-red-50/50 p-4 rounded-2xl border border-red-100'
-                                : 'text-slate-800 leading-relaxed'
-                            : 'bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-md shadow-slate-200 rounded-tr-none'
+                                ? 'text-destructive bg-destructive/5 p-4 rounded-xl border border-destructive/20'
+                                : 'text-foreground leading-relaxed'
+                            : 'bg-primary text-primary-foreground px-4 py-2.5 rounded-xl shadow-sm rounded-tr-none w-fit'
                     )}
                 >
-                    <div className={cn(
-                        "prose prose-sm max-w-none prose-p:leading-relaxed prose-pre:bg-slate-900 prose-pre:text-white prose-code:text-indigo-600 prose-code:bg-indigo-50 prose-code:px-1 prose-code:rounded",
-                        isAssistant && "text-slate-800",
-                        !isAssistant && "prose-p:text-white prose-strong:text-white prose-headings:text-white"
-                    )}>
+                    <div
+                        className={cn(
+                            'prose prose-sm max-w-none',
+                            'prose-p:leading-relaxed',
+                            'prose-pre:bg-muted prose-pre:text-foreground prose-pre:border prose-pre:border-border',
+                            'prose-code:text-primary prose-code:bg-primary/10 prose-code:px-1 prose-code:rounded',
+                            isAssistant && 'text-foreground prose-headings:text-foreground',
+                            !isAssistant && 'prose-p:text-primary-foreground prose-strong:text-primary-foreground prose-headings:text-primary-foreground prose-code:text-primary-foreground prose-code:bg-primary-foreground/10'
+                        )}
+                    >
                         {parsed ? (
                             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                                <p className="text-base font-medium text-slate-900 leading-snug">
+                                <p className="text-sm font-medium text-foreground leading-snug">
                                     {parsed.summary}
                                 </p>
-
-                                <div className="space-y-2 pl-4 border-l-2 border-indigo-100">
+                                <div className="space-y-2 pl-4 border-l-2 border-primary/20">
                                     {parsed.details?.map((item: string, idx: number) => (
-                                        <div key={idx} className="flex gap-2 text-slate-700">
-                                            <span className="text-indigo-400 font-bold mt-0.5">•</span>
+                                        <div key={idx} className="flex gap-2 text-muted-foreground text-sm">
+                                            <span className="text-primary font-bold mt-0.5">•</span>
                                             <span>{item}</span>
                                         </div>
                                     ))}
                                 </div>
-
                                 {parsed.sources?.length > 0 && (
-                                    <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-slate-100">
-                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest w-full mb-1">Tài liệu tham khảo</span>
+                                    <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-border">
+                                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest w-full mb-1">
+                                            Tài liệu tham khảo
+                                        </span>
                                         {parsed.sources.map((src: string, i: number) => (
-                                            <span key={i} className="px-2 py-1 bg-slate-50 border border-slate-100 rounded text-[11px] text-slate-600 font-medium">
+                                            <span
+                                                key={i}
+                                                className="px-2 py-1 bg-muted border border-border rounded-md text-[11px] text-foreground font-medium"
+                                            >
                                                 {src}
                                             </span>
                                         ))}
@@ -169,18 +179,21 @@ export function AIMessageBubble({
                             <div className="space-y-4 py-2">
                                 <div className="flex items-center gap-3">
                                     <div className="flex gap-1.5">
-                                        <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                                        <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                                        <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce"></div>
+                                        <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]" />
+                                        <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]" />
+                                        <div className="w-2 h-2 bg-primary rounded-full animate-bounce" />
                                     </div>
-                                    <span className="text-xs font-bold text-indigo-600 uppercase tracking-widest animate-pulse">Đang tổng hợp câu trả lời</span>
+                                    <span className="text-xs font-bold text-primary uppercase tracking-widest animate-pulse">
+                                        Đang tổng hợp câu trả lời
+                                    </span>
                                 </div>
                                 {(() => {
                                     const match = content.match(/"summary":\s*"([^"]*)"/);
                                     const summary = match ? match[1] : content.match(/"summary":\s*"([^"]*)$/)?.[1];
                                     return summary ? (
-                                        <p className="text-base font-medium text-slate-900 animate-in fade-in duration-700">
-                                            {summary}<span className="inline-block w-1.5 h-5 bg-indigo-500 ml-1 animate-pulse align-middle"></span>
+                                        <p className="text-sm font-medium text-foreground animate-in fade-in duration-700">
+                                            {summary}
+                                            <span className="inline-block w-1.5 h-5 bg-primary ml-1 animate-pulse align-middle" />
                                         </p>
                                     ) : null;
                                 })()}
@@ -194,37 +207,34 @@ export function AIMessageBubble({
 
                     {/* Insufficient sources warning */}
                     {hasInsufficientSources && !isStreaming && (
-                        <div className="flex items-center gap-2 mt-4 p-3 bg-amber-50 border border-amber-100 rounded-xl text-xs text-amber-700 animate-in fade-in slide-in-from-top-2">
+                        <div className="flex items-center gap-2 mt-4 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 rounded-lg text-xs text-amber-700 dark:text-amber-400 animate-in fade-in slide-in-from-top-2">
                             <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
                             <p>Câu trả lời này dựa trên thông tin hạn chế từ các tài liệu nội bộ hiện có.</p>
                         </div>
                     )}
 
-                    {/* Citations integrated into bubble area for assistant */}
+                    {/* Citations */}
                     {isAssistant && citations.length > 0 && !isStreaming && (
-                        <div className="mt-6 border-t border-slate-100 pt-4">
-                            <CitationList
-                                citations={citations}
-                                onCitationClick={onCitationClick}
-                            />
+                        <div className="mt-5 border-t border-border pt-4">
+                            <CitationList citations={citations} onCitationClick={onCitationClick} />
                         </div>
                     )}
                 </div>
 
                 {/* Bubble Actions */}
                 {isAssistant && !isStreaming && content && (
-                    <div className="flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <div className="flex items-center gap-1 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                         <Button
                             variant="ghost"
                             size="sm"
-                            className="h-8 w-8 p-0 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg"
+                            className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md"
                             onClick={handleCopy}
                             title="Sao chép tin nhắn"
                         >
                             {copied ? (
-                                <Check className="w-4 h-4 text-green-500" />
+                                <Check className="w-3.5 h-3.5 text-green-500" />
                             ) : (
-                                <Copy className="w-4 h-4" />
+                                <Copy className="w-3.5 h-3.5" />
                             )}
                         </Button>
 
@@ -232,11 +242,11 @@ export function AIMessageBubble({
                             <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-8 w-8 p-0 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg"
+                                className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md"
                                 onClick={onSave}
                                 title="Lưu vào ghi chú"
                             >
-                                <Bookmark className="w-4 h-4" />
+                                <Bookmark className="w-3.5 h-3.5" />
                             </Button>
                         )}
                     </div>

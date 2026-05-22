@@ -3,6 +3,9 @@
 
 import { apiSlice } from '../api/baseApi';
 
+// AI Knowledge service base URL (port 8080)
+const AI_KNOWLEDGE_URL = process.env.NEXT_PUBLIC_AI_KNOWLEDGE_URL || 'http://127.0.0.1:8080';
+
 // Types
 export interface User {
   id: string;
@@ -81,6 +84,7 @@ export interface UserFilters {
   isActive?: boolean;
   cursor?: string;
   limit?: number;
+  page?: number;
 }
 
 export interface CreateUserRequest {
@@ -125,6 +129,34 @@ export interface PaginatedResponse<T> {
   items: T[];
   nextCursor?: string;
   total: number;
+}
+
+// AI Knowledge Settings types
+export interface LlmModel {
+  id: string;
+  provider: string;
+  label: string;
+  description: string;
+  recommended: boolean;
+}
+
+export interface AiConfig {
+  // LLM
+  llm_provider?: string | null;
+  llm_api_key?: string | null;
+  llm_api_key_configured?: boolean;
+  llm_model?: string | null;
+  llm_base_url?: string | null;
+  // Embedding
+  embedding_provider?: string | null;
+  embedding_api_key?: string | null;
+  embedding_api_key_configured?: boolean;
+  embedding_model?: string | null;
+  // RAG
+  mrp_auto_approve?: string | null;
+  chunk_size?: string | null;
+  chunk_overlap?: string | null;
+  [key: string]: string | boolean | null | undefined;
 }
 
 // Admin API using apiSlice.injectEndpoints
@@ -346,6 +378,76 @@ export const adminApi = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ['Users'],
     }),
+
+    // ============= AI KNOWLEDGE SETTINGS =============
+
+    // Get all AI config (sensitive values are masked by backend)
+    getAiSettings: builder.query<AiConfig, void>({
+      queryFn: async () => {
+        try {
+          const res = await fetch(`${AI_KNOWLEDGE_URL}/api/settings`);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+          return { data };
+        } catch (e: any) {
+          return { error: { status: 'FETCH_ERROR', error: e.message } };
+        }
+      },
+      providesTags: ['AISettings'],
+    }),
+
+    // Batch update AI config
+    updateAiSettings: builder.mutation<AiConfig & { _saveResults: Record<string, boolean> }, { settings: Record<string, string> }>({
+      queryFn: async ({ settings }) => {
+        try {
+          const res = await fetch(`${AI_KNOWLEDGE_URL}/api/settings`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ settings }),
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+          return { data };
+        } catch (e: any) {
+          return { error: { status: 'FETCH_ERROR', error: e.message } };
+        }
+      },
+      invalidatesTags: ['AISettings'],
+    }),
+
+    // Get LLM model catalog
+    getLlmCatalog: builder.query<LlmModel[], void>({
+      queryFn: async () => {
+        try {
+          const res = await fetch(`${AI_KNOWLEDGE_URL}/api/settings/llm/catalog`);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+          return { data };
+        } catch (e: any) {
+          return { error: { status: 'FETCH_ERROR', error: e.message } };
+        }
+      },
+      providesTags: ['AISettings'],
+    }),
+
+    // Switch active LLM model
+    switchLlmModel: builder.mutation<{ message: string; activeModel: string; provider: string }, { modelId: string; provider: string }>({
+      queryFn: async ({ modelId, provider }) => {
+        try {
+          const res = await fetch(`${AI_KNOWLEDGE_URL}/api/settings/llm/switch`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ modelId, provider }),
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+          return { data };
+        } catch (e: any) {
+          return { error: { status: 'FETCH_ERROR', error: e.message } };
+        }
+      },
+      invalidatesTags: ['AISettings'],
+    }),
   }),
 });
 
@@ -375,6 +477,11 @@ export const {
   useListOrganizationsQuery,
   useUpdateOrgQuotaMutation,
   useUpdateUserQuotaMutation,
+  // AI Knowledge Settings
+  useGetAiSettingsQuery,
+  useUpdateAiSettingsMutation,
+  useGetLlmCatalogQuery,
+  useSwitchLlmModelMutation,
   // Lazy
   useLazyListUsersQuery,
   useLazyGetUserByIdQuery,

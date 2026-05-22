@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { WikiPagination } from '@/app/wiki/components/WikiPagination';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -56,16 +57,44 @@ const RESOURCE_ICONS: Record<string, any> = {
 export function AuditLogsPage() {
     const [filters, setFilters] = useState<AuditFilters>({ limit: 10 });
     const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+    const [page, setPage] = useState(0);
+    const [size, setSize] = useState(10);
 
-    const { data, isLoading, isFetching, refetch } = useGetAuditLogsQuery(filters);
+    // Debounce search term to protect performance and reset page to 0
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearchTerm(searchTerm);
+            setPage(0);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
+
+    // Reset page to 0 when resource or status filter changes
+    useEffect(() => {
+        setPage(0);
+    }, [filters.status, filters.resource]);
+
+    const { data, isLoading, isFetching, refetch } = useGetAuditLogsQuery({
+        status: filters.status,
+        resource: filters.resource,
+        limit: size,
+        page: page + 1, // backend page index is 1-based
+        action: debouncedSearchTerm || undefined, // use debounced search term for action filtering
+    });
 
     const logs = data?.items || [];
     const totalCount = data?.total || 0;
 
+    // Edge Case 1: Auto-decrement page if the current page is empty after filters or actions
+    useEffect(() => {
+        if (logs.length === 0 && page > 0 && !isLoading) {
+            setPage(prev => Math.max(0, prev - 1));
+        }
+    }, [logs.length, page, isLoading]);
+
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
-        // In a real app, we'd add 'search' to filters if backend supports it
-        // For now we'll just refetch or rely on existing filter params
     };
 
     const handleExport = () => {
@@ -261,33 +290,16 @@ export function AuditLogsPage() {
                     )}
 
                     {/* Pagination */}
-                    {data && totalCount > (filters.limit || 10) && (
-                        <div className="flex items-center justify-between p-4 bg-slate-50/50 border-t">
-                            <p className="text-xs text-muted-foreground font-medium">
-                                Hiển thị {logs.length} trong {totalCount} hoạt động
-                            </p>
-                            <div className="flex items-center gap-2">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-8 rounded-full"
-                                    onClick={() => setFilters(prev => ({ ...prev, cursor: undefined }))}
-                                    disabled={!filters.cursor}
-                                >
-                                    <ChevronLeft className="w-4 h-4 mr-1" />
-                                    Trước
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-8 rounded-full"
-                                    onClick={() => setFilters(prev => ({ ...prev, cursor: data.nextCursor }))}
-                                    disabled={!data.nextCursor}
-                                >
-                                    Sau
-                                    <ChevronRight className="w-4 h-4 ml-1" />
-                                </Button>
-                            </div>
+                    {data && (
+                        <div className="p-4 bg-slate-50/50 border-t">
+                            <WikiPagination
+                                page={page}
+                                size={size}
+                                totalPages={Math.ceil(totalCount / size)}
+                                totalElements={totalCount}
+                                setPage={setPage}
+                                setSize={setSize}
+                            />
                         </div>
                     )}
                 </CardContent>
