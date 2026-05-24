@@ -35,28 +35,34 @@ export function WikiBacklinks({ currentPageTitle, currentPageSlug, allWikiPages 
       const norm = target.trim().toLowerCase();
       if (slugToSlug.has(norm)) return slugToSlug.get(norm);
       if (titleToSlug.has(norm)) return titleToSlug.get(norm);
+      if (slugToSlug.has(`source/${norm}`)) return slugToSlug.get(`source/${norm}`);
       
       const normNoAccents = removeAccents(norm);
       if (normalizedTitleToSlug.has(normNoAccents)) return normalizedTitleToSlug.get(normNoAccents);
       
       const slugified = norm.replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").trim();
       if (slugToSlug.has(slugified)) return slugToSlug.get(slugified);
+      if (slugToSlug.has(`source/${slugified}`)) return slugToSlug.get(`source/${slugified}`);
       
       if (norm.endsWith("s")) {
         const singular = norm.slice(0, -1);
         if (slugToSlug.has(singular)) return slugToSlug.get(singular);
         if (titleToSlug.has(singular)) return titleToSlug.get(singular);
+        if (slugToSlug.has(`source/${singular}`)) return slugToSlug.get(`source/${singular}`);
         if (normalizedTitleToSlug.has(removeAccents(singular))) return normalizedTitleToSlug.get(removeAccents(singular));
         const slugifiedSingular = slugified.slice(0, -1);
         if (slugToSlug.has(slugifiedSingular)) return slugToSlug.get(slugifiedSingular);
+        if (slugToSlug.has(`source/${slugifiedSingular}`)) return slugToSlug.get(`source/${slugifiedSingular}`);
       }
       if (norm.endsWith("es")) {
         const singular = norm.slice(0, -2);
         if (slugToSlug.has(singular)) return slugToSlug.get(singular);
         if (titleToSlug.has(singular)) return titleToSlug.get(singular);
+        if (slugToSlug.has(`source/${singular}`)) return slugToSlug.get(`source/${singular}`);
         if (normalizedTitleToSlug.has(removeAccents(singular))) return normalizedTitleToSlug.get(removeAccents(singular));
         const slugifiedSingular = slugified.slice(0, -2);
         if (slugToSlug.has(slugifiedSingular)) return slugToSlug.get(slugifiedSingular);
+        if (slugToSlug.has(`source/${slugifiedSingular}`)) return slugToSlug.get(`source/${slugifiedSingular}`);
       }
       return target;
     };

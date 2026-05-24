@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
+import { useSelector } from "react-redux";
 import { Search, X, CornerDownLeft, Circle, Brain, Network, FileText } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useGetWikiPagesMetadataQuery, WikiPage } from "@/src/redux/feature/mrpApi";
@@ -28,7 +29,8 @@ export function WikiSearchDialog({
   onOpenChange: (v: boolean) => void;
 }) {
   const router = useRouter();
-  const workspaceId = "default-workspace";
+  const currentWorkspaceId = useSelector((state: any) => state.workspace.currentWorkspaceId);
+  const workspaceId = currentWorkspaceId || "default-workspace";
   
   // RTK Query to load wiki pages pool (lightweight metadata)
   const { data: wikiPages } = useGetWikiPagesMetadataQuery({ workspaceId }, { skip: !open });

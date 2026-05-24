@@ -4,12 +4,13 @@ import React from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
-  useGetPendingDraftsQuery,
+  useGetDraftsByWorkspaceQuery,
   useGetWikiPagesMetadataQuery,
   useGetWikiPageByIdQuery,
   useApproveDraftMutation,
   useRejectDraftMutation,
-  useRequestChangesOnDraftMutation
+  useRequestChangesOnDraftMutation,
+  useGetPendingDraftsQuery
 } from "@/src/redux/feature/mrpApi";
 import { WikiDraftDiff } from "../components/WikiDraftDiff";
 import { WikiAiCheckPanel } from "../components/WikiAiCheckPanel";
@@ -27,6 +28,7 @@ import {
   Maximize2
 } from "lucide-react";
 import { useHasRole } from "@/src/lib/rbac/usePermission";
+import { useSelector } from "react-redux";
 
 import { WikiPagination } from "../components/WikiPagination";
 
@@ -34,7 +36,8 @@ export default function WikiReviewConsole({ isEmbedded = false }: { isEmbedded?:
   const router = useRouter();
   const searchParams = useSearchParams();
   const draftIdParam = searchParams.get("draftId");
-  const workspaceId = "default-workspace";
+  const currentWorkspaceId = useSelector((state: any) => state.workspace.currentWorkspaceId);
+  const workspaceId = currentWorkspaceId || "default-workspace";
 
   // RBAC checks
   const isSuperAdmin = useHasRole("SUPER_ADMIN");
@@ -56,27 +59,43 @@ export default function WikiReviewConsole({ isEmbedded = false }: { isEmbedded?:
   const [size, setSize] = React.useState(5);
 
   // RTK Query calls
-  const { data: draftsResponse, isLoading: isDraftsLoading, refetch: refetchDrafts } = useGetPendingDraftsQuery({ page, size }, { skip: !canManageWiki });
-  const { data: wikiPages } = useGetWikiPagesMetadataQuery({ workspaceId }, { skip: !canManageWiki });
+  const { data: workspaceDrafts, isLoading: isWorkspaceDraftsLoading, refetch: refetchWorkspaceDrafts } = useGetDraftsByWorkspaceQuery(workspaceId, { skip: !canManageWiki || isSuperAdmin });
+  const { data: allPendingDrafts, isLoading: isAllPendingDraftsLoading, refetch: refetchAllPendingDrafts } = useGetPendingDraftsQuery(undefined, { skip: !isSuperAdmin });
 
-  // Extract drafts list and total elements
+  const isDraftsLoading = isSuperAdmin ? isAllPendingDraftsLoading : isWorkspaceDraftsLoading;
+  const refetchDrafts = () => {
+    if (isSuperAdmin) refetchAllPendingDrafts();
+    else refetchWorkspaceDrafts();
+  };
+
+  const rawDrafts = React.useMemo(() => {
+    const data = isSuperAdmin ? allPendingDrafts : workspaceDrafts;
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
+    return data.content || [];
+  }, [isSuperAdmin, allPendingDrafts, workspaceDrafts]);
+
+  // Extract drafts list - FILTER only status PENDING to prevent approved/rejected leaks
   const drafts = React.useMemo(() => {
-    if (!draftsResponse) return [];
-    if (Array.isArray(draftsResponse)) return draftsResponse;
-    return draftsResponse.content || [];
-  }, [draftsResponse]);
+    return rawDrafts.filter((d: any) => d.status === "PENDING");
+  }, [rawDrafts]);
 
   const totalElements = React.useMemo(() => {
-    if (!draftsResponse) return 0;
-    if (Array.isArray(draftsResponse)) return draftsResponse.length;
-    return draftsResponse.totalElements || 0;
-  }, [draftsResponse]);
+    return drafts.length;
+  }, [drafts]);
 
   const totalPages = React.useMemo(() => {
-    if (!draftsResponse) return 0;
-    if (Array.isArray(draftsResponse)) return Math.ceil(draftsResponse.length / size);
-    return draftsResponse.totalPages || 0;
-  }, [draftsResponse, size]);
+    return Math.ceil(drafts.length / size);
+  }, [drafts, size]);
+
+  const activeDraft = React.useMemo(() => {
+    if (!drafts || selectedDraftId === null) return null;
+    return drafts.find((d) => d.id === selectedDraftId) || null;
+  }, [drafts, selectedDraftId]);
+
+  // Query metadata for AI checks scoped dynamic by activeDraft's workspaceId
+  const activeWorkspaceId = activeDraft ? activeDraft.workspaceId : workspaceId;
+  const { data: wikiPages } = useGetWikiPagesMetadataQuery({ workspaceId: activeWorkspaceId }, { skip: !canManageWiki });
 
   // Reset page if totalElements changes and page is out of bounds
   React.useEffect(() => {
@@ -85,17 +104,14 @@ export default function WikiReviewConsole({ isEmbedded = false }: { isEmbedded?:
     }
   }, [totalElements, page, size]);
 
-  const paginatedDrafts = drafts;
+  const paginatedDrafts = React.useMemo(() => {
+    return drafts.slice(page * size, (page + 1) * size);
+  }, [drafts, page, size]);
 
   // Mutations
   const [approveDraft, { isLoading: isApproving }] = useApproveDraftMutation();
   const [rejectDraft, { isLoading: isRejecting }] = useRejectDraftMutation();
   const [requestChanges, { isLoading: isRequesting }] = useRequestChangesOnDraftMutation();
-
-  const activeDraft = React.useMemo(() => {
-    if (!drafts || selectedDraftId === null) return null;
-    return drafts.find((d) => d.id === selectedDraftId) || null;
-  }, [drafts, selectedDraftId]);
 
   // Dynamically load the base wiki page content only when activeDraft changes and a wikiPageId exists
   const { data: activeBasePage } = useGetWikiPageByIdQuery(
@@ -294,31 +310,52 @@ export default function WikiReviewConsole({ isEmbedded = false }: { isEmbedded?:
           ) : (
             <>
               <div className="flex flex-col gap-1.5 max-h-[480px] overflow-y-auto pr-1">
-                {paginatedDrafts.map((d) => (
-                  <button
-                    key={d.id}
-                    onClick={() => {
-                      setSelectedDraftId(d.id);
-                      setMessage(null);
-                    }}
-                    className={`w-full text-left p-2.5 border transition-all rounded-lg flex flex-col gap-1 ${
-                      selectedDraftId === d.id
-                        ? "border-primary bg-primary/5 shadow-sm"
-                        : "border-border bg-background hover:bg-muted/50"
-                    }`}
-                  >
-                    <span className="text-[8px] font-mono font-bold uppercase tracking-wider px-1.5 py-0.5 border bg-amber-500/10 border-amber-500 text-amber-800 dark:text-amber-400 rounded-md self-start leading-none">
-                      DRAFT #{d.id}
-                    </span>
-                    <h3 className="text-[11px] font-extrabold text-foreground leading-snug line-clamp-2">
-                      {d.title}
-                    </h3>
-                    <div className="flex items-center justify-between text-[8px] font-mono text-muted-foreground select-none mt-1">
-                      <span>Tác giả: {d.authorId}</span>
-                      <span>V.{d.baseVersion || 1}</span>
-                    </div>
-                  </button>
-                ))}
+                {paginatedDrafts.map((d) => {
+                  const docIdMatch = d.summary?.match(/Compiled from document ID: (\d+)/);
+                  const docId = docIdMatch ? docIdMatch[1] : null;
+
+                  return (
+                    <button
+                      key={d.id}
+                      onClick={() => {
+                        setSelectedDraftId(d.id);
+                        setMessage(null);
+                      }}
+                      className={`w-full text-left p-2.5 border transition-all rounded-lg flex flex-col gap-1.5 ${
+                        selectedDraftId === d.id
+                          ? "border-primary bg-primary/5 shadow-sm"
+                          : "border-border bg-background hover:bg-muted/50"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="text-[8px] font-mono font-bold uppercase tracking-wider px-1.5 py-0.5 border bg-amber-500/10 border-amber-500 text-amber-800 dark:text-amber-400 rounded-md self-start leading-none">
+                          DRAFT #{d.id}
+                        </span>
+                        {isSuperAdmin && (
+                          <span className="text-[8px] font-mono text-primary font-semibold truncate max-w-[120px] bg-primary/10 border border-primary/20 px-1 py-0.5 rounded">
+                            WS: {d.workspaceId}
+                          </span>
+                        )}
+                      </div>
+
+                      <h3 className="text-[11px] font-extrabold text-foreground leading-snug line-clamp-2">
+                        {d.title}
+                      </h3>
+
+                      <div className="flex flex-col gap-1 border-t border-dashed border-border pt-1.5 mt-0.5 select-none text-[8.5px] font-mono text-muted-foreground">
+                        <div className="flex items-center justify-between">
+                          <span>Tác giả: {d.authorId}</span>
+                          <span>V.{d.baseVersion || 1}</span>
+                        </div>
+                        {docId && (
+                          <div className="text-[8px] text-amber-600 dark:text-amber-400 font-semibold">
+                            Nguồn: Document #{docId}
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
 
               <WikiPagination

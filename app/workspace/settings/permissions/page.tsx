@@ -10,10 +10,10 @@ import {
 
 // ─── Permission Matrix (reflects actual backend RBAC logic) ──────────────────
 const ROLES = [
-  { key: 'WORKSPACE_OWNER',  label: 'Owner',  icon: Crown,        color: 'text-yellow-600 bg-yellow-50 border-yellow-200' },
-  { key: 'WORKSPACE_ADMIN',  label: 'Admin',  icon: ShieldCheck,  color: 'text-blue-600 bg-blue-50 border-blue-200' },
-  { key: 'WORKSPACE_MEMBER', label: 'Member', icon: User,         color: 'text-slate-600 bg-slate-50 border-slate-200' },
-  { key: 'WORKSPACE_GUEST',  label: 'Guest',  icon: UserX,        color: 'text-slate-400 bg-slate-50 border-slate-100' },
+  { key: 'WORKSPACE_OWNER',  label: 'Owner',  icon: Crown,        color: 'text-yellow-700 bg-yellow-50 border-yellow-200' },
+  { key: 'WORKSPACE_ADMIN',  label: 'Admin',  icon: ShieldCheck,  color: 'text-blue-700 bg-blue-50 border-blue-200' },
+  { key: 'WORKSPACE_MEMBER', label: 'Member', icon: User,         color: 'text-slate-700 bg-slate-100 border-slate-200' },
+  { key: 'WORKSPACE_GUEST',  label: 'Guest',  icon: UserX,        color: 'text-slate-500 bg-slate-50 border-slate-200' },
 ];
 
 const PERMISSION_GROUPS = [
@@ -59,11 +59,11 @@ const PERMISSION_GROUPS = [
 
 // ─── Cell: Yes/No ─────────────────────────────────────────────────────────────
 const PermCell = ({ allowed }: { allowed: boolean }) => (
-  <td className="px-4 py-3 text-center">
+  <td className="px-3 py-2 text-center">
     <div className="flex justify-center">
       {allowed
-        ? <Check size={16} className="text-emerald-600 font-bold" strokeWidth={3} />
-        : <X size={16} className="text-slate-200" strokeWidth={2.5} />}
+        ? <Check size={14} className="text-emerald-600 font-bold" strokeWidth={3} />
+        : <X size={14} className="text-slate-200" strokeWidth={2.5} />}
     </div>
   </td>
 );
@@ -71,54 +71,54 @@ const PermCell = ({ allowed }: { allowed: boolean }) => (
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 export default function PermissionsReference() {
   return (
-    <div className="p-8 space-y-8">
+    <div className="p-6 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Phân quyền</h1>
-        <p className="text-slate-500 mt-1">Ma trận quyền hạn theo vai trò trong Workspace. Quyền được thực thi ở cấp độ Backend.</p>
+        <h1 className="text-lg font-bold text-slate-900">Phân quyền</h1>
+        <p className="text-xs text-slate-500 mt-0.5">Ma trận quyền hạn theo vai trò trong Workspace. Quyền được thực thi ở cấp độ Backend.</p>
       </div>
 
       {/* Notice */}
-      <Card className="border-blue-100 bg-blue-50/60 shadow-none">
-        <CardContent className="p-4 flex items-start gap-3">
-          <Info size={18} className="text-blue-500 shrink-0 mt-0.5" />
+      <Card className="border border-blue-200 bg-blue-50/50 rounded-[4px] shadow-none">
+        <CardContent className="p-3.5 flex items-start gap-2.5">
+          <Info size={16} className="text-blue-500 shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-semibold text-blue-800">Đây là tài liệu tham chiếu</p>
-            <p className="text-xs text-blue-700 mt-0.5 leading-relaxed">
+            <p className="text-xs font-semibold text-blue-900">Đây là tài liệu tham chiếu</p>
+            <p className="text-[11px] text-blue-800 mt-0.5 leading-normal">
               Quyền hạn được <strong>tự động áp dụng</strong> bởi hệ thống dựa trên vai trò. 
-              Để thay đổi quyền của một thành viên, hãy điều chỉnh <strong>Vai trò (Role)</strong> của họ trong trang <a href="/workspace/settings/members" className="underline font-bold">Danh sách thành viên</a>.
+              Để thay đổi quyền của một thành viên, hãy điều chỉnh <strong>Vai trò (Role)</strong> của họ trong trang <a href="/workspace/settings/members" className="underline font-bold text-blue-600 hover:text-blue-700">Danh sách thành viên</a>.
             </p>
           </div>
         </CardContent>
       </Card>
 
       {/* Role legend */}
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap gap-2.5">
         {ROLES.map(({ label, icon: Icon, color }) => (
-          <div key={label} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-bold ${color}`}>
-            <Icon size={13} />
+          <div key={label} className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[4px] border text-[10px] font-bold ${color}`}>
+            <Icon size={12} />
             {label}
           </div>
         ))}
       </div>
 
       {/* Permission tables */}
-      <div className="space-y-8">
+      <div className="space-y-6">
         {PERMISSION_GROUPS.map((group) => (
-          <div key={group.section} className="space-y-3">
-            <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
-              <Shield size={15} className="text-slate-400" />
+          <div key={group.section} className="space-y-2">
+            <h3 className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+              <Shield size={14} className="text-slate-400" />
               {group.section}
             </h3>
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-[4px] border border-slate-200/80 shadow-sm overflow-hidden">
               <table className="w-full text-left">
                 <thead>
-                  <tr className="bg-slate-50/80 border-b border-slate-200">
-                    <th className="px-6 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 w-1/2">Quyền hạn</th>
+                  <tr className="bg-slate-50 border-b border-slate-200/80">
+                    <th className="px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500 w-1/2">Quyền hạn</th>
                     {ROLES.map(({ key, label, icon: Icon, color }) => (
-                      <th key={key} className="px-4 py-3 text-center">
-                        <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md border text-[10px] font-bold ${color}`}>
-                          <Icon size={10} />
+                      <th key={key} className="px-3 py-2 text-center">
+                        <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[4px] border text-[9px] font-bold ${color}`}>
+                          <Icon size={9} />
                           {label}
                         </div>
                       </th>
@@ -127,17 +127,17 @@ export default function PermissionsReference() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {group.items.map((perm) => (
-                    <tr key={perm.label} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-6 py-3">
+                    <tr key={perm.label} className="hover:bg-slate-50/50 transition-colors duration-150">
+                      <td className="px-4 py-2">
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <span className="text-sm text-slate-700 cursor-help flex items-center gap-1.5">
+                              <span className="text-xs text-slate-700 cursor-help flex items-center gap-1">
                                 {perm.label}
-                                <Info size={11} className="text-slate-300" />
+                                <Info size={10} className="text-slate-300" />
                               </span>
                             </TooltipTrigger>
-                            <TooltipContent side="right" className="max-w-[220px] text-xs">
+                            <TooltipContent side="right" className="max-w-[200px] text-[10px] rounded-[4px]">
                               {perm.tip}
                             </TooltipContent>
                           </Tooltip>

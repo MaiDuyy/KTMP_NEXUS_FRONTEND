@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { MarkdownContent } from '../knowledge';
 
 interface ChunkInspectorModalProps {
     isOpen: boolean;
@@ -325,10 +326,8 @@ export function ChunkInspectorModal({
 
                                             {/* Chunk Reading Space */}
                                             <div className="flex-1 p-4 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800 scrollbar-track-transparent">
-                                                <div className="bg-slate-50/30 dark:bg-slate-950/40 border border-border rounded-xl p-4 shadow-sm">
-                                                    <p className="text-foreground text-xs font-mono leading-relaxed whitespace-pre-wrap select-text">
-                                                        {selectedChunk.text}
-                                                    </p>
+                                                <div className="bg-slate-50/30 dark:bg-slate-950/40 border border-border rounded-xl p-4 shadow-sm select-text selection:bg-primary/20">
+                                                    <MarkdownContent content={selectedChunk.text} />
                                                 </div>
 
                                                 {/* Meta details footer */}
@@ -540,10 +539,8 @@ export function ChunkInspectorModal({
 
                                             {/* Result Body Text */}
                                             <div className="flex-1 p-4 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800 scrollbar-track-transparent">
-                                                <div className="bg-slate-50/30 dark:bg-slate-950/40 border border-border rounded-xl p-4 shadow-sm">
-                                                    <p className="text-foreground text-xs font-mono leading-relaxed whitespace-pre-wrap select-text">
-                                                        {searchResults[selectedSearchResultIndex].text}
-                                                    </p>
+                                                <div className="bg-slate-50/30 dark:bg-slate-950/40 border border-border rounded-xl p-4 shadow-sm select-text selection:bg-primary/20">
+                                                    <MarkdownContent content={searchResults[selectedSearchResultIndex].text} />
                                                 </div>
 
                                                 {/* Meta Details Info */}

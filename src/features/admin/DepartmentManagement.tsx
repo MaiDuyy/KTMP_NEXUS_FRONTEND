@@ -30,12 +30,14 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { DeptMembersDialog } from './DeptMembersDialog';
 
 export function DepartmentManagement() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editingDept, setEditingDept] = useState<Department | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showMembersDialog, setShowMembersDialog] = useState(false);
   const [selectedDept, setSelectedDept] = useState<Department | null>(null);
 
   const [name, setName] = useState('');
@@ -152,12 +154,15 @@ export function DepartmentManagement() {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800">
-                        <MoreHorizontal className="h-3.5 h-3.5" />
+                        <MoreHorizontal className="w-3.5 h-3.5" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="text-xs">
                       <DropdownMenuLabel className="text-[10px] font-bold text-muted-foreground uppercase px-2 py-1">Thao tác</DropdownMenuLabel>
                       <DropdownMenuSeparator className="bg-border/60" />
+                      <DropdownMenuItem className="cursor-pointer" onClick={() => { setSelectedDept(dept); setShowMembersDialog(true); }}>
+                        <Users className="w-3.5 h-3.5 mr-2 text-slate-400" /> Quản lý thành viên
+                      </DropdownMenuItem>
                       <DropdownMenuItem className="cursor-pointer" onClick={() => openEdit(dept)}>
                         <Edit className="w-3.5 h-3.5 mr-2 text-slate-400" /> Chỉnh sửa
                       </DropdownMenuItem>
@@ -306,6 +311,16 @@ export function DepartmentManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Members Dialog */}
+      {selectedDept && (
+        <DeptMembersDialog
+          open={showMembersDialog}
+          onOpenChange={setShowMembersDialog}
+          departmentId={selectedDept.id}
+          departmentName={selectedDept.name}
+        />
+      )}
     </div>
   );
 }

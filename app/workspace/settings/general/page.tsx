@@ -58,26 +58,26 @@ import { DissolveWorkspaceModal } from './DissolveWorkspaceModal';
 import { WorkspaceCleanupModal } from './WorkspaceCleanupModal';
 
 const SettingsField = ({ label, description, icon: Icon, value, onSave, isLoading, children }: any) => (
-  <Card className="border-none shadow-sm bg-white overflow-hidden">
-    <CardContent className="p-6">
-      <div className="flex flex-col md:flex-row gap-6">
+  <Card className="border border-slate-200/80 shadow-sm bg-white overflow-hidden rounded-[4px]">
+    <CardContent className="p-4">
+      <div className="flex flex-col md:flex-row gap-4">
         <div className="w-full md:w-1/3">
-          <div className="flex items-center gap-2 mb-1">
-            <Icon size={16} className="text-blue-600" />
-            <h3 className="text-sm font-bold text-slate-800">{label}</h3>
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <Icon size={14} className="text-blue-600" />
+            <h3 className="text-xs font-bold text-slate-800">{label}</h3>
           </div>
-          <p className="text-xs text-slate-500 leading-relaxed">{description}</p>
+          <p className="text-[11px] text-slate-400 leading-normal">{description}</p>
         </div>
-        <div className="flex-1 flex flex-col gap-4">
+        <div className="flex-1 flex flex-col gap-3 pt-1">
           {children}
           <div className="flex justify-end">
             <Button
               size="sm"
-              className="bg-blue-600 hover:bg-blue-700 font-bold rounded-xl h-9 px-4 transition-all active:scale-95"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-[4px] h-8 text-xs px-3 shadow-none flex items-center gap-1.5"
               onClick={onSave}
               disabled={isLoading}
             >
-              {isLoading ? <Loader2 size={14} className="mr-2 animate-spin" /> : <Save size={14} className="mr-2" />}
+              {isLoading ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
               Lưu thay đổi
             </Button>
           </div>
@@ -323,13 +323,13 @@ export default function GeneralSettings() {
   };
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Thông tin Workspace</h1>
-        <p className="text-slate-500 mt-1">Cấu hình nhận diện thương hiệu và các thông tin cơ bản.</p>
+        <h1 className="text-lg font-bold text-slate-900">Thông tin Workspace</h1>
+        <p className="text-xs text-slate-500 mt-0.5">Cấu hình nhận diện thương hiệu và các thông tin cơ bản.</p>
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-4">
         {/* Workspace Identity */}
         <SettingsField
           label="Nhận diện thương hiệu"
@@ -338,21 +338,21 @@ export default function GeneralSettings() {
           onSave={() => {}} 
           isLoading={isUploadingIcon}
         >
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4">
             <div className="relative group">
-              <Avatar className="h-20 w-20 rounded-2xl border-4 border-white shadow-xl">
+              <Avatar className="h-14 w-14 rounded-[4px] border border-slate-200">
                 <AvatarImage src={iconPreview || (currentWorkspace?.icon ? getAvatarUrl(currentWorkspace.icon) : undefined)} />
-                <AvatarFallback className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white text-3xl font-bold">
+                <AvatarFallback className="bg-slate-800 text-white text-lg font-bold rounded-[4px]">
                   {currentWorkspace?.name?.substring(0, 1).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               {isUploadingIcon && (
-                <div className="absolute inset-0 rounded-2xl bg-black/40 flex items-center justify-center">
-                  <Loader2 size={24} className="animate-spin text-white" />
+                <div className="absolute inset-0 rounded-[4px] bg-black/40 flex items-center justify-center">
+                  <Loader2 size={16} className="animate-spin text-white" />
                 </div>
               )}
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1">
               <input
                 ref={iconInputRef}
                 type="file"
@@ -362,15 +362,15 @@ export default function GeneralSettings() {
               />
               <Button
                 variant="outline"
-                className="h-9 rounded-xl font-bold border-slate-200"
+                className="h-8 text-xs font-semibold border-slate-200 hover:bg-slate-50 rounded-[4px] shadow-none px-3"
                 onClick={() => iconInputRef.current?.click()}
                 disabled={isUploadingIcon}
               >
                 {isUploadingIcon ? (
-                  <><Loader2 size={14} className="mr-2 animate-spin" />Đang tải lên...</>
+                  <><Loader2 size={12} className="mr-1.5 animate-spin" />Đang tải lên...</>
                 ) : 'Thay đổi ảnh'}
               </Button>
-              <p className="text-[10px] text-slate-400">JPG, PNG, GIF hoặc WEBP. Tối đa 2MB. Khuyên dùng 256×256px.</p>
+              <p className="text-[10px] text-slate-400 leading-none mt-1">JPG, PNG, GIF hoặc WEBP. Tối đa 2MB. Khuyên dùng 256×256px.</p>
             </div>
           </div>
         </SettingsField>
@@ -381,12 +381,11 @@ export default function GeneralSettings() {
           description="Tên này sẽ hiển thị cho tất cả thành viên trong tổ chức."
           icon={Settings}
           onSave={handleSaveName}
-        // isLoading={isSavingName}
         >
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="h-11 rounded-xl border-slate-200 focus:border-blue-500"
+            className="h-8 rounded-[4px] border-slate-200 focus:border-blue-500 text-xs"
             placeholder="Nhập tên Workspace..."
           />
         </SettingsField>
@@ -397,12 +396,11 @@ export default function GeneralSettings() {
           description="Giới thiệu ngắn gọn về mục tiêu và công việc của đội ngũ này."
           icon={FileText}
           onSave={handleSaveDesc}
-        // isLoading={isSavingDesc}
         >
           <Textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="min-h-[100px] rounded-xl border-slate-200 focus:border-blue-500 resize-none"
+            className="min-h-[80px] rounded-[4px] border-slate-200 focus:border-blue-500 resize-none text-xs"
             placeholder="Ví dụ: Đội ngũ phát triển sản phẩm Mobile App..."
           />
         </SettingsField>
@@ -414,24 +412,24 @@ export default function GeneralSettings() {
           icon={LinkIcon}
           onSave={() => toast.success("Đã cập nhật slug thành công!")}
         >
-          <div className="flex gap-2">
-            <div className="h-11 flex items-center px-4 bg-slate-100 border border-slate-200 rounded-l-xl text-slate-500 text-sm font-medium">
+          <div className="flex gap-0">
+            <div className="h-8 flex items-center px-3 bg-slate-50 border border-slate-200 rounded-l-[4px] border-r-0 text-slate-500 text-xs font-semibold leading-none">
               nexus-chat.com/
             </div>
             <Input
               defaultValue={currentWorkspace?.name?.toLowerCase().replace(/\s+/g, '-')}
-              className="h-11 rounded-r-xl border-slate-200 focus:border-blue-500 border-l-0"
+              className="h-8 rounded-r-[4px] border-slate-200 focus:border-blue-500 border-l-0 text-xs rounded-l-none"
             />
           </div>
         </SettingsField>
       </div>
 
-      <Card className="border-none bg-blue-50/50 shadow-sm border border-blue-100 mb-8">
-        <CardContent className="p-6 flex gap-4">
-          <Info className="text-blue-600 shrink-0" size={24} />
-          <div className="space-y-1">
-            <p className="text-sm font-bold text-blue-900">Mẹo quản trị</p>
-            <p className="text-xs text-blue-700 leading-relaxed">
+      <Card className="border border-blue-200 bg-blue-50/50 shadow-none rounded-[4px]">
+        <CardContent className="p-4 flex gap-3">
+          <Info className="text-blue-600 shrink-0 mt-0.5" size={16} />
+          <div className="space-y-0.5">
+            <p className="text-xs font-bold text-blue-900">Mẹo quản trị</p>
+            <p className="text-[11px] text-blue-800 leading-normal">
               Bạn có thể sử dụng các mục cấu hình bên trái để thiết lập các chính sách bảo mật nâng cao hơn như
               mã hóa tin nhắn end-to-end hoặc tích hợp hệ thống đăng nhập tập trung (SSO).
             </p>
@@ -440,24 +438,24 @@ export default function GeneralSettings() {
       </Card>
 
       {/* Danger Zone */}
-      <div className="space-y-6 pt-8 border-t border-slate-200">
+      <div className="space-y-4 pt-6 border-t border-slate-200">
         <div>
-          <h2 className="text-lg font-bold text-red-600 flex items-center gap-2">
-            <AlertTriangle size={20} />
+          <h2 className="text-sm font-bold text-red-600 flex items-center gap-1.5">
+            <AlertTriangle size={16} />
             Khu vực nguy hiểm
           </h2>
-          <p className="text-slate-500 text-sm mt-1">Các hành động dưới đây có thể gây mất dữ liệu hoặc thay đổi quyền truy cập vĩnh viễn.</p>
+          <p className="text-slate-500 text-xs mt-0.5">Các hành động dưới đây có thể gây mất dữ liệu hoặc thay đổi quyền truy cập vĩnh viễn.</p>
         </div>
 
-        <Card className="border border-red-100 bg-red-50/30 shadow-none">
-          <CardContent className="p-6 flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex gap-4">
-              <div className="p-3 rounded-2xl bg-red-100 text-red-600 shrink-0 h-fit">
-                <LogOut size={24} />
+        <Card className="border border-red-200 bg-red-50/30 shadow-none rounded-[4px]">
+          <CardContent className="p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex gap-3">
+              <div className="p-2 rounded-[4px] bg-red-100 text-red-600 shrink-0 h-fit">
+                <LogOut size={16} />
               </div>
-              <div className="space-y-1">
-                <h3 className="font-bold text-red-900">Rời khỏi Workspace</h3>
-                <p className="text-xs text-red-700/70 leading-relaxed max-w-md">
+              <div className="space-y-0.5">
+                <h3 className="font-bold text-xs text-red-900">Rời khỏi Workspace</h3>
+                <p className="text-[11px] text-red-800/80 leading-normal max-w-md">
                   Bạn sẽ không còn nhìn thấy các tin nhắn và kênh của Workspace này.
                   {isOwner ? " Vì bạn là OWNER, hệ thống sẽ yêu cầu chuyển quyền sở hữu trước khi rời đi." : " Để quay lại, bạn cần được quản trị viên mời lại."}
                 </p>
@@ -465,11 +463,11 @@ export default function GeneralSettings() {
             </div>
             <Button
               variant="outline"
-              className="border-red-200 text-red-600 hover:bg-red-600 hover:text-white font-bold rounded-xl h-11 px-6 whitespace-nowrap transition-all active:scale-95"
+              className="border-red-200 text-red-600 hover:bg-red-600 hover:text-white font-semibold rounded-[4px] h-8 text-xs px-4 whitespace-nowrap"
               onClick={handleLeaveWorkspace}
               disabled={isLeaving}
             >
-              {isLeaving ? <Loader2 size={16} className="mr-2 animate-spin" /> : <LogOut size={16} className="mr-2" />}
+              {isLeaving ? <Loader2 size={12} className="mr-1 animate-spin" /> : <LogOut size={12} className="mr-1" />}
               Rời ngay lập tức
             </Button>
           </CardContent>
@@ -477,39 +475,39 @@ export default function GeneralSettings() {
 
         {isOwner && (
           <>
-            <Card className="border border-amber-100 bg-amber-50/30 shadow-none">
-              <CardContent className="p-6 flex flex-col md:flex-row items-center justify-between gap-6">
-                <div className="flex gap-4">
-                  <div className="p-3 rounded-2xl bg-amber-100 text-amber-600 shrink-0 h-fit">
-                    <Crown size={24} />
+            <Card className="border border-amber-200 bg-amber-50/30 shadow-none rounded-[4px]">
+              <CardContent className="p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="flex gap-3">
+                  <div className="p-2 rounded-[4px] bg-amber-100 text-amber-600 shrink-0 h-fit">
+                    <Crown size={16} />
                   </div>
-                  <div className="space-y-1">
-                    <h3 className="font-bold text-amber-900">Chuyển quyền sở hữu</h3>
-                    <p className="text-xs text-amber-700/70 leading-relaxed max-w-md">
+                  <div className="space-y-0.5">
+                    <h3 className="font-bold text-xs text-amber-900">Chuyển quyền sở hữu</h3>
+                    <p className="text-[11px] text-amber-800/80 leading-normal max-w-md">
                       Chuyển quyền OWNER cho một thành viên khác. Bạn sẽ trở thành ADMIN sau khi hoàn tất.
                     </p>
                   </div>
                 </div>
                 <Button
                   variant="outline"
-                  className="border-amber-200 text-amber-600 hover:bg-amber-600 hover:text-white font-bold rounded-xl h-11 px-6 whitespace-nowrap transition-all active:scale-95"
+                  className="border-amber-200 text-amber-700 hover:bg-amber-600 hover:text-white font-semibold rounded-[4px] h-8 text-xs px-4 whitespace-nowrap"
                   onClick={() => setIsSelectingSuccessor(true)}
                 >
-                  <Crown size={16} className="mr-2" />
+                  <Crown size={12} className="mr-1" />
                   Chuyển quyền
                 </Button>
               </CardContent>
             </Card>
 
-            <Card className="border border-red-200 bg-red-100/20 shadow-none">
-              <CardContent className="p-6 flex flex-col md:flex-row items-center justify-between gap-6">
-                <div className="flex gap-4">
-                  <div className="p-3 rounded-2xl bg-red-200 text-red-700 shrink-0 h-fit">
-                    <AlertTriangle size={24} />
+            <Card className="border border-red-200 bg-red-100/20 shadow-none rounded-[4px]">
+              <CardContent className="p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="flex gap-3">
+                  <div className="p-2 rounded-[4px] bg-red-200 text-red-700 shrink-0 h-fit">
+                    <AlertTriangle size={16} />
                   </div>
-                  <div className="space-y-1">
-                    <h3 className="font-bold text-red-900">Giải tán Workspace</h3>
-                    <p className="text-xs text-red-800/70 leading-relaxed max-w-md">
+                  <div className="space-y-0.5">
+                    <h3 className="font-bold text-xs text-red-900">Giải tán Workspace</h3>
+                    <p className="text-[11px] text-red-800/80 leading-normal max-w-md">
                       Toàn bộ dữ liệu, kênh và tin nhắn sẽ bị xóa hoặc lưu trữ.
                       Hành động này <span className="font-bold">không thể hoàn tác</span>.
                     </p>
@@ -517,10 +515,10 @@ export default function GeneralSettings() {
                 </div>
                 <Button
                   variant="destructive"
-                  className="bg-red-600 hover:bg-red-700 font-bold rounded-xl h-11 px-6 whitespace-nowrap transition-all active:scale-95 shadow-lg shadow-red-200"
+                  className="bg-red-600 hover:bg-red-700 text-white font-semibold rounded-[4px] h-8 text-xs px-4 whitespace-nowrap"
                   onClick={handleDissolve}
                 >
-                  <AlertTriangle size={16} className="mr-2" />
+                  <AlertTriangle size={12} className="mr-1" />
                   Giải tán ngay
                 </Button>
               </CardContent>
@@ -540,31 +538,31 @@ export default function GeneralSettings() {
       />
 
       <Dialog open={isSelectingSuccessor} onOpenChange={setIsSelectingSuccessor}>
-        <DialogContent className="sm:max-w-[520px] rounded-3xl p-6 border-none shadow-2xl">
-          <DialogHeader className="mb-4">
-            <DialogTitle className="text-xl font-bold text-slate-900">Chọn người kế nhiệm</DialogTitle>
-            <DialogDescription className="text-slate-500">
+        <DialogContent className="sm:max-w-md rounded-[4px] p-4 border border-slate-200">
+          <DialogHeader className="mb-2">
+            <DialogTitle className="text-sm font-bold text-slate-900">Chọn người kế nhiệm</DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
               Vui lòng chọn một thành viên từ danh sách dưới đây để chuyển quyền OWNER.
               Sau khi chuyển quyền, bạn sẽ trở thành ADMIN.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
-            <div className="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar space-y-2">
+          <div className="space-y-3">
+            <div className="max-h-[300px] overflow-y-auto pr-2 custom-scrollbar space-y-2 no-scrollbar">
               {isLoadingMembers ? (
-                <div className="py-10 text-center space-y-3">
-                  <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto" />
-                  <p className="text-sm text-slate-500 font-medium">Đang tải danh sách thành viên...</p>
+                <div className="py-8 text-center space-y-2">
+                  <Loader2 className="w-6 h-6 animate-spin text-blue-600 mx-auto" />
+                  <p className="text-xs text-slate-400 font-semibold">Đang tải danh sách thành viên...</p>
                 </div>
               ) : membersError ? (
-                <div className="py-10 text-center space-y-2">
-                  <p className="text-sm text-red-500 font-medium">Không thể tải danh sách thành viên</p>
+                <div className="py-8 text-center space-y-2">
+                  <p className="text-xs text-red-500 font-semibold">Không thể tải danh sách thành viên</p>
                   <Button variant="ghost" size="sm" onClick={() => window.location.reload()}>Thử lại</Button>
                 </div>
               ) : (membersData as any)?.items?.filter((m: any) => m.userId && m.userId !== currentUser?.id).length === 0 ? (
-                <div className="py-10 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                  <Users className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                  <p className="text-sm text-slate-500 font-medium">Không tìm thấy thành viên nào khác</p>
+                <div className="py-8 text-center bg-slate-50 rounded-[4px] border border-dashed border-slate-200">
+                  <Users className="w-6 h-6 text-slate-300 mx-auto mb-1.5" />
+                  <p className="text-xs text-slate-500 font-semibold">Không tìm thấy thành viên nào khác</p>
                 </div>
               ) : (
                 (membersData as any)?.items
@@ -583,23 +581,25 @@ export default function GeneralSettings() {
                         setIsSelectingSuccessor(false);
                         setIsTransferModalOpen(true);
                       }}
-                      className="flex items-center gap-4 p-4 rounded-2xl hover:bg-blue-50/50 cursor-pointer border border-slate-100 hover:border-blue-200 transition-all group active:scale-[0.98]"
+                      className="flex items-center gap-3 p-3 rounded-[4px] hover:bg-slate-100 cursor-pointer border border-slate-200/60 transition-colors group"
                     >
-                      <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
+                      <Avatar className="h-9 w-9 rounded-[4px] border border-slate-200">
                         <AvatarImage src={member.user?.avatar} />
-                        <AvatarFallback className="bg-blue-100 text-blue-700 font-bold">
+                        <AvatarFallback className="bg-blue-100 text-blue-700 font-bold text-xs rounded-[4px]">
                           {member.user?.name?.[0].toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-slate-900 truncate">{member.user?.name}</p>
-                        <p className="text-xs text-slate-500 truncate">{member.user?.email}</p>
-                        <Badge variant="secondary" className="mt-1 text-[9px] font-bold uppercase tracking-wider bg-slate-100 text-slate-600 border-none">
-                          {member.role}
-                        </Badge>
+                        <p className="text-xs font-bold text-slate-900 truncate leading-normal">{member.user?.name}</p>
+                        <p className="text-[10px] text-slate-500 truncate leading-none mt-0.5">{member.user?.email}</p>
+                        <div className="mt-1">
+                          <Badge variant="secondary" className="text-[9px] font-semibold uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200 rounded-[2px] px-1 py-0 shadow-none">
+                            {member.role}
+                          </Badge>
+                        </div>
                       </div>
-                      <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 group-hover:text-blue-600 group-hover:border-blue-200 group-hover:shadow-sm transition-all">
-                        <ChevronRight size={18} />
+                      <div className="w-6 h-6 rounded-[4px] bg-white border border-slate-200 flex items-center justify-center text-slate-400 group-hover:text-slate-900 group-hover:border-slate-300 transition-colors">
+                        <ChevronRight size={14} />
                       </div>
                     </div>
                   ))

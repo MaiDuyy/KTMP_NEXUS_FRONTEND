@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/src/redux/store';
 import {
     useGetDocumentsQuery,
     useDeleteDocumentMutation,
@@ -9,6 +11,8 @@ import {
     Document,
 } from '@/src/redux/feature/knowledgeApi';
 import { useCompileDocumentMutation } from '@/src/redux/feature/mrpApi';
+import { useGetUserWorkspacesQuery } from '@/src/redux/feature/workspaceApi';
+import { useListDepartmentsQuery } from '@/src/redux/feature/departmentApi';
 import { MarkdownEditorModal } from '@/src/features/knowledge/MarkdownEditorModal';
 import { ChunkInspectorModal } from './ChunkInspectorModal';
 import {
@@ -51,6 +55,9 @@ import {
     Sparkles,
     Cpu,
     Database,
+    Building2,
+    Globe,
+    X,
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
@@ -72,6 +79,25 @@ export function DocumentManagement() {
     const [size, setSize] = useState(10);
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+    const [filterWorkspaceId, setFilterWorkspaceId] = useState<string>('all');
+    const currentWorkspaceId = useSelector((state: RootState) => state.workspace.currentWorkspaceId);
+
+    const { data: workspaces = [] } = useGetUserWorkspacesQuery();
+    const { data: departments = [] } = useListDepartmentsQuery();
+
+    // Group workspaces client-side for visual categorization (Hierarchical Model)
+    const groupedWorkspaces = useMemo(() => {
+        const depts: any[] = [];
+        const projs: any[] = [];
+        workspaces.forEach((ws: any) => {
+            if (ws.departmentId) {
+                depts.push(ws);
+            } else {
+                projs.push(ws);
+            }
+        });
+        return { departments: depts, projects: projs };
+    }, [workspaces]);
 
     // Debounce search term to protect performance and reset page to 0 immediately
     useEffect(() => {
@@ -82,8 +108,14 @@ export function DocumentManagement() {
         return () => clearTimeout(timer);
     }, [searchTerm]);
 
-    // If there is a search term, fetch all documents for complete search. Otherwise, fetch paginated page.
-    const queryArg = debouncedSearchTerm.trim() ? undefined : { page, size };
+    // workspaceIdForQuery directly matches filterWorkspaceId to allow system-wide query
+    const workspaceIdForQuery = useMemo(() => {
+        return filterWorkspaceId;
+    }, [filterWorkspaceId]);
+
+    const queryArg = debouncedSearchTerm.trim()
+        ? (workspaceIdForQuery ? { workspaceId: workspaceIdForQuery } : undefined)
+        : { workspaceId: workspaceIdForQuery, page, size };
     const { data, isLoading, refetch } = useGetDocumentsQuery(queryArg);
 
     const [deleteDocument, { isLoading: isDeleting }] = useDeleteDocumentMutation();
@@ -98,9 +130,10 @@ export function DocumentManagement() {
     const [inspectingDoc, setInspectingDoc] = useState<Document | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const handleStartMRP = async (id: number) => {
+    const handleStartMRP = async (doc: Document) => {
         try {
-            await compileDocument({ documentId: id, workspaceId: 'default-workspace', autoApprove: false }).unwrap();
+            const targetWorkspaceId = doc.workspaceId || (workspaceIdForQuery && workspaceIdForQuery !== 'all' ? workspaceIdForQuery : null) || currentWorkspaceId || 'default-workspace';
+            await compileDocument({ documentId: doc.id, workspaceId: targetWorkspaceId, autoApprove: false }).unwrap();
             toast.success('Kích hoạt quy trình biên soạn MRP thành công! Kế hoạch mới đang chờ duyệt.');
         } catch (error: any) {
             console.error('MRP compilation error:', error);
@@ -116,13 +149,23 @@ export function DocumentManagement() {
     }, [data, isPaged]);
 
     const filteredDocuments = useMemo(() => {
-        if (!debouncedSearchTerm.trim()) return allDocs;
-        const q = debouncedSearchTerm.toLowerCase();
-        return allDocs.filter(doc =>
-            doc.fileName.toLowerCase().includes(q) ||
-            doc.userId.toLowerCase().includes(q)
-        );
-    }, [allDocs, debouncedSearchTerm]);
+        let docs = allDocs;
+        if (debouncedSearchTerm.trim()) {
+            const q = debouncedSearchTerm.toLowerCase();
+            docs = docs.filter((doc: Document) =>
+                doc.fileName.toLowerCase().includes(q) ||
+                doc.userId.toLowerCase().includes(q)
+            );
+        }
+        // Workspace filter: match by workspaceId or legacy tag
+        if (filterWorkspaceId !== 'all') {
+            docs = docs.filter((doc: Document) =>
+                doc.workspaceId === filterWorkspaceId ||
+                doc.tags?.some(t => t === `ws:${filterWorkspaceId}` || t.includes(filterWorkspaceId))
+            );
+        }
+        return docs;
+    }, [allDocs, debouncedSearchTerm, filterWorkspaceId]);
 
     // Compute paginated subset and counts
     const totalElements = debouncedSearchTerm.trim() ? filteredDocuments.length : (isPaged ? (data as any).totalElements : allDocs.length);
@@ -178,8 +221,9 @@ export function DocumentManagement() {
         const formData = new FormData();
         formData.append('file', file);
 
+        const targetUploadWorkspaceId = (workspaceIdForQuery && workspaceIdForQuery !== 'all') ? workspaceIdForQuery : (currentWorkspaceId || 'default-workspace');
         try {
-            const result = await uploadDocument({ formData, preview: previewMode, parser: parserMethod }).unwrap();
+            const result = await uploadDocument({ formData, preview: previewMode, parser: parserMethod, workspaceId: targetUploadWorkspaceId }).unwrap();
             toast.success(`Tải lên thành công: ${result.fileName}`);
             
             if (previewMode && result.markdownContent) {
@@ -226,6 +270,80 @@ export function DocumentManagement() {
                         onChange={(e) => handleSearchChange(e.target.value)}
                         className="pl-8 h-8 text-xs rounded-lg border-border shadow-sm focus-visible:ring-1 bg-background"
                     />
+                </div>
+
+                {/* Unified Workspace filter row (Flat Model) */}
+                <div className="flex items-center gap-2 flex-wrap w-full">
+                    <Filter className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                    
+                    <div className="flex items-center gap-1.5 flex-wrap overflow-x-auto no-scrollbar max-w-[85%]">
+                        <button
+                            type="button"
+                            onClick={() => setFilterWorkspaceId('all')}
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all whitespace-nowrap cursor-pointer ${
+                                filterWorkspaceId === 'all'
+                                    ? 'border-primary bg-primary/10 text-primary'
+                                    : 'border-border bg-background text-muted-foreground hover:bg-accent'
+                            }`}
+                        >
+                            <Globe className="w-3 h-3" /> Tất cả không gian
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setFilterWorkspaceId('default-workspace')}
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all whitespace-nowrap cursor-pointer ${
+                                filterWorkspaceId === 'default-workspace'
+                                    ? 'border-primary bg-primary/10 text-primary'
+                                    : 'border-border bg-background text-muted-foreground hover:bg-accent'
+                            }`}
+                        >
+                            <Database className="w-3 h-3 text-indigo-505" /> Không gian mặc định
+                        </button>
+
+                        {/* Department Workspaces */}
+                        {groupedWorkspaces.departments.map((ws: any) => (
+                            <button
+                                key={ws.id}
+                                type="button"
+                                onClick={() => setFilterWorkspaceId(filterWorkspaceId === ws.id ? 'all' : ws.id)}
+                                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-semibold border transition-all whitespace-nowrap cursor-pointer ${
+                                    filterWorkspaceId === ws.id
+                                        ? 'border-blue-400 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300'
+                                        : 'border-border bg-background text-muted-foreground hover:bg-accent'
+                                }`}
+                            >
+                                <Building2 className="w-3 h-3 text-blue-500 shrink-0" /> {ws.name}
+                            </button>
+                        ))}
+
+                        {/* Project Workspaces */}
+                        {groupedWorkspaces.projects.map((ws: any) => (
+                            <button
+                                key={ws.id}
+                                type="button"
+                                onClick={() => setFilterWorkspaceId(filterWorkspaceId === ws.id ? 'all' : ws.id)}
+                                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-semibold border transition-all whitespace-nowrap cursor-pointer ${
+                                    filterWorkspaceId === ws.id
+                                        ? 'border-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300'
+                                        : 'border-border bg-background text-muted-foreground hover:bg-accent'
+                                }`}
+                            >
+                                <Cpu className="w-3 h-3 text-emerald-500 shrink-0" /> {ws.name}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Active filter indicator */}
+                    {filterWorkspaceId !== 'all' && (
+                        <button
+                            type="button"
+                            onClick={() => setFilterWorkspaceId('all')}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 cursor-pointer hover:bg-rose-100 transition-colors ml-auto"
+                        >
+                            <X className="w-3 h-3" /> Xóa bộ lọc
+                        </button>
+                    )}
                 </div>
                 <div className="flex flex-wrap gap-2 items-center">
                     {/* Segmented Control for Parser Selection */}
@@ -309,7 +427,7 @@ export function DocumentManagement() {
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                paginatedDocs.map((doc) => {
+                                paginatedDocs.map((doc: Document) => {
                                     const status = statusConfig[doc.status as keyof typeof statusConfig] || statusConfig.PREVIEW;
                                     const StatusIcon = status.icon;
 
@@ -395,7 +513,7 @@ export function DocumentManagement() {
                                                             <Button
                                                                 variant="outline"
                                                                 size="sm"
-                                                                onClick={() => handleStartMRP(doc.id)}
+                                                                onClick={() => handleStartMRP(doc)}
                                                                 disabled={isCompiling}
                                                                 className="rounded-lg h-7 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 border-emerald-200/60 dark:border-emerald-900/40 bg-emerald-50/30 dark:bg-emerald-950/20 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-all shadow-sm flex items-center gap-1 cursor-pointer"
                                                             >
@@ -435,7 +553,7 @@ export function DocumentManagement() {
                                                                         Xem phân mảnh (Chunks)
                                                                     </DropdownMenuItem>
                                                                     <DropdownMenuItem 
-                                                                        onClick={() => handleStartMRP(doc.id)}
+                                                                        onClick={() => handleStartMRP(doc)}
                                                                         disabled={isCompiling}
                                                                         className="rounded-md text-xs gap-1.5 cursor-pointer text-emerald-600 dark:text-emerald-400 focus:text-emerald-600 dark:focus:text-emerald-450 font-semibold"
                                                                     >

@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { ModernSidebarRail } from './modern-sidebar-rail';
+import ModernSidebarRail from './modern-sidebar-rail';
 import { ModernChannelSidebar } from './modern-channel-sidebar';
 import { ModernChatArea } from './modern-chat-area';
 

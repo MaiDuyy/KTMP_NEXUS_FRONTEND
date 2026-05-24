@@ -9,8 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useIngestDocumentMutation, useAiRefactorDocumentMutation, useGetRawDocumentQuery } from '@/src/redux/feature/knowledgeApi';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { MarkdownContent } from './MarkdownContent';
 import {
     FileText,
     Loader2,
@@ -112,11 +111,11 @@ export function MarkdownEditorModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="w-full sm:max-w-[95vw] md:max-w-[90vw] lg:max-w-7xl h-[90vh] p-0 flex flex-col gap-0 overflow-hidden bg-slate-900 border-slate-800 shadow-[0_0_50px_rgba(0,0,0,0.5)] text-slate-100 rounded-md">
+            <DialogContent className="w-full sm:max-w-[95vw] md:max-w-[90vw] lg:max-w-7xl h-[90vh] p-0 flex flex-col gap-0 overflow-hidden bg-slate-900 border-slate-800 shadow-[0_0_50px_rgba(0,0,0,0.5)] text-slate-100 rounded-[4px]">
                 {/* Header */}
                 <DialogHeader className="px-4 py-2.5 border-b border-slate-800 bg-slate-950 flex flex-row items-center justify-between space-y-0">
                     <div className="flex items-center gap-2.5">
-                        <div className="p-2 rounded bg-primary/10 text-primary border border-primary/20">
+                        <div className="p-2 rounded-[4px] bg-primary/10 text-primary border border-primary/20">
                             <FileText className="w-4 h-4" />
                         </div>
                         <div>
@@ -131,13 +130,13 @@ export function MarkdownEditorModal({
 
                     <div className="flex items-center gap-3">
                         {/* View Modes */}
-                        <div className="flex items-center bg-slate-900 p-0.5 rounded-md border border-slate-800">
+                        <div className="flex items-center bg-slate-900 p-0.5 rounded-[4px] border border-slate-800">
                             <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => setViewMode('edit')}
                                 className={cn(
-                                    "rounded-sm px-2.5 py-1 h-7 text-[11px] font-semibold gap-1.5 transition-all text-slate-400 hover:text-slate-200",
+                                    "rounded-[3px] px-2.5 py-1 h-7 text-[11px] font-semibold gap-1.5 transition-all text-slate-400 hover:text-slate-200",
                                     viewMode === 'edit' && "bg-slate-800 text-white shadow-sm"
                                 )}
                             >
@@ -149,7 +148,7 @@ export function MarkdownEditorModal({
                                 size="sm"
                                 onClick={() => setViewMode('split')}
                                 className={cn(
-                                    "rounded-sm px-2.5 py-1 h-7 text-[11px] font-semibold gap-1.5 transition-all text-slate-400 hover:text-slate-200",
+                                    "rounded-[3px] px-2.5 py-1 h-7 text-[11px] font-semibold gap-1.5 transition-all text-slate-400 hover:text-slate-200",
                                     viewMode === 'split' && "bg-slate-800 text-white shadow-sm"
                                 )}
                             >
@@ -161,7 +160,7 @@ export function MarkdownEditorModal({
                                 size="sm"
                                 onClick={() => setViewMode('preview')}
                                 className={cn(
-                                    "rounded-sm px-2.5 py-1 h-7 text-[11px] font-semibold gap-1.5 transition-all text-slate-400 hover:text-slate-200",
+                                    "rounded-[3px] px-2.5 py-1 h-7 text-[11px] font-semibold gap-1.5 transition-all text-slate-400 hover:text-slate-200",
                                     viewMode === 'preview' && "bg-slate-800 text-white shadow-sm"
                                 )}
                             >
@@ -175,7 +174,7 @@ export function MarkdownEditorModal({
                             variant="ghost" 
                             size="icon" 
                             onClick={onClose}
-                            className="rounded h-7 w-7 border border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-slate-200"
+                            className="rounded-[4px] h-7 w-7 border border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-slate-200"
                         >
                             <X className="w-3.5 h-3.5" />
                         </Button>
@@ -222,7 +221,7 @@ export function MarkdownEditorModal({
                                 <button
                                     onClick={() => setPreviewTab('markdown')}
                                     className={cn(
-                                        "px-2 py-0.5 rounded transition-colors",
+                                        "px-2 py-0.5 rounded-[4px] transition-colors",
                                         previewTab === 'markdown' ? "bg-slate-800 text-slate-200" : "hover:text-slate-300"
                                     )}
                                 >
@@ -231,68 +230,22 @@ export function MarkdownEditorModal({
                                 <button
                                     onClick={() => setPreviewTab('pdf')}
                                     className={cn(
-                                        "px-2 py-0.5 rounded transition-colors",
+                                        "px-2 py-0.5 rounded-[4px] transition-colors",
                                         previewTab === 'pdf' ? "bg-slate-800 text-slate-200" : "hover:text-slate-300"
                                     )}
                                 >
                                     Bản gốc (PDF)
                                 </button>
                             </div>
-                            <span className="flex items-center gap-1 text-[9px] text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded-sm border border-emerald-500/20 uppercase">
+                            <span className="flex items-center gap-1 text-[9px] text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded-[3px] border border-emerald-500/20 uppercase">
                                 <CheckCircle className="w-2.5 h-2.5" /> Layout-Aware
                             </span>
                         </div>
                         <div className="flex-1 overflow-y-auto select-text pr-2 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent flex flex-col bg-slate-950">
                             {previewTab === 'markdown' ? (
-                                <div className="p-5 prose prose-invert max-w-none text-slate-300 select-text pb-8">
+                                <div className="p-5 select-text pb-8">
                                 {markdown ? (
-                                    <ReactMarkdown
-                                        remarkPlugins={[remarkGfm]}
-                                        components={{
-                                            h1: ({ node, ...props }) => <h1 className="text-xl font-extrabold text-white mt-4 mb-2.5 border-b border-slate-800 pb-1.5" {...props} />,
-                                            h2: ({ node, ...props }) => <h2 className="text-lg font-bold text-slate-100 mt-3.5 mb-2 border-b border-slate-900/50 pb-0.5" {...props} />,
-                                            h3: ({ node, ...props }) => <h3 className="text-base font-bold text-slate-200 mt-3 mb-1.5" {...props} />,
-                                            h4: ({ node, ...props }) => <h4 className="text-sm font-semibold text-slate-300 mt-2 mb-1" {...props} />,
-                                            p: ({ node, ...props }) => <p className="text-slate-400 text-xs leading-relaxed mb-3 text-justify" {...props} />,
-                                            
-                                            ul: ({ node, ...props }) => <ul className="list-disc pl-4 space-y-1 mb-3 text-slate-400 text-xs" {...props} />,
-                                            ol: ({ node, ...props }) => <ol className="list-decimal pl-4 space-y-1 mb-3 text-slate-400 text-xs" {...props} />,
-                                            li: ({ node, ...props }) => <li className="pl-0.5 text-slate-400 text-xs" {...props} />,
-                                            
-                                            blockquote: ({ node, ...props }) => (
-                                                <blockquote className="border-l-2 border-primary/40 pl-3 italic my-3 text-slate-500 bg-slate-900/40 py-2 pr-2 rounded-r-md text-xs" {...props} />
-                                            ),
-                                            
-                                            table: ({ node, ...props }) => (
-                                                <div className="overflow-x-auto my-4 border border-slate-800 rounded-md shadow bg-slate-900/30">
-                                                    <table className="min-w-full divide-y divide-slate-800 text-[11px] text-left" {...props} />
-                                                </div>
-                                            ),
-                                            thead: ({ node, ...props }) => <thead className="bg-slate-900/80 font-semibold text-slate-300" {...props} />,
-                                            tbody: ({ node, ...props }) => <tbody className="divide-y divide-slate-800 bg-transparent" {...props} />,
-                                            tr: ({ node, ...props }) => <tr className="hover:bg-slate-800/20 transition-colors" {...props} />,
-                                            th: ({ node, ...props }) => <th className="px-3 py-2 font-semibold border-b border-slate-800 bg-slate-900 text-slate-250" {...props} />,
-                                            td: ({ node, ...props }) => <td className="px-3 py-2 text-slate-350 border-b border-slate-850 font-medium" {...props} />,
-                                            
-                                            code({ node, className, children, ...props }) {
-                                                const match = /language-(\w+)/.exec(className || '');
-                                                const isInline = !match;
-                                                return isInline ? (
-                                                    <code className="bg-slate-800 text-slate-200 px-1 py-0.5 rounded font-mono text-[10px]" {...props}>
-                                                        {children}
-                                                    </code>
-                                                ) : (
-                                                    <pre className="bg-slate-950 text-slate-300 p-3 rounded-md font-mono text-[11px] overflow-x-auto shadow-inner my-3 relative border border-slate-800">
-                                                        <code className={className} {...props}>
-                                                            {children}
-                                                        </code>
-                                                    </pre>
-                                                );
-                                            }
-                                        }}
-                                    >
-                                        {markdown}
-                                    </ReactMarkdown>
+                                    <MarkdownContent content={markdown} isInverted={true} />
                                 ) : (
                                     <div className="flex flex-col items-center justify-center h-40 text-slate-600 gap-1.5">
                                         <AlertTriangle className="w-6 h-6 opacity-20" />
@@ -327,7 +280,7 @@ export function MarkdownEditorModal({
 
                 {/* Footer Controls */}
                 <div className="px-4 py-2.5 border-t border-slate-800 bg-slate-950 flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-[11px] text-amber-500 bg-amber-500/5 border border-amber-500/20 px-3 py-1.5 rounded-md max-w-xl">
+                    <div className="flex items-center gap-2 text-[11px] text-amber-500 bg-amber-500/5 border border-amber-500/20 px-3 py-1.5 rounded-[4px] max-w-xl">
                         <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
                         <span>Kiểm duyệt các đề mục H1, H2, H3 để đảm bảo cấu trúc cây phân cấp (Tree Hierarchy) chính xác.</span>
                     </div>
@@ -336,7 +289,7 @@ export function MarkdownEditorModal({
                         <Button
                             variant="outline"
                             onClick={handleAiRefactor}
-                            className="rounded-md border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary h-8 text-xs px-3 font-semibold transition-all"
+                            className="rounded-[4px] border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary h-8 text-xs px-3 font-semibold transition-all"
                             disabled={isIngesting || isRefactoring}
                         >
                             {isRefactoring ? (
@@ -349,14 +302,14 @@ export function MarkdownEditorModal({
                         <Button
                             variant="outline"
                             onClick={onClose}
-                            className="rounded-md border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white h-8 text-xs px-3"
+                            className="rounded-[4px] border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white h-8 text-xs px-3"
                             disabled={isIngesting || isRefactoring}
                         >
                             Hủy bỏ
                         </Button>
                         <Button
                             onClick={handleSaveAndIngest}
-                            className="rounded-md bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm gap-1.5 h-8 px-4 text-xs"
+                            className="rounded-[4px] bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm gap-1.5 h-8 px-4 text-xs"
                             disabled={isIngesting || isRefactoring}
                         >
                             {isIngesting ? (

@@ -34,7 +34,8 @@ export const departmentApi = apiSlice.injectEndpoints({
 
     getDepartment: builder.query<Department, string>({
       query: (id) => `/departments/${id}`,
-      transformResponse: (response: { success: boolean; department: Department }) => response.department,
+      transformResponse: (response: { success: boolean; department?: Department; data?: Department }) =>
+        response.department || response.data || (response as any),
       providesTags: (_r, _e, id) => [{ type: 'Departments', id }],
     }),
 
@@ -66,11 +67,11 @@ export const departmentApi = apiSlice.injectEndpoints({
       invalidatesTags: ['Departments'],
     }),
 
-    addDepartmentMember: builder.mutation<void, { departmentId: string; userId: string }>({
-      query: ({ departmentId, userId }) => ({
+    addDepartmentMember: builder.mutation<void, { departmentId: string; userId: string; role?: string }>({
+      query: ({ departmentId, userId, role }) => ({
         url: `/departments/${departmentId}/members`,
         method: 'POST',
-        body: { userId },
+        body: { userId, role },
       }),
       invalidatesTags: ['Departments'],
     }),

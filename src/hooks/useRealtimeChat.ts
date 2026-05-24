@@ -59,6 +59,12 @@ const RealtimeChatContext = createContext<RealtimeChatContextValue>({
 
 export function RealtimeChatProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const routerRef = useRef(router);
+
+  useEffect(() => {
+    routerRef.current = router;
+  }, [router]);
+
   const dispatch = useDispatch<any>();
   const { data: workspaces } = useGetUserWorkspacesQuery(undefined, {
     skip: !useSelector((state: any) => state.auth?.isAuthenticated)
@@ -182,7 +188,7 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
                        } else {
                          dispatch(setWorkspace(null));
                        }
-                       router.push(`/chat/${data.chatId}`);
+                       routerRef.current.push(`/chat/${data.chatId}`);
                      }
                    }
                });
@@ -396,7 +402,7 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
               action: {
                 label: 'Xem ngay',
                 onClick: () => {
-                  router.push(`/chat/${data.chatId}`);
+                  routerRef.current.push(`/chat/${data.chatId}`);
                 }
               }
             });
@@ -425,7 +431,7 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
               action: {
                 label: 'Xem ngay',
                 onClick: () => {
-                  router.push(`/chat/${data.chatId}`);
+                  routerRef.current.push(`/chat/${data.chatId}`);
                 }
               }
             });
@@ -644,7 +650,7 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
         // If user is currently in this chat, redirect to home
         if (typeof window !== 'undefined' && window.location.pathname.includes(data.chatId)) {
           toast.error("Nhóm này đã bị giải tán bởi trưởng nhóm.");
-          router.replace("/chat"); 
+          routerRef.current.replace("/chat"); 
         }
       },
 
@@ -658,7 +664,7 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
           if (!data.isSelfLeave) {
             toast.error("Bạn đã bị xóa khỏi nhóm chat.");
           }
-          router.replace("/chat");
+          routerRef.current.replace("/chat");
         }
       },
 
@@ -819,10 +825,37 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
       onDocumentStatusChanged: (data) => {
         console.log("[RealtimeChat] 📄 Document status changed:", data);
         dispatch(apiSlice.util.invalidateTags(["Documents"]));
-        if (data.status === 'READY') {
+        if (data.status === 'READY' || data.status === 'COMPLETED') {
            toast.success(`Tài liệu #${data.documentId} đã được xử lý xong và đưa hướng vào Vector Database!`);
         } else if (data.status === 'ERROR' || data.status === 'FAILED') {
            toast.error(`Xử lý tài liệu #${data.documentId} thất bại.`);
+        }
+      },
+
+      onCompilationPlanStatusChanged: (data) => {
+        console.log("[RealtimeChat] 📋 Compilation plan status changed:", data);
+        dispatch(apiSlice.util.invalidateTags(["Tasks"]));
+        if (data.status === 'PENDING_REVIEW') {
+           toast.info(`Có kế hoạch biên soạn mới cần phê duyệt trong không gian làm việc!`);
+        } else if (data.status === 'APPROVED') {
+           toast.success(`Kế hoạch biên soạn #${data.planId} đã được phê duyệt.`);
+        } else if (data.status === 'DONE') {
+           toast.success(`Kế hoạch biên soạn #${data.planId} đã hoàn thành việc tạo bản thảo.`);
+        }
+      },
+
+      onWikiDraftStatusChanged: (data) => {
+        console.log("[RealtimeChat] 📄 Wiki draft status changed:", data);
+        dispatch(apiSlice.util.invalidateTags(["Tasks"]));
+        if (data.status === 'APPROVED') {
+           dispatch(apiSlice.util.invalidateTags(["Documents"]));
+           toast.success(`Bản thảo Wiki "${data.title}" đã được duyệt và xuất bản chính thức!`);
+        } else if (data.status === 'REJECTED') {
+           toast.error(`Bản thảo Wiki "${data.title}" đã bị từ chối.`);
+        } else if (data.status === 'NEEDS_REVISION') {
+           toast.warning(`Bản thảo Wiki "${data.title}" cần được chỉnh sửa lại.`);
+        } else if (data.status === 'PENDING') {
+           toast.info(`Bản thảo Wiki "${data.title}" mới đã được đề xuất và đang chờ duyệt.`);
         }
       },
 
@@ -843,7 +876,7 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
           duration: 10000,
           action: {
             label: "Tham gia ngay",
-            onClick: () => router.push(`/invite?token=${data.token}`)
+            onClick: () => routerRef.current.push(`/invite?token=${data.token}`)
           }
         });
         
@@ -859,9 +892,10 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
         dispatch(apiSlice.util.invalidateTags(["Workspaces"] as any));
 
         // If user is currently in this workspace, redirect to dashboard
-        const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
-        if (currentPath.includes(`/chat`) && currentPath.includes(data.workspaceId)) {
-           router.replace("/dashboard");
+        const currentWorkspaceId = store.getState().workspace?.currentWorkspaceId;
+        if (currentWorkspaceId === data.workspaceId) {
+           dispatch(setWorkspace(null));
+           routerRef.current.replace("/chat");
         }
       },
 
@@ -874,7 +908,12 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
 
       onWorkspaceMemberLeft: (data) => {
         console.log("[RealtimeChat] 🚪 Member removed from workspace:", data.workspaceId);
-        dispatch(apiSlice.util.invalidateTags(["Workspaces"] as any));
+        dispatch(apiSlice.util.invalidateTags([
+          "Workspaces", 
+          { type: "Chats" }, 
+          { type: "Chats", id: "LIST" }, 
+          "Chats"
+        ] as any));
 
         // If user is the one removed and currently in this workspace, redirect
         const authUser = store.getState().auth?.user;
@@ -885,21 +924,58 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
             toast.info("Bạn đã rời khỏi không gian làm việc.");
           }
           
-          const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
-          if (currentPath.includes(`/chat`) && currentPath.includes(data.workspaceId)) {
-            router.replace("/dashboard");
+          const currentWorkspaceId = store.getState().workspace?.currentWorkspaceId;
+          if (currentWorkspaceId === data.workspaceId) {
+            dispatch(setWorkspace(null));
+            routerRef.current.replace("/chat");
           }
         }
       },
 
       onWorkspaceMemberUpdated: (data) => {
-        console.log("[RealtimeChat] 👥 Workspace member updated:", data.workspaceId);
+        console.log("[RealtimeChat] 👥 Workspace member updated:", data.workspaceId, data.action, data.userId);
+        
         // Refresh workspace members list if needed
         dispatch(apiSlice.util.invalidateTags([
           "Workspaces", 
           "WorkspaceMembers" as any, 
           { type: "Workspaces" as any, id: data.workspaceId }
         ]));
+
+        if (data.action === 'removed') {
+          // Invalidate chats list so that sidebar updates and hides the DM with B
+          dispatch(apiSlice.util.invalidateTags([
+            { type: "Chats" }, 
+            { type: "Chats", id: "LIST" }, 
+            "Chats"
+          ] as any));
+
+          // If current user is looking at the DM with the removed user B, redirect to /chat
+          if (typeof window !== 'undefined') {
+            const currentPath = window.location.pathname;
+            const chatMatch = currentPath.match(/\/chat\/([a-zA-Z0-9_-]+)/);
+            const currentChatId = chatMatch ? chatMatch[1] : null;
+
+            if (currentChatId) {
+              const state = store.getState();
+              const chatCache = chatApi.endpoints.getChatById.select(currentChatId)(state);
+              const chatData = chatCache?.data;
+
+              if (chatData && chatData.chat && chatData.chat.isGroup === false) {
+                const hasRemovedUser = chatData.chat.participants.some(
+                  (p: any) => p.accountId === data.userId
+                );
+                if (hasRemovedUser) {
+                  // Invalidate specific chat query to trigger refetch (which returns hidden/blocked status)
+                  dispatch(apiSlice.util.invalidateTags([{ type: "Chats", id: currentChatId }]));
+                  toast.error("Thành viên này đã rời khỏi không gian làm việc.");
+                  routerRef.current.replace("/chat");
+                }
+              }
+            }
+          }
+        }
+
         if (data.action === 'role_updated') {
            const authUser = store.getState().auth?.user;
            if (data.userId === authUser?.id) {
@@ -931,9 +1007,10 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
         
         dispatch(apiSlice.util.invalidateTags(["Workspaces"] as any));
 
-        const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
-        if (currentPath.includes(`/chat`) && currentPath.includes(data.workspaceId)) {
-           router.replace("/dashboard");
+        const currentWorkspaceId = store.getState().workspace?.currentWorkspaceId;
+        if (currentWorkspaceId === data.workspaceId) {
+           dispatch(setWorkspace(null));
+           routerRef.current.replace("/dashboard");
         }
       },
 

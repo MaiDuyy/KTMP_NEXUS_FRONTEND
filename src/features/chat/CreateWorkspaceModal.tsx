@@ -24,6 +24,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateWorkspaceMutation } from "@/src/redux/feature/workspaceApi";
+import { useListDepartmentsQuery } from "@/src/redux/feature/departmentApi";
 import { toast } from "sonner";
 import { Loader2, Globe, Lock } from "lucide-react";
 import { useDispatch } from "react-redux";
@@ -34,6 +35,7 @@ const formSchema = z.object({
   slug: z.string().min(2, "Slug phải có ít nhất 2 ký tự").regex(/^[a-z0-9-]+$/, "Slug chỉ gồm chữ thường, số và dấu gạch ngang"),
   description: z.string().optional(),
   isPublic: z.boolean().default(true),
+  departmentId: z.string().optional(),
 });
 
 interface CreateWorkspaceModalProps {
@@ -43,6 +45,7 @@ interface CreateWorkspaceModalProps {
 
 export function CreateWorkspaceModal({ isOpen, onClose }: CreateWorkspaceModalProps) {
   const [createWorkspace, { isLoading }] = useCreateWorkspaceMutation();
+  const { data: departments = [] } = useListDepartmentsQuery(undefined, { skip: !isOpen });
   const dispatch = useDispatch();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -52,6 +55,7 @@ export function CreateWorkspaceModal({ isOpen, onClose }: CreateWorkspaceModalPr
       slug: "",
       description: "",
       isPublic: true,
+      departmentId: "",
     },
   });
 
@@ -68,7 +72,11 @@ export function CreateWorkspaceModal({ isOpen, onClose }: CreateWorkspaceModalPr
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      const result = await createWorkspace(values).unwrap();
+      const payload = {
+        ...values,
+        departmentId: values.departmentId || undefined,
+      };
+      const result = await createWorkspace(payload).unwrap();
       toast.success(`Đã tạo workspace "${result.name}" thành công!`);
       dispatch(setWorkspace(result.id)); // Tự động chuyển sang workspace mới
       onClose();
@@ -119,6 +127,30 @@ export function CreateWorkspaceModal({ isOpen, onClose }: CreateWorkspaceModalPr
                       <span className="text-muted-foreground text-sm">workspace/</span>
                       <Input placeholder="my-awesome-team" {...field} />
                     </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="departmentId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Phòng ban trực thuộc</FormLabel>
+                  <FormControl>
+                    <select
+                      {...field}
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <option value="">-- Không trực thuộc (Dự án độc lập) --</option>
+                      {departments.map((dept) => (
+                        <option key={dept.id} value={dept.id}>
+                          {dept.name}
+                        </option>
+                      ))}
+                    </select>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
