@@ -2,12 +2,12 @@
 // API endpoints cho Notification system
 
 import { apiSlice } from "../api/baseApi";
-import { NotificationsResponse } from "@/src/type/chat.types";
+import { NotificationsResponse, NotificationType } from "@/src/type/chat.types";
 
 export const notificationApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
-    // Lấy thông báo
-    getNotifications: builder.query<NotificationsResponse, { limit?: number; cursor?: string; unreadOnly?: boolean } | void>({
+    // Lấy thông báo (có filter theo type/unreadOnly)
+    getNotifications: builder.query<NotificationsResponse, { limit?: number; cursor?: string; unreadOnly?: boolean; type?: NotificationType } | void>({
       query: (params) => ({
         url: "/notifications",
         params: params || {},
@@ -21,26 +21,26 @@ export const notificationApi = apiSlice.injectEndpoints({
       providesTags: ["Notifications"],
     }),
 
-    // Đánh dấu đã đọc
-    markNotificationAsRead: builder.mutation<{ message: string }, string>({
+    // Đánh dấu đã đọc (PATCH — khớp với backend)
+    markNotificationAsRead: builder.mutation<{ success: boolean }, string>({
       query: (notificationId) => ({
         url: `/notifications/${notificationId}/read`,
-        method: "PUT",
+        method: "PATCH",
       }),
       invalidatesTags: ["Notifications"],
     }),
 
-    // Đánh dấu tất cả đã đọc
-    markAllAsRead: builder.mutation<{ message: string }, void>({
+    // Đánh dấu tất cả đã đọc (PATCH — khớp với backend)
+    markAllAsRead: builder.mutation<{ success: boolean; count: number }, void>({
       query: () => ({
         url: "/notifications/read-all",
-        method: "PUT",
+        method: "PATCH",
       }),
       invalidatesTags: ["Notifications"],
     }),
 
-    // Xóa thông báo
-    deleteNotification: builder.mutation<{ message: string }, string>({
+    // Xóa một thông báo
+    deleteNotification: builder.mutation<{ success: boolean }, string>({
       query: (notificationId) => ({
         url: `/notifications/${notificationId}`,
         method: "DELETE",
@@ -48,10 +48,28 @@ export const notificationApi = apiSlice.injectEndpoints({
       invalidatesTags: ["Notifications"],
     }),
 
-    // Xóa tất cả
-    clearAllNotifications: builder.mutation<{ message: string }, void>({
+    // Xóa tất cả thông báo
+    clearAllNotifications: builder.mutation<{ success: boolean; count: number }, void>({
       query: () => ({
         url: "/notifications",
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Notifications"],
+    }),
+
+    // Xóa thông báo đã đọc
+    clearReadNotifications: builder.mutation<{ success: boolean; count: number }, void>({
+      query: () => ({
+        url: "/notifications/read",
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Notifications"],
+    }),
+
+    // Xóa thông báo theo danh mục/type
+    deleteNotificationsByCategory: builder.mutation<{ success: boolean; count: number }, NotificationType>({
+      query: (type) => ({
+        url: `/notifications/category/${type}`,
         method: "DELETE",
       }),
       invalidatesTags: ["Notifications"],
@@ -66,4 +84,6 @@ export const {
   useMarkAllAsReadMutation,
   useDeleteNotificationMutation,
   useClearAllNotificationsMutation,
+  useClearReadNotificationsMutation,
+  useDeleteNotificationsByCategoryMutation,
 } = notificationApi;

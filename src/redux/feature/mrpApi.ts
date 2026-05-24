@@ -6,6 +6,7 @@ import { apiSlice } from '../api/baseApi';
 export interface SourceCompilationPlan {
   id: number;
   sourceDocumentId: number;
+  sourceDocumentName?: string;
   planJson: string;
   status: 'PENDING_REVIEW' | 'APPROVED' | 'DONE' | string;
   reviewedBy?: string;
@@ -67,8 +68,8 @@ export const mrpApi = apiSlice.injectEndpoints({
   overrideExisting: true,
   endpoints: (builder) => ({
     // Khởi tạo quy trình compile MRP
-    compileDocument: builder.mutation<SourceCompilationPlan, { documentId: number; workspaceId?: string; autoApprove?: boolean }>({
-      query: ({ documentId, workspaceId = 'default-workspace', autoApprove = false }) => ({
+    compileDocument: builder.mutation<SourceCompilationPlan, { documentId: number; workspaceId: string; autoApprove?: boolean }>({
+      query: ({ documentId, workspaceId, autoApprove = false }) => ({
         url: `/mrp/compile?documentId=${documentId}&workspaceId=${workspaceId}&autoApprove=${autoApprove}`,
         method: 'POST',
       }),
@@ -76,8 +77,8 @@ export const mrpApi = apiSlice.injectEndpoints({
     }),
 
     // Phê duyệt Kế hoạch biên soạn
-    approvePlan: builder.mutation<{ message: string }, { planId: number; workspaceId?: string; runAutoApproveDrafts?: boolean }>({
-      query: ({ planId, workspaceId = 'default-workspace', runAutoApproveDrafts = false }) => ({
+    approvePlan: builder.mutation<{ message: string }, { planId: number; workspaceId: string; runAutoApproveDrafts?: boolean }>({
+      query: ({ planId, workspaceId, runAutoApproveDrafts = false }) => ({
         url: `/mrp/plan/${planId}/approve?workspaceId=${workspaceId}&runAutoApproveDrafts=${runAutoApproveDrafts}`,
         method: 'POST',
       }),
@@ -94,6 +95,24 @@ export const mrpApi = apiSlice.injectEndpoints({
         return url;
       },
       providesTags: ['Tasks'],
+    }),
+
+    // Lấy bản thảo theo trạng thái và phạm vi
+    getDraftsByStatus: builder.query<WikiPageDraft[], { status?: string; mine?: boolean; limit?: number }>({
+      query: ({ status = 'pending', mine = false, limit = 200 }) => {
+        const params = new URLSearchParams();
+        params.set('status', status);
+        params.set('limit', String(limit));
+        if (mine) params.set('mine', 'true');
+        return `/mrp/drafts?${params.toString()}`;
+      },
+      providesTags: ['Tasks'],
+    }),
+
+    // Lấy chi tiết một bản thảo theo ID
+    getDraftById: builder.query<WikiPageDraft, number>({
+      query: (draftId) => `/mrp/drafts/${draftId}`,
+      providesTags: (_r, _e, id) => [{ type: 'Tasks', id }],
     }),
 
     // Lấy bản thảo theo workspace
@@ -131,6 +150,30 @@ export const mrpApi = apiSlice.injectEndpoints({
       invalidatesTags: ['Tasks'],
     }),
 
+    // Rút lại bản thảo (tác giả)
+    withdrawDraft: builder.mutation<WikiPageDraft, number>({
+      query: (draftId) => ({
+        url: `/mrp/drafts/${draftId}/withdraw`,
+        method: 'POST',
+      }),
+      invalidatesTags: ['Tasks'],
+    }),
+
+    // Phê duyệt hàng loạt bản thảo
+    bulkApproveDrafts: builder.mutation<{
+      approved: number;
+      skipped: number;
+      errored: number;
+      results: Array<{ draft_id: number; status: string; message: string | null }>;
+    }, { draft_ids: number[]; allow_conflict?: boolean }>({
+      query: (body) => ({
+        url: '/mrp/drafts/bulk-approve',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['Tasks', 'Documents'],
+    }),
+
     // Lấy danh sách trang Wiki chính thức (Hỗ trợ phân trang server-side)
     getWikiPages: builder.query<PaginatedResponse<WikiPage> | WikiPage[], { workspaceId?: string; page?: number; size?: number }>({
       query: ({ workspaceId = 'default-workspace', page, size } = {}) => {
@@ -161,14 +204,20 @@ export const mrpApi = apiSlice.injectEndpoints({
       providesTags: (_r, _e, id) => [{ type: 'Documents', id }],
     }),
 
-    // Lấy danh sách tất cả các kế hoạch biên soạn (Hỗ trợ phân trang server-side)
-    getCompilationPlans: builder.query<PaginatedResponse<SourceCompilationPlan> | SourceCompilationPlan[], { page?: number; size?: number } | void>({
+    // Lấy danh sách tất cả các kế hoạch biên soạn theo workspace (Hỗ trợ phân trang server-side)
+    getCompilationPlans: builder.query<PaginatedResponse<SourceCompilationPlan> | SourceCompilationPlan[], { workspaceId?: string; page?: number; size?: number } | void>({
       query: (params) => {
         let url = '/mrp/plans';
-        if (params && params.page !== undefined && params.size !== undefined) {
-          url += `?page=${params.page}&size=${params.size}`;
+        const queryParts: string[] = [];
+        if (params) {
+          if (params.workspaceId) {
+            queryParts.push(`workspaceId=${encodeURIComponent(params.workspaceId)}`);
+          }
+          if (params.page !== undefined && params.size !== undefined) {
+            queryParts.push(`page=${params.page}&size=${params.size}`);
+          }
         }
-        return url;
+        return queryParts.length ? `${url}?${queryParts.join('&')}` : url;
       },
       providesTags: ['Tasks'],
     }),
@@ -178,6 +227,15 @@ export const mrpApi = apiSlice.injectEndpoints({
       query: (planId) => `/mrp/plans/${planId}`,
       providesTags: (_r, _e, planId) => [{ type: 'Tasks', id: planId }],
     }),
+
+    // Giải mã tham chiếu hình ảnh wiki (image://<uuid>)
+    resolveWikiImages: builder.mutation<{ resolved: Record<string, string>; denied: string[] }, { ids: string[] }>({
+      query: (body) => ({
+        url: '/wiki/images/resolve',
+        method: 'POST',
+        body,
+      }),
+    }),
   }),
 });
 
@@ -186,13 +244,18 @@ export const {
   useApprovePlanMutation,
   useGetPendingDraftsQuery,
   useGetDraftsByWorkspaceQuery,
+  useGetDraftsByStatusQuery,
+  useGetDraftByIdQuery,
   useApproveDraftMutation,
   useRejectDraftMutation,
   useRequestChangesOnDraftMutation,
+  useWithdrawDraftMutation,
+  useBulkApproveDraftsMutation,
   useGetWikiPagesQuery,
   useGetWikiPagesMetadataQuery,
   useGetWikiPageBySlugQuery,
   useGetWikiPageByIdQuery,
   useGetCompilationPlansQuery,
   useGetPlanByIdQuery,
+  useResolveWikiImagesMutation,
 } = mrpApi;

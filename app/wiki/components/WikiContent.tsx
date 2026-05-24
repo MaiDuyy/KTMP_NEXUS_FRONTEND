@@ -7,6 +7,9 @@ import remarkGfm from "remark-gfm";
 import { Check, Copy, ExternalLink, Hash, Info, List } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { WikiImage } from "./WikiImage";
+import { useImageResolver } from "@/src/hooks/useImageResolver";
+
+const IMAGE_REF_RE = /image:\/\/([0-9a-fA-F-]{36})/g;
 
 function wikiUrlTransform(url: string): string {
   if (url.startsWith("image://")) return url;
@@ -43,6 +46,7 @@ export function preprocessWikilinks(md: string, allPages?: { title: string; slug
     // 1. Direct match on slug or title
     if (slugToSlug.has(norm)) return slugToSlug.get(norm);
     if (titleToSlug.has(norm)) return titleToSlug.get(norm);
+    if (slugToSlug.has(`source/${norm}`)) return slugToSlug.get(`source/${norm}`);
 
     // 2. Direct match with accents removed (for flexible Vietnamese typing)
     const normNoAccents = removeAccents(norm);
@@ -51,25 +55,30 @@ export function preprocessWikilinks(md: string, allPages?: { title: string; slug
     // 3. Match after standard slugification
     const slugified = norm.replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").trim();
     if (slugToSlug.has(slugified)) return slugToSlug.get(slugified);
+    if (slugToSlug.has(`source/${slugified}`)) return slugToSlug.get(`source/${slugified}`);
 
     // 4. English plural fallback (e.g. "containers" -> "container")
     if (norm.endsWith("s")) {
       const singular = norm.slice(0, -1);
       if (slugToSlug.has(singular)) return slugToSlug.get(singular);
       if (titleToSlug.has(singular)) return titleToSlug.get(singular);
+      if (slugToSlug.has(`source/${singular}`)) return slugToSlug.get(`source/${singular}`);
       if (normalizedTitleToSlug.has(removeAccents(singular))) return normalizedTitleToSlug.get(removeAccents(singular));
       
       const slugifiedSingular = slugified.slice(0, -1);
       if (slugToSlug.has(slugifiedSingular)) return slugToSlug.get(slugifiedSingular);
+      if (slugToSlug.has(`source/${slugifiedSingular}`)) return slugToSlug.get(`source/${slugifiedSingular}`);
     }
     if (norm.endsWith("es")) {
       const singular = norm.slice(0, -2);
       if (slugToSlug.has(singular)) return slugToSlug.get(singular);
       if (titleToSlug.has(singular)) return titleToSlug.get(singular);
+      if (slugToSlug.has(`source/${singular}`)) return slugToSlug.get(`source/${singular}`);
       if (normalizedTitleToSlug.has(removeAccents(singular))) return normalizedTitleToSlug.get(removeAccents(singular));
       
       const slugifiedSingular = slugified.slice(0, -2);
       if (slugToSlug.has(slugifiedSingular)) return slugToSlug.get(slugifiedSingular);
+      if (slugToSlug.has(`source/${slugifiedSingular}`)) return slugToSlug.get(`source/${slugifiedSingular}`);
     }
 
     return target; // fallback
@@ -139,6 +148,13 @@ export function WikiContent({
   const processed = React.useMemo(() => preprocessWikilinks(markdown, allPages), [markdown, allPages]);
   const headings = React.useMemo(() => extractHeadings(markdown), [markdown]);
   const [activeHeading, setActiveHeading] = React.useState<string | null>(null);
+
+  const imageIds = React.useMemo(() => {
+    const out = new Set<string>();
+    for (const m of processed.matchAll(IMAGE_REF_RE)) out.add(m[1].toLowerCase());
+    return Array.from(out);
+  }, [processed]);
+  const imageResolver = useImageResolver(imageIds);
 
   // Intersection observer for active heading tracking
   React.useEffect(() => {
@@ -344,11 +360,26 @@ export function WikiContent({
             img: ({ src, alt }) => {
               const srcStr = typeof src === "string" ? src : "";
               const altStr = typeof alt === "string" ? alt : "";
-              if (!srcStr) return <WikiImage alt={altStr} status="missing" />;
-              if (srcStr.startsWith("image://")) {
-                return <WikiImage alt={altStr} status="missing" />;
+              if (!srcStr.startsWith("image://")) {
+                // External / regular image — render as-is.
+                // eslint-disable-next-line @next/next/no-img-element
+                return (
+                  <img
+                    src={srcStr}
+                    alt={altStr}
+                    loading="lazy"
+                    className="rounded-xl border border-border max-w-full my-4 mx-auto"
+                  />
+                );
               }
-              return <WikiImage src={srcStr} alt={altStr} status="ok" />;
+              const uuid = srcStr.slice("image://".length).toLowerCase();
+              const url = imageResolver.resolved[uuid];
+              if (url) return <WikiImage src={url} alt={altStr} status="ok" />;
+              if (imageResolver.denied.has(uuid))
+                return <WikiImage alt={altStr} status="denied" />;
+              if (imageResolver.loading)
+                return <WikiImage alt={altStr} status="loading" />;
+              return <WikiImage alt={altStr} status="missing" />;
             },
             table: ({ children }) => (
               <div className="my-4 rounded-xl border border-border overflow-hidden shadow-sm bg-card">

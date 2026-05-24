@@ -340,10 +340,10 @@ export default function SettingsPage() {
                                 { key: "sounds", label: "Âm thanh", desc: "Phát âm thanh khi có thông báo" },
                                 { key: "desktop", label: "Thông báo desktop", desc: "Hiển thị thông báo trên màn hình" },
                             ].map((item) => (
-                                <div key={item.key} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                                <div key={item.key} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/50 rounded-[4px]">
                                     <div>
-                                        <p className="font-medium text-gray-900 dark:text-white">{item.label}</p>
-                                        <p className="text-sm text-gray-500 dark:text-gray-400">{item.desc}</p>
+                                        <p className="text-xs font-semibold text-slate-900 dark:text-slate-100">{item.label}</p>
+                                        <p className="text-[11px] text-slate-500">{item.desc}</p>
                                     </div>
                                     <Switch
                                         checked={notifications[item.key as keyof typeof notifications]}
@@ -359,21 +359,21 @@ export default function SettingsPage() {
 
             case "privacy":
                 return (
-                    <div className="space-y-6">
-                        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                    <div className="space-y-4">
+                        <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">
                             Quyền riêng tư
                         </h2>
-                        <div className="space-y-4">
+                        <div className="space-y-1.5">
                             {[
                                 { key: "showOnlineStatus", label: "Hiển thị trạng thái online", desc: "Cho phép người khác thấy bạn đang online" },
                                 { key: "showLastSeen", label: "Hiển thị lần hoạt động cuối", desc: "Cho phép người khác thấy lần online cuối" },
                                 { key: "showReadReceipts", label: "Xác nhận đã đọc", desc: "Cho phép người khác thấy bạn đã đọc tin nhắn" },
                                 { key: "allowAddBynumber", label: "Cho phép tìm kiếm bằng SĐT", desc: "Người khác có thể tìm bạn bằng số điện thoại" },
                             ].map((item) => (
-                                <div key={item.key} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                                <div key={item.key} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/50 rounded-[4px]">
                                     <div>
-                                        <p className="font-medium text-gray-900 dark:text-white">{item.label}</p>
-                                        <p className="text-sm text-gray-500 dark:text-gray-400">{item.desc}</p>
+                                        <p className="text-xs font-semibold text-slate-900 dark:text-slate-100">{item.label}</p>
+                                        <p className="text-[11px] text-slate-500">{item.desc}</p>
                                     </div>
                                     <Switch
                                         checked={privacy[item.key as keyof typeof privacy]}
@@ -384,25 +384,24 @@ export default function SettingsPage() {
                                 </div>
                             ))}
 
-                            {/* Blocked Users Section */}
+                            {/* Blocked Users */}
                             <div
-                                className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                                className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/50 rounded-[4px] cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors"
                                 onClick={() => setShowBlockedUsers(true)}
                             >
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                                        <Ban className="h-5 w-5 text-red-600" />
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-7 h-7 rounded-[4px] bg-red-50 dark:bg-red-950/30 flex items-center justify-center">
+                                        <Ban className="h-3.5 w-3.5 text-red-600" />
                                     </div>
                                     <div>
-                                        <p className="font-medium text-gray-900 dark:text-white">Danh sách chặn</p>
-                                        <p className="text-sm text-gray-500 dark:text-gray-400">Quản lý những người bạn đã chặn</p>
+                                        <p className="text-xs font-semibold text-slate-900 dark:text-slate-100">Danh sách chặn</p>
+                                        <p className="text-[11px] text-slate-500">Quản lý những người bạn đã chặn</p>
                                     </div>
                                 </div>
-                                <ChevronRight className="h-5 w-5 text-gray-400" />
+                                <ChevronRight className="h-4 w-4 text-slate-400" />
                             </div>
                         </div>
 
-                        {/* Blocked Users Sheet */}
                         <BlockedUsersSheet
                             isOpen={showBlockedUsers}
                             onClose={() => setShowBlockedUsers(false)}
@@ -505,51 +504,50 @@ export default function SettingsPage() {
     };
 
     return (
-        <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
-            {/* Sidebar */}
-            <div className="w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
+        <div className="flex h-screen bg-[#F8F8F8] dark:bg-[#111113]">
+            {/* Settings Sidebar */}
+            <div className="w-64 bg-white dark:bg-[#19191B] border-r border-slate-200/80 dark:border-white/[0.06] flex flex-col shrink-0">
                 {/* Header */}
-                <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                    <div className="flex items-center gap-3">
-                        <a href="/chat" className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-                            <ArrowLeft className="h-5 w-5 text-gray-600 dark:text-gray-300" />
-                        </a>
-                        <h1 className="text-xl font-bold text-gray-900 dark:text-white">Cài đặt</h1>
-                    </div>
+                <div className="flex items-center gap-2.5 px-4 h-12 border-b border-slate-200/80 dark:border-white/[0.06]">
+                    <a href="/chat" className="w-7 h-7 flex items-center justify-center rounded-[4px] text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer">
+                        <ArrowLeft className="h-4 w-4" />
+                    </a>
+                    <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100">Cài đặt</h1>
                 </div>
 
                 {/* Menu */}
-                <nav className="flex-1 p-4 space-y-1">
+                <nav className="flex-1 p-2 space-y-0.5">
                     {menuItems.map((item) => (
                         <button
                             key={item.id}
                             onClick={() => setActiveSection(item.id)}
-                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeSection === item.id
-                                ? "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
-                                : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                                }`}
+                            className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-[4px] transition-colors duration-100 text-xs font-medium cursor-pointer ${
+                                activeSection === item.id
+                                    ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300'
+                                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200'
+                            }`}
                         >
-                            <item.icon className="h-5 w-5" />
-                            <span className="font-medium">{item.label}</span>
+                            <item.icon className="h-3.5 w-3.5 shrink-0" />
+                            <span>{item.label}</span>
                         </button>
                     ))}
                 </nav>
 
                 {/* Logout */}
-                <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="p-2 border-t border-slate-200/80 dark:border-white/[0.06]">
                     <button
                         onClick={handleLogout}
-                        className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                        className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-[4px] text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
                     >
-                        <LogOut className="h-5 w-5" />
-                        <span className="font-medium">Đăng xuất</span>
+                        <LogOut className="h-3.5 w-3.5" />
+                        <span>Đăng xuất</span>
                     </button>
                 </div>
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto p-8">
-                <div className="max-w-2xl">
+            <div className="flex-1 overflow-y-auto custom-scrollbar">
+                <div className="max-w-2xl p-6">
                     {renderContent()}
                 </div>
             </div>

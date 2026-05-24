@@ -7,17 +7,22 @@ import { CheckCircle2 } from "lucide-react";
 import { useGetWikiPagesQuery, useCompileDocumentMutation } from "@/src/redux/feature/mrpApi";
 import { useHasRole } from "@/src/lib/rbac/usePermission";
 import { WikiEditor } from "../components/WikiEditor";
+import { useSelector } from "react-redux";
 
 export default function NewWikiPage() {
   const router = useRouter();
-  const workspaceId = "default-workspace";
+  const currentWorkspaceId = useSelector((state: any) => state.workspace.currentWorkspaceId);
+  const workspaceId = currentWorkspaceId || "default-workspace";
 
   const isSuperAdmin = useHasRole("SUPER_ADMIN");
   const isAdmin = useHasRole("ADMIN");
   const isWorkspaceManager = useHasRole("WORKSPACE_MANAGER");
   const canManageWiki = isSuperAdmin || isAdmin || isWorkspaceManager;
 
-  const { data: wikiPages } = useGetWikiPagesQuery({ workspaceId });
+  const { data: wikiPagesRaw } = useGetWikiPagesQuery({ workspaceId });
+  const wikiPages = Array.isArray(wikiPagesRaw)
+    ? wikiPagesRaw
+    : (wikiPagesRaw && 'content' in wikiPagesRaw ? wikiPagesRaw.content : undefined);
   const [compileDocument, { isLoading }] = useCompileDocumentMutation();
 
   const [submitted, setSubmitted] = React.useState(false);

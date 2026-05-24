@@ -28,25 +28,32 @@ import {
   Sparkles
 } from "lucide-react";
 import { useHasRole } from "@/src/lib/rbac/usePermission";
+import { useSelector } from "react-redux";
 
 import { WikiPagination } from "../components/WikiPagination";
 
 export default function CompilationPlansPage({ isEmbedded = false }: { isEmbedded?: boolean }) {
   const router = useRouter();
-  const workspaceId = "default-workspace";
+  const currentWorkspaceId = useSelector((state: any) => state.workspace.currentWorkspaceId);
 
   // RBAC checks
   const isSuperAdmin = useHasRole("SUPER_ADMIN");
   const isAdmin = useHasRole("ADMIN");
+  const isSystemAdmin = isSuperAdmin || isAdmin;
   const isWorkspaceManager = useHasRole("WORKSPACE_MANAGER");
   const canManageWiki = isSuperAdmin || isAdmin || isWorkspaceManager;
+
+  // View All toggle (Defaults to true for System Admins to view all workspaces)
+  const [viewAll, setViewAll] = React.useState(isSystemAdmin);
+
+  const workspaceId = viewAll && isSystemAdmin ? "all" : (currentWorkspaceId || "default-workspace");
 
   // Pagination State
   const [page, setPage] = React.useState(0);
   const [size, setSize] = React.useState(5);
 
   // RTK Query hooks
-  const { data: plansResponse, isLoading: isPlansLoading, refetch: refetchPlans } = useGetCompilationPlansQuery({ page, size }, { skip: !canManageWiki });
+  const { data: plansResponse, isLoading: isPlansLoading, refetch: refetchPlans } = useGetCompilationPlansQuery({ workspaceId, page, size }, { skip: !canManageWiki });
   const [approvePlan, { isLoading: isApproving }] = useApprovePlanMutation();
   // State
   const [selectedPlanId, setSelectedPlanId] = React.useState<number | null>(null);
@@ -96,6 +103,12 @@ export default function CompilationPlansPage({ isEmbedded = false }: { isEmbedde
     summary?: string;
     definition?: string;
     description?: string;
+    action?: "CREATE" | "UPDATE" | string;
+    wikiPageId?: number | null;
+    pageType?: string;
+    reason?: string;
+    keyClaims?: string[];
+    key_claims?: string[];
   }
 
   // Parse planJson robustly
@@ -264,8 +277,21 @@ export default function CompilationPlansPage({ isEmbedded = false }: { isEmbedde
         <div className="lg:col-span-4 flex flex-col gap-2.5 border border-border bg-card p-3 rounded-xl shadow-md">
           <div className="border-b pb-1.5 flex items-center justify-between">
             <span className="font-mono text-xs uppercase font-extrabold text-foreground">
-              DANH SÁCH KẾ HOẠCH ({plans?.length || 0})
+              DANH SÁCH ({plans?.length || 0})
             </span>
+            {isSystemAdmin && (
+              <button
+                onClick={() => setViewAll((v) => !v)}
+                className={`text-[9px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 border rounded-md transition-all cursor-pointer select-none active:scale-[0.97] ${
+                  viewAll
+                    ? "bg-primary/10 text-primary border-primary/30 font-bold"
+                    : "bg-secondary text-secondary-foreground border-border hover:bg-secondary/80 font-bold"
+                }`}
+                title={viewAll ? "Đang hiển thị kế hoạch từ tất cả Workspace" : "Chỉ hiển thị kế hoạch của Workspace hiện tại"}
+              >
+                {viewAll ? "Tất cả Workspace" : "Không gian hiện tại"}
+              </button>
+            )}
           </div>
 
           {isPlansLoading ? (
@@ -313,9 +339,9 @@ export default function CompilationPlansPage({ isEmbedded = false }: { isEmbedde
                         </span>
                       </div>
 
-                      <h3 className="text-xs font-extrabold text-foreground leading-normal flex items-center gap-1">
+                      <h3 className="text-xs font-extrabold text-foreground leading-normal flex items-center gap-1 truncate max-w-[280px]" title={plan.sourceDocumentName || `ID: ${plan.sourceDocumentId}`}>
                         <FileText className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                        Tài liệu gốc ID: {plan.sourceDocumentId}
+                        Tài liệu gốc: {plan.sourceDocumentName || `ID: ${plan.sourceDocumentId}`}
                       </h3>
 
                       <div className="text-[10px] text-muted-foreground flex items-center justify-between border-t border-dashed border-border pt-1.5 mt-0.5 select-none">
@@ -353,8 +379,8 @@ export default function CompilationPlansPage({ isEmbedded = false }: { isEmbedde
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-border pb-2 gap-2">
                   <div>
                     <span className="font-mono text-[9px] uppercase font-bold text-muted-foreground">Chi tiết kế hoạch biên soạn</span>
-                    <h2 className="text-sm font-bold text-foreground mt-0.5">
-                      KẾ HOẠCH SỐ #{activePlan.id} — NGUỒN TÀI LIỆU {activePlan.sourceDocumentId}
+                    <h2 className="text-sm font-bold text-foreground mt-0.5 truncate max-w-[400px]" title={activePlan.sourceDocumentName || `ID ${activePlan.sourceDocumentId}`}>
+                      KẾ HOẠCH SỐ #{activePlan.id} — NGUỒN: {activePlan.sourceDocumentName || `Tài liệu ID ${activePlan.sourceDocumentId}`}
                     </h2>
                   </div>
 
@@ -367,9 +393,11 @@ export default function CompilationPlansPage({ isEmbedded = false }: { isEmbedde
 
                 {/* Audit summary panel */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2 font-mono text-xs">
-                  <div className="border border-border bg-muted/30 p-2.5 rounded-lg flex flex-col gap-0.5">
+                  <div className="border border-border bg-muted/30 p-2.5 rounded-lg flex flex-col gap-0.5 overflow-hidden">
                     <span className="text-[9px] uppercase font-extrabold text-muted-foreground">Tài liệu nguồn</span>
-                    <span className="font-bold text-foreground">Document ID #{activePlan.sourceDocumentId}</span>
+                    <span className="font-bold text-foreground truncate" title={activePlan.sourceDocumentName || `ID: ${activePlan.sourceDocumentId}`}>
+                      {activePlan.sourceDocumentName || `Document ID #${activePlan.sourceDocumentId}`}
+                    </span>
                   </div>
                   <div className="border border-border bg-muted/30 p-2.5 rounded-lg flex flex-col gap-0.5">
                     <span className="text-[9px] uppercase font-extrabold text-muted-foreground">Ngày khởi tạo</span>
@@ -394,15 +422,23 @@ export default function CompilationPlansPage({ isEmbedded = false }: { isEmbedde
                   ) : (
                     <div className="flex flex-col gap-2 max-h-[380px] overflow-y-auto pr-1">
                       {parsedPlanItems.map((item, idx) => {
-                        const type = item.type || item.category || "concept";
+                        const type = item.pageType || item.type || item.category || "concept";
                         const isConcept = type.toLowerCase().includes("concept") || type.toLowerCase().includes("khái niệm");
                         const isEntity = type.toLowerCase().includes("entity") || type.toLowerCase().includes("thực thể");
+                        const isSource = type.toLowerCase().includes("source");
                         
-                        const typeLabel = isConcept ? "Concept" : isEntity ? "Entity" : "Topic";
+                        const typeLabel = isConcept ? "Concept" : isEntity ? "Entity" : isSource ? "Source" : "Topic";
                         const typeClass = isConcept
                           ? "bg-emerald-500/10 border-emerald-500 text-emerald-800 dark:text-emerald-400"
                           : isEntity
                           ? "bg-sky-500/10 border-sky-500 text-sky-800 dark:text-sky-400"
+                          : "bg-amber-500/10 border-amber-500 text-amber-800 dark:text-amber-400";
+
+                        const claims = item.keyClaims || item.key_claims || [];
+
+                        const actionLabel = item.action === "CREATE" ? "Tạo mới" : item.action === "UPDATE" ? "Cập nhật" : item.action;
+                        const actionClass = item.action === "CREATE"
+                          ? "bg-emerald-500/10 border-emerald-500 text-emerald-800 dark:text-emerald-400"
                           : "bg-amber-500/10 border-amber-500 text-amber-800 dark:text-amber-400";
 
                         return (
@@ -411,23 +447,51 @@ export default function CompilationPlansPage({ isEmbedded = false }: { isEmbedde
                             className="border border-border p-2.5 bg-background hover:bg-muted/5 rounded-lg transition-colors flex flex-col gap-1.5"
                           >
                             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-dashed border-border pb-1.5">
-                              <div className="flex items-center gap-2">
+                              <div className="flex flex-wrap items-center gap-2">
                                 <span className={`text-[9px] font-mono font-bold uppercase tracking-wider px-1.5 py-0.5 border rounded-md ${typeClass}`}>
                                   {typeLabel}
                                 </span>
+                                {item.action && (
+                                  <span className={`text-[9px] font-mono font-bold uppercase tracking-wider px-1.5 py-0.5 border rounded-md ${actionClass}`}>
+                                    {actionLabel} {item.wikiPageId ? `(ID: ${item.wikiPageId})` : ""}
+                                  </span>
+                                )}
                                 <h4 className="text-xs font-extrabold text-foreground truncate max-w-[200px] md:max-w-[320px]">
                                   {item.title || item.concept || item.entity || item.topic || "Không có tiêu đề"}
                                 </h4>
                               </div>
 
-                              <code className="text-[10px] bg-muted px-1.5 py-0.5 border border-border rounded-md text-primary">
+                              <code className="text-[10px] bg-muted px-1.5 py-0.5 border border-border rounded-md text-primary font-mono">
                                 /{item.slug || "no-slug"}
                               </code>
                             </div>
 
-                            <p className="text-[11px] text-muted-foreground leading-normal">
-                              {item.summary || item.definition || item.description || "Không có tóm tắt chi tiết cho thực thể này."}
-                            </p>
+                            {(item.summary || item.definition || item.description) && (
+                              <p className="text-[11px] text-muted-foreground leading-normal">
+                                <strong>Tóm tắt: </strong>
+                                {item.summary || item.definition || item.description}
+                              </p>
+                            )}
+
+                            {item.reason && (
+                              <p className="text-[11px] text-muted-foreground leading-normal">
+                                <strong>Lý do đề xuất: </strong>
+                                {item.reason}
+                              </p>
+                            )}
+
+                            {claims.length > 0 && (
+                              <div className="mt-1 pt-1.5 border-t border-dashed border-border/60">
+                                <span className="font-mono text-[8.5px] uppercase font-bold text-muted-foreground block mb-1">
+                                  Các dẫn chứng & Khẳng định (Evidence & Claims):
+                                </span>
+                                <ul className="list-disc pl-4 space-y-1 text-[10.5px] text-foreground/80 leading-normal">
+                                  {claims.map((claim, cIdx) => (
+                                    <li key={cIdx} className="break-words">{claim}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
                           </div>
                         );
                       })}

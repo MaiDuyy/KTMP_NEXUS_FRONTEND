@@ -22,6 +22,7 @@ interface UploadResponse {
 }
 
 export const userApi = apiSlice.injectEndpoints({
+  overrideExisting: true,
   endpoints: (builder) => ({
     // Get profile
     getProfile: builder.query<{ user: User }, void>({

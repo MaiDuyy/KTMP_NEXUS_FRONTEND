@@ -13,6 +13,7 @@ import { apiSlice } from '../api/baseApi';
 export interface Document {
   id: number;
   userId: string;
+  workspaceId?: string;
   fileName: string;
   fileSize: number;
   filePath?: string;
@@ -84,6 +85,7 @@ export interface ChunkSearchRequest {
   query: string;
   topK?: number;
   minSimilarity?: number;
+  workspaceId?: string;
 }
 
 export interface AiRefactorRequest {
@@ -118,12 +120,18 @@ export const knowledgeApi = apiSlice.injectEndpoints({
 
     // ============= DOCUMENTS (Direct to Spring AI) =============
 
-    getDocuments: builder.query<Document[] | PagedResponse<Document>, { page?: number; size?: number } | void>({
+    getDocuments: builder.query<Document[] | PagedResponse<Document>, { workspaceId?: string; page?: number; size?: number } | void>({
       query: (params) => {
-        if (params && typeof params.page === 'number' && typeof params.size === 'number') {
-          return `/documents?page=${params.page}&size=${params.size}`;
+        const { workspaceId, page, size } = params || {};
+        const targetWorkspaceId = workspaceId === undefined ? 'default-workspace' : workspaceId;
+        const queryParts: string[] = [];
+        if (targetWorkspaceId) {
+          queryParts.push(`workspaceId=${encodeURIComponent(targetWorkspaceId)}`);
         }
-        return '/documents';
+        if (typeof page === 'number' && typeof size === 'number') {
+          queryParts.push(`page=${page}&size=${size}`);
+        }
+        return queryParts.length ? `/documents?${queryParts.join('&')}` : '/documents';
       },
       providesTags: ['Documents'],
     }),
@@ -140,13 +148,18 @@ export const knowledgeApi = apiSlice.injectEndpoints({
       }),
     }),
 
-    uploadDocument: builder.mutation<DocumentUploadResponse, FormData | { formData: FormData; preview: boolean; parser?: string }>({
+    uploadDocument: builder.mutation<DocumentUploadResponse, FormData | { formData: FormData; preview: boolean; parser?: string; workspaceId?: string }>({
       query: (arg) => {
         const formData = arg instanceof FormData ? arg : arg.formData;
         const preview = arg instanceof FormData ? false : arg.preview;
         const parser = arg instanceof FormData ? 'gemini' : (arg.parser || 'gemini');
+        const workspaceId = arg instanceof FormData ? undefined : arg.workspaceId;
+        let url = `/documents/upload?preview=${preview}&parser=${parser}`;
+        if (workspaceId) {
+          url += `&workspaceId=${encodeURIComponent(workspaceId)}`;
+        }
         return {
-          url: `/documents/upload?preview=${preview}&parser=${parser}`,
+          url,
           method: 'POST',
           body: formData,
         };

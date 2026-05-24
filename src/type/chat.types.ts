@@ -244,7 +244,29 @@ export type NotificationType =
   | "WORKSPACE_INVITE"
   | "MENTION"
   | "REACTION"
-  | "SYSTEM";
+  | "SYSTEM"
+  | "ANNOUNCEMENT";
+
+/** Enterprise classification — maps to UI category tabs */
+export type NotificationCategory =
+  | "all"
+  | "social"      // FRIEND_REQUEST, FRIEND_ACCEPTED, REACTION
+  | "messaging"   // NEW_MESSAGE, MENTION
+  | "workspace"   // GROUP_INVITE, GROUP_REMOVED, WORKSPACE_INVITE
+  | "system";     // SYSTEM, ANNOUNCEMENT
+
+export const NOTIFICATION_CATEGORY_MAP: Record<NotificationType, NotificationCategory> = {
+  FRIEND_REQUEST: "social",
+  FRIEND_ACCEPTED: "social",
+  REACTION: "social",
+  NEW_MESSAGE: "messaging",
+  MENTION: "messaging",
+  GROUP_INVITE: "workspace",
+  GROUP_REMOVED: "workspace",
+  WORKSPACE_INVITE: "workspace",
+  SYSTEM: "system",
+  ANNOUNCEMENT: "system",
+};
 
 export interface Notification {
   id: string;

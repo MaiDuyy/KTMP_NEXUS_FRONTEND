@@ -105,18 +105,18 @@ export const RegisterForm: React.FC = () => {
   const confirmPasswordValue = form.watch('confirmPassword');
 
   return (
-    <div className="flex flex-col gap-8">
-      <div className="flex flex-col space-y-3">
-        <h1 className="text-3xl font-semibold tracking-[-0.03em] text-foreground">
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col space-y-1.5">
+        <h1 className="text-xl font-bold tracking-tight text-slate-900">
           Đăng ký tài khoản
         </h1>
-        <p className="text-base text-muted-foreground">
+        <p className="text-xs text-slate-500">
           Bắt đầu kết nối với cộng đồng NEXUS ngay hôm nay.
         </p>
       </div>
 
       {error && (
-        <div className="p-3 rounded-lg bg-red-50 border border-red-100 text-red-600 text-sm font-medium animate-in fade-in slide-in-from-top-2">
+        <div className="p-2.5 rounded-[4px] bg-red-50 border border-red-100 text-red-600 text-xs font-semibold animate-in fade-in slide-in-from-top-2">
           {error}
         </div>
       )}
@@ -127,15 +127,15 @@ export const RegisterForm: React.FC = () => {
             control={form.control}
             name="name"
             render={({ field }) => (
-              <FormItem className="space-y-1.5">
-                <FormLabel className="text-sm font-semibold text-foreground">Họ và tên</FormLabel>
+              <FormItem className="space-y-1">
+                <FormLabel className="text-xs font-semibold text-slate-700">Họ và tên</FormLabel>
                 <FormControl>
                   <div className="relative">
-                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input placeholder="Ví dụ: Nguyễn Văn A" className="pl-11 h-12 border-border focus:border-primary focus:ring-0 rounded-lg transition-colors" {...field} />
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                    <Input placeholder="Ví dụ: Nguyễn Văn A" className="pl-9 h-9 border-slate-200 focus:border-blue-500 focus:ring-0 rounded-[4px] text-sm transition-colors" {...field} />
                   </div>
                 </FormControl>
-                <FormMessage className="text-xs" />
+                <FormMessage className="text-[11px]" />
               </FormItem>
             )}
           />
@@ -145,15 +145,15 @@ export const RegisterForm: React.FC = () => {
               control={form.control}
               name="email"
               render={({ field }) => (
-                <FormItem className="space-y-1.5">
-                  <FormLabel className="text-sm font-semibold text-foreground">Email</FormLabel>
+                <FormItem className="space-y-1">
+                  <FormLabel className="text-xs font-semibold text-slate-700">Email</FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input placeholder="admin@vi-du.com" className="pl-11 h-12 border-border focus:border-primary focus:ring-0 rounded-lg transition-colors" {...field} />
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                      <Input placeholder="admin@vi-du.com" className="pl-9 h-9 border-slate-200 focus:border-blue-500 focus:ring-0 rounded-[4px] text-sm transition-colors" {...field} />
                     </div>
                   </FormControl>
-                  <FormMessage className="text-xs" />
+                  <FormMessage className="text-[11px]" />
                 </FormItem>
               )}
             />
@@ -162,15 +162,15 @@ export const RegisterForm: React.FC = () => {
               control={form.control}
               name="number"
               render={({ field }) => (
-                <FormItem className="space-y-1.5">
-                  <FormLabel className="text-sm font-semibold text-foreground">Số điện thoại</FormLabel>
+                <FormItem className="space-y-1">
+                  <FormLabel className="text-xs font-semibold text-slate-700">Số điện thoại</FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input placeholder="0912345678" className="pl-11 h-12 border-border focus:border-primary focus:ring-0 rounded-lg transition-colors" {...field} />
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                      <Input placeholder="0912345678" className="pl-9 h-9 border-slate-200 focus:border-blue-500 focus:ring-0 rounded-[4px] text-sm transition-colors" {...field} />
                     </div>
                   </FormControl>
-                  <FormMessage className="text-xs" />
+                  <FormMessage className="text-[11px]" />
                 </FormItem>
               )}
             />
@@ -180,11 +180,11 @@ export const RegisterForm: React.FC = () => {
             control={form.control}
             name="gender"
             render={({ field }) => (
-              <FormItem className="space-y-1.5">
-                <FormLabel className="text-sm font-semibold text-foreground">Giới tính</FormLabel>
+              <FormItem className="space-y-1">
+                <FormLabel className="text-xs font-semibold text-slate-700">Giới tính</FormLabel>
                 <FormControl>
                   <select
-                    className="flex h-12 w-full rounded-lg border border-border bg-white px-4 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all appearance-none"
+                    className="flex h-9 w-full rounded-[4px] border border-slate-200 bg-white px-3 py-1.5 text-sm ring-offset-background focus:outline-none focus:ring-0 focus:border-blue-500 transition-colors appearance-none cursor-pointer text-slate-700"
                     {...field}
                   >
                     <option value="male">Nam</option>
@@ -192,7 +192,7 @@ export const RegisterForm: React.FC = () => {
                     <option value="other">Khác</option>
                   </select>
                 </FormControl>
-                <FormMessage className="text-xs" />
+                <FormMessage className="text-[11px]" />
               </FormItem>
             )}
           />
@@ -201,28 +201,28 @@ export const RegisterForm: React.FC = () => {
             control={form.control}
             name="password"
             render={({ field }) => (
-              <FormItem className="space-y-1.5">
-                <FormLabel className="text-sm font-semibold text-foreground">Mật khẩu</FormLabel>
+              <FormItem className="space-y-1">
+                <FormLabel className="text-xs font-semibold text-slate-700">Mật khẩu</FormLabel>
                 <FormControl>
                   <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                     <Input
                       type={showPassword ? 'text' : 'password'}
                       placeholder="••••••••"
-                      className="pl-11 pr-11 h-12 border-border focus:border-primary focus:ring-0 rounded-lg transition-colors"
+                      className="pl-9 pr-9 h-9 border-slate-200 focus:border-blue-500 focus:ring-0 rounded-[4px] text-sm transition-colors"
                       {...field}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary focus:outline-none transition-colors"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 focus:outline-none transition-colors cursor-pointer"
                     >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                     </button>
                   </div>
                 </FormControl>
                 <PasswordStrengthMeter password={passwordValue} />
-                <FormMessage className="text-xs" />
+                <FormMessage className="text-[11px]" />
               </FormItem>
             )}
           />
@@ -231,16 +231,15 @@ export const RegisterForm: React.FC = () => {
             control={form.control}
             name="confirmPassword"
             render={({ field }) => (
-              <FormItem className="space-y-1.5">
-                <FormLabel className="text-sm font-semibold text-foreground">Xác nhận mật khẩu</FormLabel>
+              <FormItem className="space-y-1">
+                <FormLabel className="text-xs font-semibold text-slate-700">Xác nhận mật khẩu</FormLabel>
                 <FormControl>
                   <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input type="password" placeholder="••••••••" className="pl-11 h-12 border-border focus:border-primary focus:ring-0 rounded-lg transition-colors" {...field} />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                    <Input type="password" placeholder="••••••••" className="pl-9 h-9 border-slate-200 focus:border-blue-500 focus:ring-0 rounded-[4px] text-sm transition-colors" {...field} />
                   </div>
                 </FormControl>
-                {/* <PasswordStrengthMeter password={confirmPasswordValue} /> */}
-                <FormMessage className="text-xs" />
+                <FormMessage className="text-[11px]" />
               </FormItem>
             )}
           />
@@ -249,27 +248,27 @@ export const RegisterForm: React.FC = () => {
             control={form.control}
             name="agreeToTerms"
             render={({ field }) => (
-              <FormItem className="flex flex-row items-baseline space-x-3 space-y-0 rounded-md py-2">
+              <FormItem className="flex flex-row items-center space-x-2.5 space-y-0 py-0.5">
                 <FormControl>
                   <Checkbox
                     checked={field.value}
                     onCheckedChange={field.onChange}
-                    className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                    className="h-3.5 w-3.5 rounded-[2px] border-slate-300 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                   />
                 </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel className="text-[13px] font-normal text-muted-foreground">
-                    Tôi đồng ý với các <a href="/terms" className="text-primary font-semibold hover:underline">Điều khoản Dịch vụ</a> và <a href="/privacy" className="text-primary font-semibold hover:underline">Chính sách Bảo mật</a>.
+                <div className="leading-none">
+                  <FormLabel className="text-xs font-medium text-slate-500 cursor-pointer">
+                    Tôi đồng ý với các <a href="/terms" className="text-blue-600 font-semibold hover:underline">Điều khoản Dịch vụ</a> và <a href="/privacy" className="text-blue-600 font-semibold hover:underline">Chính sách Bảo mật</a>
                   </FormLabel>
                 </div>
               </FormItem>
             )}
           />
 
-          <Button type="submit" disabled={isSpinning} className="w-full bg-primary hover:opacity-90 text-primary-foreground h-12 font-semibold rounded-lg shadow-sm transition-all mt-4">
+          <Button type="submit" disabled={isSpinning} className="w-full bg-blue-600 hover:bg-blue-700 text-white h-9 text-sm font-semibold rounded-[4px] transition-colors duration-150 mt-1">
             {isSpinning ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
                 Đang khởi tạo tài khoản...
               </>
             ) : (

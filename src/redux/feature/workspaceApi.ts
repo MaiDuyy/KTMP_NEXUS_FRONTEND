@@ -10,12 +10,18 @@ export interface Workspace {
   memberCount: number;
   channelCount: number;
   updatedAt: string;
+  departmentId?: string;
 }
 
 export const workspaceApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     getUserWorkspaces: builder.query<Workspace[], void>({
       query: () => "/workspaces",
+      transformResponse: (response: { success: boolean; workspaces: Workspace[] }) => response.workspaces,
+      providesTags: ["Workspaces"],
+    }),
+    getWorkspacesByDepartment: builder.query<Workspace[], string>({
+      query: (departmentId) => `/workspaces?departmentId=${departmentId}`,
       transformResponse: (response: { success: boolean; workspaces: Workspace[] }) => response.workspaces,
       providesTags: ["Workspaces"],
     }),
@@ -167,6 +173,7 @@ export const workspaceApi = apiSlice.injectEndpoints({
 export const { 
   useGetUserWorkspacesQuery, 
   useGetDissolvedWorkspacesQuery,
+  useGetWorkspacesByDepartmentQuery,
   useCreateWorkspaceMutation,
   useAddWorkspaceMemberMutation,
   useSendInviteMutation,

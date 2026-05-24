@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { useSelector } from "react-redux";
 import {
   Search,
   Plus,
@@ -20,6 +21,7 @@ import {
 import {
   useGetWikiPagesQuery,
   useGetWikiPagesMetadataQuery,
+  useGetDraftsByWorkspaceQuery,
   useGetPendingDraftsQuery,
   useCompileDocumentMutation,
   useGetCompilationPlansQuery,
@@ -35,7 +37,8 @@ import { WikiPagination } from "./components/WikiPagination";
 import { DocumentManagement } from "@/src/features/admin/DocumentManagement";
 
 export default function WikiDashboard() {
-  const workspaceId = "default-workspace";
+  const currentWorkspaceId = useSelector((state: any) => state.workspace.currentWorkspaceId);
+  const workspaceId = currentWorkspaceId || "default-workspace";
   
   // RBAC checks
   const isSuperAdmin = useHasRole("SUPER_ADMIN");
@@ -71,11 +74,23 @@ export default function WikiDashboard() {
     page,
     size
   });
-  const { data: pendingDrafts, isLoading: isDraftsLoading, refetch: refetchDrafts } = useGetPendingDraftsQuery(undefined, { skip: !canManageWiki });
-  const { data: plans } = useGetCompilationPlansQuery(undefined, { skip: !canManageWiki });
+  const { data: workspaceDrafts } = useGetDraftsByWorkspaceQuery(workspaceId, { skip: !canManageWiki || isSuperAdmin });
+  const { data: allPendingDrafts } = useGetPendingDraftsQuery(undefined, { skip: !isSuperAdmin });
+  const { data: plans } = useGetCompilationPlansQuery({ workspaceId }, { skip: !canManageWiki });
   const [compileDocument, { isLoading: isCompiling }] = useCompileDocumentMutation();
 
   const wikiPages = React.useMemo(() => wikiPagesMetadata || [], [wikiPagesMetadata]);
+
+  const rawDrafts = React.useMemo(() => {
+    const data = isSuperAdmin ? allPendingDrafts : workspaceDrafts;
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
+    return data.content || [];
+  }, [isSuperAdmin, allPendingDrafts, workspaceDrafts]);
+
+  const pendingCount = React.useMemo(() => {
+    return rawDrafts.filter((d: any) => d.status === "PENDING").length;
+  }, [rawDrafts]);
 
   // Key bindings for Ctrl+K
   React.useEffect(() => {
@@ -114,9 +129,12 @@ export default function WikiDashboard() {
       const norm = target.trim().toLowerCase();
       if (slugToSlug.has(norm)) return slugToSlug.get(norm);
       if (titleToSlug.has(norm)) return titleToSlug.get(norm);
+      if (slugToSlug.has(`source/${norm}`)) return slugToSlug.get(`source/${norm}`);
+
       // Fallback: strip accents/spaces to mimic backend slugify
       const slugified = norm.replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").trim();
       if (slugToSlug.has(slugified)) return slugToSlug.get(slugified);
+      if (slugToSlug.has(`source/${slugified}`)) return slugToSlug.get(`source/${slugified}`);
       return null;
     };
 
@@ -253,33 +271,50 @@ export default function WikiDashboard() {
               Tìm nhanh (Ctrl+K)
             </button>
 
+            <Link
+              href="/wiki/queue"
+              className="px-2.5 py-1.5 text-xs font-mono font-bold uppercase tracking-wide border border-border bg-secondary hover:bg-secondary/85 text-secondary-foreground transition-all rounded-lg shadow-sm active:translate-y-[0.5px] flex items-center gap-1.5 cursor-pointer"
+              title="Bản thảo bạn đã tạo và bản thảo đang chờ bạn kiểm duyệt"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              Đóng góp
+            </Link>
+
+            <Link
+              href="/wiki/graph"
+              className="px-2.5 py-1.5 text-xs font-mono font-bold uppercase tracking-wide border border-transparent bg-primary hover:bg-primary/90 text-primary-foreground transition-all rounded-lg shadow-sm active:translate-y-[0.5px] flex items-center gap-1.5 cursor-pointer"
+            >
+              <Compass className="w-3.5 h-3.5" />
+              Đồ thị tri thức
+            </Link>
+
             {canManageWiki && (
               <>
                 <Link
                   href="/wiki/plans"
                   className={`px-2.5 py-1.5 text-xs font-mono font-bold uppercase tracking-wide border transition-all rounded-lg shadow-sm active:translate-y-[0.5px] flex items-center gap-1.5 cursor-pointer ${
-                    plans && plans.filter(p => p.status === 'PENDING_REVIEW').length > 0
+                    Array.isArray(plans) && plans.filter(p => p.status === 'PENDING_REVIEW').length > 0
                       ? "border-primary bg-primary hover:bg-primary/95 text-primary-foreground font-semibold"
                       : "border-border bg-secondary hover:bg-secondary/85 text-secondary-foreground"
                   }`}
                 >
                   <Layers className="w-3.5 h-3.5" />
-                  Kế hoạch biên soạn {plans && plans.filter(p => p.status === 'PENDING_REVIEW').length > 0 ? `(${plans.filter(p => p.status === 'PENDING_REVIEW').length})` : ""}
+                  Kế hoạch biên soạn {Array.isArray(plans) && plans.filter(p => p.status === 'PENDING_REVIEW').length > 0 ? `(${plans.filter(p => p.status === 'PENDING_REVIEW').length})` : ""}
                 </Link>
 
-                {pendingDrafts && pendingDrafts.length > 0 && (
+                {pendingCount > 0 && (
                   <Link
                     href="/wiki/review"
                     className="px-2.5 py-1.5 text-xs font-mono font-bold uppercase tracking-wide border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 transition-all rounded-lg shadow-sm active:translate-y-[0.5px] flex items-center gap-1.5 cursor-pointer"
                   >
                     <Clock className="w-3.5 h-3.5" />
-                    Duyệt bản thảo ({pendingDrafts.length})
+                    Duyệt bản thảo ({pendingCount})
                   </Link>
                 )}
                 
                 <Link
                   href="/wiki/new"
-                  className="px-2.5 py-1.5 text-xs font-mono font-bold uppercase tracking-wide border border-transparent bg-primary hover:bg-primary/90 text-primary-foreground transition-all rounded-lg shadow-sm active:translate-y-[0.5px] flex items-center gap-1.5 cursor-pointer font-semibold"
+                  className="px-2.5 py-1.5 text-xs font-mono font-bold uppercase tracking-wide border border-border bg-secondary hover:bg-secondary/85 text-secondary-foreground transition-all rounded-lg shadow-sm active:translate-y-[0.5px] flex items-center gap-1.5 cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   Tạo trang mới
@@ -329,7 +364,7 @@ export default function WikiDashboard() {
                 { label: "Khái niệm (Concept)", val: stats.concepts, color: "text-emerald-600 dark:text-emerald-400" },
                 { label: "Thực thể (Entity)", val: stats.entities, color: "text-sky-600 dark:text-sky-400" },
                 { label: "Chủ đề (Topic)", val: stats.topics, color: "text-amber-600 dark:text-amber-400" },
-                ...(canManageWiki ? [{ label: "Bản thảo chờ duyệt", val: pendingDrafts?.length || 0, color: "text-rose-600 dark:text-rose-400 font-bold" }] : []),
+                ...(canManageWiki ? [{ label: "Bản thảo chờ duyệt", val: pendingCount, color: "text-rose-600 dark:text-rose-400 font-bold" }] : []),
               ].map((item, idx) => (
                 <div
                   key={idx}

@@ -1,5 +1,5 @@
 "use client";
-
+ 
 import React from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -32,35 +32,38 @@ import {
   Tag,
   Search
 } from "lucide-react";
-
+ 
 export default function WikiPageDetail() {
   const params = useParams();
   const router = useRouter();
-  const slug = params.slug as string;
+  
+  // Extract and join all dynamic slug segments for catch-all router
+  const slugParts = Array.isArray(params.slug) ? params.slug : [params.slug ?? ""];
+  const slug = slugParts.join("/");
   const currentWorkspaceId = useSelector((state: any) => state.workspace.currentWorkspaceId);
   const workspaceId = currentWorkspaceId || "default-workspace";
-
+ 
   // RBAC checks
   const isSuperAdmin = useHasRole("SUPER_ADMIN");
   const isAdmin = useHasRole("ADMIN");
   const isWorkspaceManager = useHasRole("WORKSPACE_MANAGER");
   const canManageWiki = isSuperAdmin || isAdmin || isWorkspaceManager;
-
+ 
   // RTK Queries
   const { data: page, isLoading: isPageLoading, error: pageError } = useGetWikiPageBySlugQuery({ slug, workspaceId });
   const { data: allPages } = useGetWikiPagesMetadataQuery({ workspaceId });
   const { data: drafts, isLoading: isDraftsLoading, refetch: refetchDrafts } = useGetDraftsByWorkspaceQuery(workspaceId, { skip: !canManageWiki });
-
+ 
   // Review mutations
   const [approveDraft, { isLoading: isApproving }] = useApproveDraftMutation();
   const [rejectDraft, { isLoading: isRejecting }] = useRejectDraftMutation();
   const [requestChanges, { isLoading: isRequesting }] = useRequestChangesOnDraftMutation();
-
+ 
   const activeDraft = React.useMemo(() => {
     if (!drafts) return null;
     return drafts.find((d) => d.slug === slug && d.status === "PENDING");
   }, [drafts, slug]);
-
+ 
   const handleApprove = async () => {
     if (!activeDraft || !canManageWiki) return;
     try {
@@ -71,7 +74,7 @@ export default function WikiPageDetail() {
       console.error("Lỗi phê duyệt bản thảo:", err);
     }
   };
-
+ 
   const handleReject = async (note: string) => {
     if (!activeDraft || !canManageWiki) return;
     try {
@@ -81,7 +84,7 @@ export default function WikiPageDetail() {
       console.error("Lỗi từ chối bản thảo:", err);
     }
   };
-
+ 
   const handleRequestChanges = async (note: string) => {
     if (!activeDraft || !canManageWiki) return;
     try {
@@ -91,9 +94,9 @@ export default function WikiPageDetail() {
       console.error("Lỗi yêu cầu sửa đổi:", err);
     }
   };
-
+ 
   const [searchOpen, setSearchOpen] = React.useState(false);
-
+ 
   // Key bindings for Ctrl+K
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -105,37 +108,37 @@ export default function WikiPageDetail() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
-
+ 
   // Compute backlinks graph nodes & edges
   const localGraphData = React.useMemo(() => {
     if (!allPages || !page) return { nodes: [], edges: [] };
-
+ 
     const currentSlug = page.slug;
     const WIKILINK_RE = /\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/g;
-
+ 
     const directLinks = new Set<string>();
     const edges: { from: string; to: string }[] = [];
     const seenEdges = new Set<string>();
-
+ 
     const titleToSlug = new Map<string, string>();
     const slugToSlug = new Map<string, string>();
     for (const p of allPages) {
       titleToSlug.set(p.title.toLowerCase(), p.slug);
       slugToSlug.set(p.slug.toLowerCase(), p.slug);
     }
-
+ 
     const getResolvedSlug = (target: string) => {
       const norm = target.trim().toLowerCase();
       if (slugToSlug.has(norm)) return slugToSlug.get(norm);
       if (titleToSlug.has(norm)) return titleToSlug.get(norm);
       if (slugToSlug.has(`source/${norm}`)) return slugToSlug.get(`source/${norm}`);
-
+ 
       const slugified = norm.replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").trim();
       if (slugToSlug.has(slugified)) return slugToSlug.get(slugified);
       if (slugToSlug.has(`source/${slugified}`)) return slugToSlug.get(`source/${slugified}`);
       return null;
     };
-
+ 
     for (const p of allPages) {
       const pageLinks = p.links || [];
       for (const targetRaw of pageLinks) {
@@ -153,9 +156,9 @@ export default function WikiPageDetail() {
         }
       }
     }
-
+ 
     directLinks.add(currentSlug);
-
+ 
     const nodes = allPages
       .filter((p) => directLinks.has(p.slug))
       .map((p) => ({
@@ -163,10 +166,10 @@ export default function WikiPageDetail() {
         title: p.title,
         page_type: getPageType(p),
       }));
-
+ 
     return { nodes, edges };
   }, [allPages, page]);
-
+ 
   if (isPageLoading) {
     return (
       <div className="font-sans min-h-[400px] flex flex-col items-center justify-center text-center p-6">
@@ -175,7 +178,7 @@ export default function WikiPageDetail() {
       </div>
     );
   }
-
+ 
   if (pageError || !page) {
     return (
       <div className="font-sans max-w-2xl mx-auto p-4 border border-rose-500/30 bg-rose-500/5 text-center rounded-xl shadow-md my-6">
@@ -192,17 +195,17 @@ export default function WikiPageDetail() {
       </div>
     );
   }
-
+ 
   // Tags processing
   const tagsList = page.tags ? page.tags.split(/,\s*/) : [];
-
+ 
   return (
     <div className="font-sans flex gap-3 w-full text-foreground mx-auto p-2 md:p-3 h-full overflow-y-auto text-xs md:text-sm">
       {/* Collapsible Left Sidebar */}
       <div className="hidden md:block">
         <WikiPageTree activeSlug={slug} />
       </div>
-
+ 
       {/* Main Body */}
       <div className="flex-1 flex flex-col gap-3 min-w-0">
         
@@ -216,7 +219,7 @@ export default function WikiPageDetail() {
               <ArrowLeft className="w-3 h-3" />
               Quay lại bảng
             </Link>
-
+ 
             <button
               onClick={() => setSearchOpen(true)}
               className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium border border-border bg-secondary hover:bg-secondary/80 text-secondary-foreground transition-colors rounded-lg shadow-sm active:scale-[0.98]"
@@ -225,7 +228,7 @@ export default function WikiPageDetail() {
               Tìm nhanh (Ctrl+K)
             </button>
           </div>
-
+ 
           <div className="flex items-center gap-1.5">
             <span className="text-[9px] font-mono font-bold bg-muted px-1.5 py-0.5 rounded-md border border-border text-muted-foreground">
               Workspace: {page.workspaceId}
@@ -235,7 +238,7 @@ export default function WikiPageDetail() {
             </span>
           </div>
         </div>
-
+ 
         {/* Main Grid: Content (8 cols) & Sidebar (4 cols) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-start">
           
@@ -252,7 +255,7 @@ export default function WikiPageDetail() {
                 isActionsLoading={isApproving || isRejecting || isRequesting}
               />
             )}
-
+ 
             {/* Wiki Content Render Box */}
             <div className="border border-border bg-card p-3 md:p-4.5 rounded-xl shadow-md">
               {/* Title block */}
@@ -276,13 +279,13 @@ export default function WikiPageDetail() {
                   </div>
                 )}
               </div>
-
+ 
               {/* Markdown Content Render */}
               <WikiContent markdown={page.content} allPages={allPages} />
             </div>
-
+ 
           </div>
-
+ 
           {/* Right sidebar pane */}
           <div className="lg:col-span-4 flex flex-col gap-3">
             
@@ -294,7 +297,7 @@ export default function WikiPageDetail() {
                   THÔNG TIN CHI TIẾT
                 </span>
               </div>
-
+ 
               <div className="flex flex-col gap-1.5 font-sans text-[11px]">
                 <div className="flex items-center justify-between border-b border-dashed border-border pb-1.5">
                   <span className="text-muted-foreground flex items-center gap-1"><Layers className="w-3 h-3" /> ID trang</span>
@@ -316,14 +319,14 @@ export default function WikiPageDetail() {
                 )}
               </div>
             </div>
-
+ 
             {/* Dynamic internal backlinks cross-linking */}
             <WikiBacklinks
               currentPageTitle={page.title}
               currentPageSlug={page.slug}
               allWikiPages={allPages}
             />
-
+ 
             {/* Mini sub-graph visual */}
             {localGraphData.nodes.length > 1 && (
               <div className="border border-border bg-card p-3 rounded-xl shadow-md flex flex-col gap-2.5">
@@ -338,7 +341,7 @@ export default function WikiPageDetail() {
                 </div>
               </div>
             )}
-
+ 
             {/* Quick Wiki Navigation Sidebar Actions */}
             <div className="border border-border bg-card p-3 rounded-xl shadow-md flex flex-col gap-2">
               <div className="border-b pb-1.5 flex items-center gap-1.5">
@@ -347,11 +350,11 @@ export default function WikiPageDetail() {
                   ĐIỀU HƯỚNG WIKI
                 </span>
               </div>
-
+ 
               <p className="text-[10px] text-muted-foreground leading-relaxed">
                 Bạn có thể xem các trang khác trong hệ thống để tìm kiếm thông tin liên quan hoặc trích xuất tri thức.
               </p>
-
+ 
               <Link
                 href="/wiki"
                 className="w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-xs font-medium bg-primary hover:bg-primary/90 text-primary-foreground transition-colors rounded-lg shadow-sm active:scale-[0.98]"
@@ -359,13 +362,13 @@ export default function WikiPageDetail() {
                 Mở Wiki Explorer Dashboard
               </Link>
             </div>
-
+ 
           </div>
-
+ 
         </div>
-
+ 
       </div>
-
+ 
       {/* Global Wiki Search palette */}
       <WikiSearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
     </div>

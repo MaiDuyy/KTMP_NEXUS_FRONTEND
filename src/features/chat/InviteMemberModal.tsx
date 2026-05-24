@@ -76,33 +76,34 @@ export function InviteMemberModal({ isOpen, onClose, workspaceId }: InviteMember
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-[400px] rounded-[4px]">
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                        <Mail className="w-5 h-5 text-primary" />
+                    <DialogTitle className="text-sm font-bold flex items-center gap-2">
+                        <Mail className="w-4 h-4 text-blue-600" />
                         Mời thành viên mới
                     </DialogTitle>
-                    <DialogDescription>
-                        Gửi lời mời tham gia workspace qua email. Người nhận sẽ nhận được một liên kết để tham gia.
+                    <DialogDescription className="text-[11px] text-slate-500">
+                        Gửi lời mời tham gia workspace qua email.
                     </DialogDescription>
                 </DialogHeader>
 
                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-2">
                         <FormField
                             control={form.control}
                             name="email"
                             render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Địa chỉ Email</FormLabel>
+                                <FormItem className="space-y-1">
+                                    <FormLabel className="text-xs font-semibold text-slate-700">Địa chỉ Email</FormLabel>
                                     <FormControl>
-                                        <Input 
-                                            placeholder="example@company.com" 
-                                            {...field} 
+                                        <Input
+                                            placeholder="example@company.com"
+                                            {...field}
                                             disabled={isLoading}
+                                            className="h-8 text-sm rounded-[4px]"
                                         />
                                     </FormControl>
-                                    <FormMessage />
+                                    <FormMessage className="text-[11px]" />
                                 </FormItem>
                             )}
                         />
@@ -111,37 +112,35 @@ export function InviteMemberModal({ isOpen, onClose, workspaceId }: InviteMember
                             control={form.control}
                             name="role"
                             render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Vai trò</FormLabel>
-                                    <Select 
-                                        onValueChange={field.onChange} 
+                                <FormItem className="space-y-1">
+                                    <FormLabel className="text-xs font-semibold text-slate-700">Vai trò</FormLabel>
+                                    <Select
+                                        onValueChange={field.onChange}
                                         defaultValue={field.value}
                                         disabled={isLoading}
                                     >
                                         <FormControl>
-                                            <SelectTrigger>
+                                            <SelectTrigger className="h-8 text-sm rounded-[4px]">
                                                 <SelectValue placeholder="Chọn vai trò" />
                                             </SelectTrigger>
                                         </FormControl>
-                                        <SelectContent>
-                                            <SelectItem value="MEMBER">Member (Thành viên)</SelectItem>
-                                            <SelectItem value="ADMIN">Admin (Quản trị viên)</SelectItem>
+                                        <SelectContent className="rounded-[4px]">
+                                            <SelectItem value="MEMBER" className="text-xs">Member (Thành viên)</SelectItem>
+                                            <SelectItem value="ADMIN" className="text-xs">Admin (Quản trị viên)</SelectItem>
                                         </SelectContent>
                                     </Select>
-                                    <FormMessage />
+                                    <FormMessage className="text-[11px]" />
                                 </FormItem>
                             )}
                         />
 
-                        <DialogFooter className="pt-4">
-                            <Button type="button" variant="ghost" onClick={onClose} disabled={isLoading}>
-                                Hủy
-                            </Button>
-                            <Button type="submit" disabled={isLoading}>
-                                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        <div className="flex justify-end gap-2 pt-2">
+                            <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={isLoading} className="h-7 text-xs rounded-[4px]">Hủy</Button>
+                            <Button type="submit" size="sm" disabled={isLoading} className="h-7 text-xs rounded-[4px] gap-1.5">
+                                {isLoading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                                 Gửi lời mời
                             </Button>
-                        </DialogFooter>
+                        </div>
                     </form>
                 </Form>
             </DialogContent>

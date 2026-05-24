@@ -1,6 +1,6 @@
 // Chat module components
 export * from './modern-dashboard';
-export * from './modern-sidebar-rail';
+export { default as ModernSidebarRail } from './modern-sidebar-rail';
 export * from './modern-channel-sidebar';
 export * from './modern-chat-area';
 

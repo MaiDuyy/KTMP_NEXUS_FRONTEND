@@ -67,6 +67,21 @@ export interface DocumentStatusChangedEvent {
   status: string;
 }
 
+export interface CompilationPlanStatusChangedEvent {
+  planId: number;
+  sourceDocumentId: number;
+  status: string;
+  workspaceId: string;
+}
+
+export interface WikiDraftStatusChangedEvent {
+  draftId: number;
+  title: string;
+  slug: string;
+  status: string;
+  workspaceId: string;
+}
+
 // Socket URL - từ environment variable
 const getSocketUrl = (): string => {
   return process.env.NEXT_PUBLIC_WS_URL || "http://localhost:3001";
@@ -123,6 +138,8 @@ export interface SocketCallbacks {
   onTaskNew?: (data: { chatId: string; [key: string]: any }) => void;
   onTaskUpdated?: (data: { chatId: string; taskId: string; [key: string]: any }) => void;
   onDocumentStatusChanged?: (data: DocumentStatusChangedEvent) => void;
+  onCompilationPlanStatusChanged?: (data: CompilationPlanStatusChangedEvent) => void;
+  onWikiDraftStatusChanged?: (data: WikiDraftStatusChangedEvent) => void;
   onChatCallStatus?: (data: { chatId: string; roomName: string | null; isActive: boolean; [key: string]: any }) => void;
   onCallActiveStatus?: (data: { chatId: string; isActive: boolean; roomName?: string; [key: string]: any }) => void;
   onWorkspaceInvite?: (data: { workspaceName: string; role: string; token: string; inviterId: string; timestamp: string }) => void;
@@ -421,6 +438,16 @@ export const connectSocket = (token: string, callbacks?: SocketCallbacks): Socke
   socket.on("document:status_changed", (data) => {
     console.log("[Socket] 📄 Document status changed:", data);
     callbacks?.onDocumentStatusChanged?.(data);
+  });
+
+  socket.on("compilation_plan:status_changed", (data) => {
+    console.log("[Socket] 📋 Compilation plan status changed:", data);
+    callbacks?.onCompilationPlanStatusChanged?.(data);
+  });
+
+  socket.on("wiki_draft:status_changed", (data) => {
+    console.log("[Socket] 📄 Wiki draft status changed:", data);
+    callbacks?.onWikiDraftStatusChanged?.(data);
   });
 
   socket.on("chat:call_status", (data) => {

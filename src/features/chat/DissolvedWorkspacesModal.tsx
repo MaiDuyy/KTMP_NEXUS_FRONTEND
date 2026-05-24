@@ -55,70 +55,65 @@ export function DissolvedWorkspacesModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] max-h-[80vh] flex flex-col p-0 overflow-hidden shadow-2xl border-none">
-        <DialogHeader className="p-6 pb-2 bg-gradient-to-r from-slate-50 to-white">
-          <DialogTitle className="text-2xl font-bold flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-amber-100">
-              <Archive className="w-6 h-6 text-amber-600" />
-            </div>
+      <DialogContent className="sm:max-w-[560px] max-h-[80vh] flex flex-col p-0 overflow-hidden rounded-[4px]">
+        <DialogHeader className="px-5 pt-5 pb-3 border-b border-slate-200/80 dark:border-white/[0.06] shrink-0">
+          <DialogTitle className="text-sm font-bold flex items-center gap-2">
+            <Archive className="w-4 h-4 text-amber-600" />
             Kho lưu trữ Workspace
           </DialogTitle>
-          <DialogDescription className="text-slate-500 text-sm mt-1">
-            Danh sách các Workspace đã bị giải tán. Bạn có thể khôi phục chúng trước khi bị xóa vĩnh viễn.
+          <DialogDescription className="text-[11px] text-slate-500 mt-0.5">
+            Danh sách Workspace đã giải tán. Khôi phục trước khi bị xóa vĩnh viễn.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto p-6 bg-slate-50/30">
+        <div className="flex-1 overflow-y-auto p-4 no-scrollbar">
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center py-20 space-y-4">
-              <Loader2 className="w-10 h-10 animate-spin text-amber-600" />
-              <p className="text-sm text-slate-400 font-medium">Đang tải danh sách...</p>
+            <div className="flex flex-col items-center justify-center py-16">
+              <Loader2 className="w-6 h-6 animate-spin text-amber-500 mb-2" />
+              <p className="text-xs text-slate-400">Đang tải...</p>
             </div>
           ) : !workspaces || workspaces.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-dashed border-slate-200">
-              <div className="p-4 rounded-full bg-slate-50 mb-4">
-                <Archive className="w-8 h-8 text-slate-300" />
-              </div>
-              <p className="text-sm text-slate-500 font-medium text-center max-w-[250px]">
+            <div className="flex flex-col items-center justify-center py-16 border border-dashed border-slate-200 dark:border-slate-700 rounded-[4px]">
+              <Archive className="w-8 h-8 text-slate-200 dark:text-slate-700 mb-2" />
+              <p className="text-xs text-slate-500 text-center">
                 Không có Workspace nào bị giải tán gần đây.
               </p>
             </div>
           ) : (
-            <div className="grid gap-4">
+            <div className="space-y-2">
               {workspaces.map((ws) => (
                 <div
                   key={ws.id}
-                  className="flex items-center justify-between p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition-all group"
+                  className="flex items-center justify-between p-3 rounded-[4px] bg-white dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/50 hover:border-slate-300 transition-colors"
                 >
-                  <div className="flex items-center gap-4">
-                    <Avatar className="h-12 w-12 border-2 border-white shadow-sm opacity-60 grayscale-[0.5]">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-9 w-9 rounded-[4px] border border-slate-200 opacity-60">
                       <AvatarImage src={ws.icon} />
-                      <AvatarFallback className="bg-slate-200 text-slate-500 font-bold uppercase">
+                      <AvatarFallback className="bg-slate-100 text-slate-500 text-xs font-bold rounded-[4px]">
                         {ws.name[0]}
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <h4 className="text-sm font-bold text-slate-700">{ws.name}</h4>
-                      <div className="flex flex-col gap-1 mt-1">
+                      <h4 className="text-xs font-semibold text-slate-700 dark:text-slate-300">{ws.name}</h4>
+                      <div className="space-y-0.5 mt-0.5">
                         <p className="text-[10px] text-slate-400 flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          Đã giải tán {ws.dissolvedAt ? formatDistanceToNow(new Date(ws.dissolvedAt), { addSuffix: true, locale: vi }) : "không rõ"}
+                          <Clock className="w-2.5 h-2.5" />
+                          Giải tán {(ws as any).dissolvedAt ? formatDistanceToNow(new Date((ws as any).dissolvedAt), { addSuffix: true, locale: vi }) : 'không rõ'}
                         </p>
                         <p className="text-[10px] text-amber-600 flex items-center gap-1 font-medium">
-                          <AlertTriangle className="w-3 h-3" />
-                          Sẽ bị xóa sau {ws.retentionDays || 30} ngày kể từ lúc giải tán
+                          <AlertTriangle className="w-2.5 h-2.5" />
+                          Xóa sau {(ws as any).retentionDays || 30} ngày
                         </p>
                       </div>
                     </div>
                   </div>
-
                   <Button
                     size="sm"
-                    className="h-9 px-4 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl shadow-lg shadow-amber-100 transition-all active:scale-95"
+                    className="h-7 px-3 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold rounded-[4px] gap-1.5"
                     onClick={() => handleRestore(ws.id, ws.name)}
                     disabled={isRestoring}
                   >
-                    {isRestoring ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RefreshCcw className="w-4 h-4 mr-2" />}
+                    {isRestoring ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCcw className="w-3.5 h-3.5" />}
                     Khôi phục
                   </Button>
                 </div>
@@ -127,11 +122,11 @@ export function DissolvedWorkspacesModal({
           )}
         </div>
 
-        <DialogFooter className="p-4 border-t bg-slate-50/50">
-          <Button variant="ghost" className="font-bold text-slate-600 hover:bg-slate-100 rounded-xl w-full" onClick={onClose}>
+        <div className="px-4 py-3 border-t border-slate-200/80 dark:border-white/[0.06] flex justify-end">
+          <Button variant="outline" size="sm" className="h-7 text-xs rounded-[4px]" onClick={onClose}>
             Đóng
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );

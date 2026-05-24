@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSelector } from "react-redux";
 import { 
   ChevronDown, 
   ChevronRight, 
@@ -35,7 +36,8 @@ export function WikiPageTree({
   onPageSelect?: (slug: string) => void;
 }) {
   const pathname = usePathname();
-  const workspaceId = "default-workspace";
+  const currentWorkspaceId = useSelector((state: any) => state.workspace.currentWorkspaceId);
+  const workspaceId = currentWorkspaceId || "default-workspace";
   
   // RTK query to load pages
   const { data: wikiPages, isLoading } = useGetWikiPagesMetadataQuery({ workspaceId });

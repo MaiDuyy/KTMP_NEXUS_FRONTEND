@@ -18,6 +18,7 @@ import { WikiContent } from "./WikiContent";
 import { WikilinkAutocomplete } from "./WikilinkAutocomplete";
 import { getTextareaCaretCoords, type CaretCoords } from "../../../src/lib/textarea-caret";
 import { useGetWikiPagesMetadataQuery, WikiPage } from "@/src/redux/feature/mrpApi";
+import { useSelector } from "react-redux";
 
 function insertWrap(
   ta: HTMLTextAreaElement,
@@ -138,7 +139,9 @@ export function MarkdownEditor({
   const [coords, setCoords] = React.useState<CaretCoords | null>(null);
   
   // RTK query for page pool (lightweight metadata)
-  const { data: pagesData } = useGetWikiPagesMetadataQuery({ workspaceId: "default-workspace" });
+  const currentWorkspaceId = useSelector((state: any) => state.workspace.currentWorkspaceId);
+  const workspaceId = currentWorkspaceId || "default-workspace";
+  const { data: pagesData } = useGetWikiPagesMetadataQuery({ workspaceId });
   const pages: WikiPage[] = React.useMemo(() => pagesData || [], [pagesData]);
 
   const updateLinkCtx = React.useCallback(() => {

@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Eye, EyeOff, Loader2, Mail, Lock } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
@@ -28,7 +28,7 @@ import { useAppDispatch } from '@/src/redux/hooks';
 const loginSchema = z.object({
   email: z.string().email({ message: 'Vui lòng nhập email công việc hợp lệ' }),
   password: z.string().min(6, { message: 'Mật khẩu phải có ít nhất 6 ký tự' }),
-  rememberMe: z.boolean().default(false),
+  rememberMe: z.boolean(),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -36,8 +36,11 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export const LoginForm: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
   const [login, { isLoading }] = useLoginMutation();
+
+  const callbackUrl = searchParams ? searchParams.get('callbackUrl') || '/chat' : '/chat';
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -71,7 +74,7 @@ export const LoginForm: React.FC = () => {
       }
 
       toast.success(result.message || 'Đăng nhập thành công!');
-      router.push('/chat');
+      router.push(callbackUrl);
     } catch (err: unknown) {
       const error = err as { data?: { message?: string }; status?: number };
       const message = error?.data?.message || 'Đăng nhập thất bại. Vui lòng thử lại.';
@@ -87,13 +90,13 @@ export const LoginForm: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-8">
-      <div className="flex flex-col space-y-3">
-        <h1 className="text-3xl font-semibold tracking-[-0.03em] text-foreground">
-          Đăng nhập vào không gian làm việc
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col space-y-1.5">
+        <h1 className="text-xl font-bold tracking-tight text-slate-900">
+          Đăng nhập
         </h1>
-        <p className="text-base text-muted-foreground">
-          Nhập thông tin tài khoản của bạn để truy cập vào hệ thống an toàn.
+        <p className="text-xs text-slate-500">
+          Nhập thông tin tài khoản để truy cập hệ thống.
         </p>
       </div>
 
@@ -116,32 +119,32 @@ export const LoginForm: React.FC = () => {
 
       <div className="relative">
         <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t border-border" />
+          <span className="w-full border-t border-slate-200" />
         </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-white lg:bg-[#fcfcfc] px-4 text-muted-foreground font-medium tracking-wider">Hoặc sử dụng email</span>
+        <div className="relative flex justify-center text-[10px] uppercase">
+          <span className="bg-white px-3 text-slate-400 font-semibold tracking-widest">Email & mật khẩu</span>
         </div>
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <FormField
             control={form.control}
             name="email"
             render={({ field }) => (
-              <FormItem className="space-y-1.5">
-                <FormLabel className="text-sm font-semibold text-foreground">Email công việc</FormLabel>
+              <FormItem className="space-y-1">
+                <FormLabel className="text-xs font-semibold text-slate-700">Email công việc</FormLabel>
                 <FormControl>
                   <div className="relative">
-                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      placeholder="ten@congty.com" 
-                      className="pl-11 h-12 border-border focus:border-primary focus:ring-0 rounded-lg transition-colors" 
-                      {...field} 
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                    <Input
+                      placeholder="ten@congty.com"
+                      className="pl-9 h-9 border-slate-200 focus:border-blue-500 focus:ring-0 rounded-[4px] text-sm transition-colors"
+                      {...field}
                     />
                   </div>
                 </FormControl>
-                <FormMessage className="text-xs" />
+                <FormMessage className="text-[11px]" />
               </FormItem>
             )}
           />
@@ -150,35 +153,35 @@ export const LoginForm: React.FC = () => {
             control={form.control}
             name="password"
             render={({ field }) => (
-              <FormItem className="space-y-1.5">
+              <FormItem className="space-y-1">
                 <div className="flex items-center justify-between">
-                  <FormLabel className="text-sm font-semibold text-foreground">Mật khẩu</FormLabel>
+                  <FormLabel className="text-xs font-semibold text-slate-700">Mật khẩu</FormLabel>
                   <Link
                     href="/auth/forgot-password"
-                    className="text-xs font-semibold text-primary hover:opacity-70 transition-opacity"
+                    className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 transition-colors"
                   >
                     Quên mật khẩu?
                   </Link>
                 </div>
                 <FormControl>
                   <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                     <Input
                       type={showPassword ? 'text' : 'password'}
                       placeholder="••••••••"
-                      className="pl-11 pr-11 h-12 border-border focus:border-primary focus:ring-0 rounded-lg transition-colors"
+                      className="pl-9 pr-9 h-9 border-slate-200 focus:border-blue-500 focus:ring-0 rounded-[4px] text-sm transition-colors"
                       {...field}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary focus:outline-none transition-colors"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 focus:outline-none transition-colors cursor-pointer"
                     >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                     </button>
                   </div>
                 </FormControl>
-                <FormMessage className="text-xs" />
+                <FormMessage className="text-[11px]" />
               </FormItem>
             )}
           />
@@ -187,16 +190,16 @@ export const LoginForm: React.FC = () => {
             control={form.control}
             name="rememberMe"
             render={({ field }) => (
-              <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md py-1">
+              <FormItem className="flex flex-row items-center space-x-2.5 space-y-0 py-0.5">
                 <FormControl>
                   <Checkbox
                     checked={field.value}
                     onCheckedChange={field.onChange}
-                    className="h-4 w-4 border-border data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                    className="h-3.5 w-3.5 rounded-[2px] border-slate-300 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                   />
                 </FormControl>
                 <div className="leading-none">
-                  <FormLabel className="text-sm font-medium text-muted-foreground cursor-pointer">
+                  <FormLabel className="text-xs font-medium text-slate-500 cursor-pointer">
                     Ghi nhớ đăng nhập trong 30 ngày
                   </FormLabel>
                 </div>
@@ -204,14 +207,14 @@ export const LoginForm: React.FC = () => {
             )}
           />
 
-          <Button 
-            type="submit" 
-            disabled={isLoading} 
-            className="w-full bg-primary hover:opacity-90 text-primary-foreground h-12 font-semibold rounded-lg shadow-sm transition-all mt-2"
+          <Button
+            type="submit"
+            disabled={isLoading}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white h-9 text-sm font-semibold rounded-[4px] transition-colors duration-150 mt-1"
           >
             {isLoading ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
                 Đang đăng nhập...
               </>
             ) : (

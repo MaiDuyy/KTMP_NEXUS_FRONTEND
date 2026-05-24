@@ -48,6 +48,7 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
   const [showGroupSettings, setShowGroupSettings] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const isTypingRef = useRef(false);
+  const isFirstRenderOfChat = useRef(true);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -151,7 +152,25 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
 
   // Scroll to bottom
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+    if (chatContainerRef.current) {
+      if (isFirstRenderOfChat.current) {
+        // Temporarily disable smooth scroll for instant initial jump
+        chatContainerRef.current.style.scrollBehavior = 'auto';
+        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+        // Restore scroll behavior in next frame
+        setTimeout(() => {
+          if (chatContainerRef.current) {
+            chatContainerRef.current.style.scrollBehavior = '';
+          }
+        }, 50);
+        isFirstRenderOfChat.current = false;
+      } else {
+        // Smooth scroll for subsequent active messages
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }
+    } else {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+    }
   };
 
   // Initial Load & Chat Change
@@ -162,6 +181,7 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
     setNextCursor(null);
     setHasMore(true);
     setIsInitialLoad(true);
+    isFirstRenderOfChat.current = true;
 
     const loadInitialMessages = async () => {
       try {
@@ -170,10 +190,10 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
         setNextCursor(result.nextCursor || null);
         setHasMore(!!result.nextCursor);
 
+        setIsInitialLoad(false);
         // Wait for render then scroll
         setTimeout(() => {
           scrollToBottom();
-          setIsInitialLoad(false);
         }, 100);
       } catch (err) {
         console.error("Failed to load initial messages:", err);
@@ -720,6 +740,15 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
     };
   }, [chatId, triggerGetUser]);
 
+  // Auto-resize input textarea to fit content dynamically
+  useEffect(() => {
+    const textarea = inputRef.current;
+    if (!textarea) return;
+
+    textarea.style.height = 'auto';
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }, [inputText]);
+
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -806,21 +835,21 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
       )}
 
       {/* Header */}
-      <header className="h-14 border-b border-slate-100 flex items-center justify-between px-6 shrink-0">
+      <header className="h-14 border-b border-slate-200/80 bg-white flex items-center justify-between px-6 shrink-0 select-none">
         <div className="flex items-center gap-3 min-w-0">
           {isChannel ? (
             /* Channel header: show # or 🔒 icon */
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="h-8 w-8 rounded-[4px] bg-slate-50 border border-slate-200/60 flex items-center justify-center shrink-0">
                 {channelData?.type === 'PRIVATE' ? (
-                  <Lock size={16} className="text-slate-500" />
+                  <Lock size={15} className="text-slate-500" />
                 ) : (
-                  <Hash size={16} className="text-slate-500" />
+                  <Hash size={15} className="text-slate-500" />
                 )}
               </div>
               <div className="min-w-0">
-                <h3 className="font-bold text-slate-900 text-[15px] truncate">{channelData?.name}</h3>
-                <p className="text-[11px] text-slate-400 truncate max-w-xs">
+                <h3 className="font-bold text-slate-900 text-[14px] leading-tight truncate">{channelData?.name}</h3>
+                <p className="text-[11px] text-slate-500 truncate max-w-xs mt-0.5">
                   {typingUsers.length > 0
                     ? `${typingUsers.map(u => u.userName).join(', ')} đang gõ...`
                     : channelData?.topic || `${channelData?._count?.members ?? 0} thành viên`}
@@ -831,17 +860,17 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
             /* DM header: show avatar + online status */
             <div className="flex items-center gap-2.5">
               <div className="relative">
-                <Avatar className="h-8 w-8 border-2 border-white">
-                  <AvatarImage src={imageUrl || partner?.avatar || undefined} />
-                  <AvatarFallback>{chatName[0]}</AvatarFallback>
+                <Avatar className="h-8 w-8 rounded-[4px] border border-slate-200/80">
+                  <AvatarImage className="rounded-[4px]" src={imageUrl || partner?.avatar || undefined} />
+                  <AvatarFallback className="rounded-[4px] bg-slate-100 text-slate-600 text-xs font-semibold">{chatName[0]}</AvatarFallback>
                 </Avatar>
                 {isPartnerOnline && (
-                  <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white" />
+                  <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border border-white" />
                 )}
               </div>
               <div>
-                <h3 className="font-bold text-slate-900 text-[15px]">{chatName}</h3>
-                <p className={`text-[11px] font-medium ${typingUsers.length > 0 ? 'text-blue-500' : isPartnerOnline ? 'text-emerald-500' : 'text-slate-400'}`}>
+                <h3 className="font-bold text-slate-900 text-[14px] leading-tight">{chatName}</h3>
+                <p className={`text-[11px] font-medium mt-0.5 ${typingUsers.length > 0 ? 'text-blue-600' : isPartnerOnline ? 'text-emerald-600' : 'text-slate-500'}`}>
                   {getStatusText()}
                 </p>
               </div>
@@ -849,46 +878,33 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
           ) : (
             /* Group Chat header: show group avatar */
             <div className="flex items-center gap-2.5">
-              <Avatar className="h-8 w-8 border-2 border-white">
-                <AvatarImage src={imageUrl || undefined} />
-                <AvatarFallback>{chatName[0]}</AvatarFallback>
+              <Avatar className="h-8 w-8 rounded-[4px] border border-slate-200/80">
+                <AvatarImage className="rounded-[4px]" src={imageUrl || undefined} />
+                <AvatarFallback className="rounded-[4px] bg-slate-100 text-slate-600 text-xs font-semibold">{chatName[0]}</AvatarFallback>
               </Avatar>
               <div>
-                <h3 className="font-bold text-slate-900 text-[15px]">{chatName}</h3>
-                <p className="text-[11px] text-slate-400">{getStatusText()}</p>
+                <h3 className="font-bold text-slate-900 text-[14px] leading-tight">{chatName}</h3>
+                <p className="text-[11px] text-slate-500 mt-0.5">{getStatusText()}</p>
               </div>
             </div>
           )}
         </div>
-{/* 
-        <div className="flex-1 max-w-md mx-6 relative">
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-2 pointer-events-none">
-            <Search className="h-4 w-4 text-slate-400" />
-          </div>
-          <Input
-            placeholder="Search messages, files..."
-            className="pl-9 pr-12 bg-slate-50 border-0 h-9 rounded-lg text-sm focus-visible:ring-1 focus-visible:ring-blue-100"
-          />
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded border border-slate-200 text-[10px] text-slate-400 font-bold bg-white pointer-events-none">
-            ⌘K
-          </div>
-        </div> */}
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1">
           {activeCall && (
             <Button
               size="sm"
               onClick={() => {
                 window.dispatchEvent(new CustomEvent("call:rejoin", { detail: { ...activeCall, chatId } }));
               }}
-              className="bg-emerald-500 hover:bg-emerald-600 text-white flex items-center gap-1.5 h-8 px-3 rounded-full animate-pulse shadow-md"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 h-8 px-3 rounded-[4px] text-xs font-semibold animate-pulse shadow-none transition-colors"
             >
-              <Phone size={14} fill="currentColor" /> Tham gia
+              <Phone size={13} fill="currentColor" /> Tham gia
             </Button>
           )}
-          <Button variant="ghost" size="icon" onClick={() => startCall(false)} className="h-8 w-8 text-slate-400 hover:text-blue-600" title="Bắt đầu cuộc gọi thoại"><Phone size={18} /></Button>
-          <Button variant="ghost" size="icon" onClick={() => startCall(true)} className="h-8 w-8 text-slate-400 hover:text-blue-600" title="Bắt đầu cuộc gọi video"><Video size={18} /></Button>
-          <div className="h-4 w-[1px] bg-slate-100 mx-1" />
+          <Button variant="ghost" size="icon" onClick={() => startCall(false)} className="h-8 w-8 rounded-[4px] text-slate-500 hover:text-blue-600 hover:bg-slate-100 transition-colors" title="Bắt đầu cuộc gọi thoại"><Phone size={15} /></Button>
+          <Button variant="ghost" size="icon" onClick={() => startCall(true)} className="h-8 w-8 rounded-[4px] text-slate-500 hover:text-blue-600 hover:bg-slate-100 transition-colors" title="Bắt đầu cuộc gọi video"><Video size={15} /></Button>
+          <div className="h-4 w-[1px] bg-slate-200 mx-1" />
           <Button variant="ghost"
             size="icon"
             onClick={() => {
@@ -901,8 +917,8 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
               }
             }}
             title={isChannel ? 'Thông tin kênh' : chat?.isGroup ? 'Cài đặt nhóm' : 'Thông tin cuộc trò chuyện'}
-            className="h-8 w-8 text-slate-400 hover:text-slate-600">
-            <Info size={18} />
+            className="h-8 w-8 rounded-[4px] text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors">
+            <Info size={15} />
           </Button>
         </div>
       </header>
@@ -999,40 +1015,42 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
       </div>
 
       {replyTo && (
-        <div className="px-6 py-2 bg-slate-50 border-t border-slate-100 flex items-center gap-3">
-          <Reply className="h-4 w-4 text-blue-500 flex-shrink-0" />
-          <div className="flex-1 min-w-0 border-l-2 border-blue-500 pl-2">
-            <p className="text-xs text-blue-600 font-medium">
-              {replyTo.isMe ? "Bạn" : replyTo.sender?.name}
-            </p>
-            <p className="text-sm text-slate-500 truncate">
-              {replyTo.content || `[${replyTo.type}]`}
-            </p>
+        <div className="px-6 py-2 bg-slate-50 border-t border-slate-200/80 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <Reply className="h-3.5 w-3.5 text-blue-600 flex-shrink-0" />
+            <div className="flex-1 min-w-0 border-l-2 border-blue-600 pl-2.5">
+              <p className="text-[11px] text-blue-600 font-bold">
+                {replyTo.isMe ? "Bạn" : replyTo.sender?.name}
+              </p>
+              <p className="text-xs text-slate-500 truncate mt-0.5">
+                {replyTo.content || `[${replyTo.type}]`}
+              </p>
+            </div>
           </div>
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6 text-slate-400 hover:text-slate-600"
+            className="h-6 w-6 rounded-[4px] text-slate-400 hover:text-slate-600 hover:bg-slate-150 transition-colors"
             onClick={() => setReplyTo(null)}
           >
-            <X className="h-4 w-4" />
+            <X className="h-3.5 w-3.5" />
           </Button>
         </div>
       )}
       {/* File Preview */}
       {selectedFiles.length > 0 && (
-        <div className="px-4 py-2 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-3 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
+        <div className="px-6 py-2 bg-slate-50 border-t border-slate-200/80">
+          <div className="flex items-center gap-3 p-2 bg-white border border-slate-200 rounded-[4px] shadow-sm">
             {filePreview ? (
-              <img src={filePreview} alt="Preview" className="w-16 h-16 object-cover rounded-lg" />
+              <img src={filePreview} alt="Preview" className="w-12 h-12 object-cover rounded-[4px] border border-slate-100" />
             ) : (
-              <div className="w-16 h-16 bg-gray-200 dark:bg-gray-600 rounded-lg flex items-center justify-center">
-                <File className="h-8 w-8 text-gray-500" />
+              <div className="w-12 h-12 bg-slate-50 rounded-[4px] flex items-center justify-center border border-slate-200/80">
+                <File className="h-6 w-6 text-slate-400" />
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{selectedFiles[0].name}</p>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs font-semibold text-slate-800 truncate">{selectedFiles[0].name}</p>
+              <p className="text-[10px] text-slate-400 font-medium mt-0.5">
                 {(selectedFiles[0].size / 1024 / 1024).toFixed(2)} MB
               </p>
             </div>
@@ -1041,57 +1059,60 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
               size="icon"
               onClick={clearSelectedFiles}
               disabled={isUploading}
+              className="h-8 w-8 rounded-[4px] text-slate-400 hover:text-slate-600 hover:bg-slate-100"
             >
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4" />
             </Button>
             <Button
               onClick={handleSendFile}
               disabled={isUploading}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-blue-600 hover:bg-blue-700 text-white rounded-[4px] h-8 px-3 text-xs font-semibold flex items-center gap-1.5 shadow-none transition-colors"
             >
               {isUploading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
-                <Send className="h-4 w-4" />
+                <>
+                  <Send className="h-3.5 w-3.5" />
+                  <span>Gửi file</span>
+                </>
               )}
             </Button>
           </div>
         </div>
       )}
 
-
       {/* Rich Text Composer */}
-      <div className="px-6 py-4 border-t border-slate-100 bg-white">
+      <div className="px-6 py-4 border-t border-slate-200/80 bg-white">
         {chat?.isBlocked ? (
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 text-center">
+          <div className="bg-slate-50 border border-slate-200 rounded-[4px] p-6 text-center">
             <Ban className="w-8 h-8 mx-auto mb-2 text-slate-300" />
-            <p className="text-sm font-medium text-slate-500">
+            <p className="text-xs font-semibold text-slate-500">
               {chat.isBlockedByMe
                 ? "Bạn đã chặn người dùng này. Bỏ chặn để gửi tin nhắn."
                 : "Bạn không thể gửi tin nhắn cho người này vì trạng thái chặn."}
             </p>
           </div>
         ) : !canPost ? (
-          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 text-center animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
-              <Lock size={20} />
+          <div className="bg-slate-50 border border-slate-200 rounded-[4px] p-4 flex flex-col items-center justify-center gap-1.5 text-center animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <div className="h-8 w-8 rounded-[4px] bg-slate-100 flex items-center justify-center text-slate-500">
+              <Lock size={15} />
             </div>
             <div>
-              <p className="text-sm font-semibold text-slate-700">Kênh này đang ở chế độ chỉ đọc</p>
-              <p className="text-xs text-slate-500">Chỉ quản trị viên mới có thể gửi tin nhắn trong cuộc hội thoại này.</p>
+              <p className="text-xs font-bold text-slate-800">Kênh này đang ở chế độ chỉ đọc</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">Chỉ quản trị viên mới có thể gửi tin nhắn trong cuộc hội thoại này.</p>
             </div>
           </div>
         ) : (
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm focus-within:border-blue-400 focus-within:ring-4 focus-within:ring-blue-50 transition-all duration-200">
+          <div className="bg-white border border-slate-200/80 focus-within:border-slate-400 rounded-[4px] flex flex-col shadow-none transition-colors duration-150">
             {/* Input Area */}
-            <div className="p-3 min-h-[44px] relative">
+            <div className="px-3 pt-2 pb-1.5 min-h-[44px] relative">
               <textarea
                 ref={inputRef}
                 value={inputText}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
                 placeholder={`Nhắn cho ${chatName}...`}
-                className="w-full resize-none border-0 focus:ring-0 text-[15px] text-slate-700 placeholder:text-slate-400 outline-none bg-transparent"
+                className="w-full resize-none border-0 focus:ring-0 text-[14px] text-slate-800 placeholder:text-slate-400 outline-none bg-transparent py-1"
                 rows={1}
                 style={{ minHeight: '24px', maxHeight: '200px' }}
               />
@@ -1107,19 +1128,19 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
             </div>
 
             {/* Bottom Toolbar */}
-            <div className="flex items-center justify-between px-2 pb-2">
+            <div className="bg-slate-50/70 border-t border-slate-100 px-3 py-1.5 flex items-center justify-between">
               <div className="flex items-center gap-0.5">
                 <div className="relative">
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    className="h-7 w-7 text-slate-500 hover:text-slate-850 hover:bg-slate-200/60 rounded-[4px] transition-colors"
                     onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                   >
-                    <Smile size={18} />
+                    <Smile size={15} />
                   </Button>
                   {showEmojiPicker && (
-                    <div className="absolute bottom-full left-0 mb-3 z-50">
+                    <div className="absolute bottom-full left-0 mb-3 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
                       <EmojiPicker onSelect={handleEmojiSelect} onClose={() => setShowEmojiPicker(false)} />
                     </div>
                   )}
@@ -1143,54 +1164,54 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  className="h-7 w-7 text-slate-500 hover:text-slate-850 hover:bg-slate-200/60 rounded-[4px] transition-colors"
                   onClick={() => imageInputRef.current?.click()}
                   title="Gửi ảnh"
                 >
-                  <ImageIcon size={18} />
+                  <ImageIcon size={15} />
                 </Button>
                 
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  className="h-7 w-7 text-slate-500 hover:text-slate-850 hover:bg-slate-200/60 rounded-[4px] transition-colors"
                   onClick={() => fileInputRef.current?.click()}
                   title="Gửi file"
                 >
-                  <Paperclip size={18} />
+                  <Paperclip size={15} />
                 </Button>
 
-                <div className="h-4 w-[1px] bg-slate-200 mx-1.5" />
+                <div className="h-4 w-[1px] bg-slate-200 mx-2" />
 
                 <button
                   onClick={() => openAIPanel()}
-                  className={`flex items-center gap-1.5 px-3 py-1 text-[11px] font-bold rounded-full transition-all border ${
+                  className={`flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-[4px] border transition-all ${
                     showAIPanel
-                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-100'
-                      : 'bg-indigo-50 text-indigo-600 border-indigo-100 hover:bg-indigo-100 hover:border-indigo-200'
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-blue-50/60 text-blue-600 border-blue-200/80 hover:bg-blue-100/70 hover:border-blue-200'
                   }`}
                 >
-                  <Sparkles size={13} className={showAIPanel ? '' : 'animate-pulse text-indigo-500'} />
-                  AI Assistant
+                  <Sparkles size={12} className={showAIPanel ? '' : 'animate-pulse text-blue-500'} />
+                  <span>AI Assistant</span>
                 </button>
               </div>
 
-              <div className="flex items-center gap-3 pr-1">
-                <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider hidden sm:block">
+              <div className="flex items-center gap-3">
+                <span className="text-[10px] text-slate-400 font-medium tracking-wide hidden sm:block">
                   Nhấn Enter để gửi
                 </span>
                 <button
                   onClick={handleSend}
                   disabled={!inputText.trim() || sending}
-                  className="h-9 w-9 flex items-center justify-center bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-xl shadow-lg shadow-blue-100 transition-all active:scale-90"
+                  className="h-7 w-7 flex items-center justify-center bg-blue-600 hover:bg-blue-700 disabled:bg-slate-100 disabled:text-slate-400 text-white rounded-[4px] transition-all shadow-none"
                 >
-                  <Send size={18} />
+                  <Send size={13} />
                 </button>
               </div>
             </div>
           </div>
         )}
-        <div className="p-2 text-center text-[10px] text-slate-300 font-medium">
+        <div className="py-2 text-center text-[10px] text-slate-400/80 font-medium tracking-wider select-none bg-white">
           NEXUS Enterprise Collaboration Chat • Secure & Encrypted
         </div>
       </div>
