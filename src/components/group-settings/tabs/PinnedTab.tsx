@@ -5,6 +5,7 @@ import { vi } from "date-fns/locale";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { getInitials, avatarColor } from "../shared/utils";
+import { MessageSnippet } from "@/src/features/chat/message-snippet";
 
 interface PinnedTabProps {
     pinnedMessages: any[];
@@ -37,7 +38,9 @@ export function PinnedTab({ pinnedMessages, onMessageClick }: PinnedTabProps) {
                             {msg.time && format(new Date(msg.time), "dd/MM/yyyy", { locale: vi })}
                         </span>
                     </div>
-                    <p className="text-[13px] text-slate-700 leading-relaxed line-clamp-3">{msg.content}</p>
+                    <div className="text-[13px] text-slate-700 leading-relaxed line-clamp-3">
+                        <MessageSnippet type={msg.type} content={msg.content} file={(msg as any).file} />
+                    </div>
                     <div className="flex items-center gap-1 mt-2">
                         <Pin className="w-3 h-3 text-blue-500" />
                         <span className="text-[10px] text-blue-500 font-medium">Đã ghim</span>

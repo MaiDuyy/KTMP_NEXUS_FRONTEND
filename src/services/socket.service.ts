@@ -88,14 +88,14 @@ const getSocketUrl = (): string => {
 };
 
 let socket: Socket | null = null;
-const messageListeners: Set<(data: { message: Message; chatId: string; tempId?: string }) => void> = new Set();
+const messageListeners: Set<(data: { message: Message; chatId: string; tempId?: string; workspaceId?: string }) => void> = new Set();
 
 
 export interface SocketCallbacks {
   onConnect?: () => void;
   onDisconnect?: () => void;
   onReconnect?: (attempt: number) => void;
-  onNewMessage?: (data: { message: Message; chatId: string; tempId?: string }) => void;
+  onNewMessage?: (data: { message: Message; chatId: string; tempId?: string; workspaceId?: string }) => void;
   onTypingStart?: (data: TypingEvent) => void;
   onTypingStop?: (data: { chatId: string; userId: string }) => void;
   onMessageRead?: (data: MessageReadEvent) => void;
@@ -137,10 +137,12 @@ export interface SocketCallbacks {
   onJoinRequestUpdated?: (data: { chatId: string; accountId: string; status: string }) => void;
   onTaskNew?: (data: { chatId: string; [key: string]: any }) => void;
   onTaskUpdated?: (data: { chatId: string; taskId: string; [key: string]: any }) => void;
+  onTaskDeleted?: (data: { chatId: string; taskId: string; [key: string]: any }) => void;
   onDocumentStatusChanged?: (data: DocumentStatusChangedEvent) => void;
   onCompilationPlanStatusChanged?: (data: CompilationPlanStatusChangedEvent) => void;
   onWikiDraftStatusChanged?: (data: WikiDraftStatusChangedEvent) => void;
   onChatCallStatus?: (data: { chatId: string; roomName: string | null; isActive: boolean; [key: string]: any }) => void;
+  onPollUpdated?: (data: { chatId: string; pollId: string; options: any[]; totalVotes: number }) => void;
   onCallActiveStatus?: (data: { chatId: string; isActive: boolean; roomName?: string; [key: string]: any }) => void;
   onWorkspaceInvite?: (data: { workspaceName: string; role: string; token: string; inviterId: string; timestamp: string }) => void;
   onWorkspaceDissolved?: (data: { workspaceId: string; dissolvedBy: string }) => void;
@@ -161,6 +163,8 @@ export interface SocketCallbacks {
   onCallEnded?: (data: any) => void;
   onCallBusy?: (data: any) => void;
   onCallActiveSync?: (data: any) => void;
+  onDepartmentMemberAdded?: (data: { departmentId: string; userId: string; role: string }) => void;
+  onDepartmentMemberRemoved?: (data: { departmentId: string; userId: string }) => void;
 }
 
 // Kết nối socket
@@ -435,6 +439,11 @@ export const connectSocket = (token: string, callbacks?: SocketCallbacks): Socke
     callbacks?.onTaskUpdated?.(data);
   });
 
+  socket.on("task:deleted", (data) => {
+    console.log("[Socket] 🗑️ Task deleted:", data);
+    callbacks?.onTaskDeleted?.(data);
+  });
+
   socket.on("document:status_changed", (data) => {
     console.log("[Socket] 📄 Document status changed:", data);
     callbacks?.onDocumentStatusChanged?.(data);
@@ -453,6 +462,11 @@ export const connectSocket = (token: string, callbacks?: SocketCallbacks): Socke
   socket.on("chat:call_status", (data) => {
     console.log("[Socket] 📞 Chat call status changed:", data);
     callbacks?.onChatCallStatus?.(data);
+  });
+
+  socket.on("poll:updated", (data) => {
+    console.log("[Socket] 📊 Poll updated:", data);
+    callbacks?.onPollUpdated?.(data);
   });
 
   socket.on("call:active_status", (data) => {
@@ -549,6 +563,16 @@ export const connectSocket = (token: string, callbacks?: SocketCallbacks): Socke
   socket.on("call:active_sync", (data) => {
     console.log("[Socket] 📞 Received call:active_sync:", data);
     callbacks?.onCallActiveSync?.(data);
+  });
+
+  socket.on("department:member_added", (data) => {
+    console.log("[Socket] 🏢 Department member added:", data);
+    callbacks?.onDepartmentMemberAdded?.(data);
+  });
+
+  socket.on("department:member_removed", (data) => {
+    console.log("[Socket] 🏢 Department member removed:", data);
+    callbacks?.onDepartmentMemberRemoved?.(data);
   });
 
   return socket;

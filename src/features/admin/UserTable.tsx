@@ -411,9 +411,12 @@ export function UserTable({ onInviteUser, onEditUser }: UserTableProps) {
                         </SelectContent>
                     </Select>
                 </div>
-                <Button onClick={() => setShowInviteDialog(true)} className="h-8 text-xs rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
+                <Button 
+                    onClick={() => setShowInviteDialog(true)} 
+                    className="h-8.5 text-xs rounded-lg bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold shadow-sm transition-all active:scale-[0.98] cursor-pointer"
+                >
                     <UserPlus className="w-3.5 h-3.5 mr-1.5" />
-                    Mời người dùng
+                    Thêm nhân sự
                 </Button>
             </div>
 
@@ -504,7 +507,7 @@ export function UserTable({ onInviteUser, onEditUser }: UserTableProps) {
                                 <Label htmlFor="anonymize" className="flex-1 cursor-pointer">
                                     <span className="block text-xs font-bold text-foreground">Vô danh hóa (Khuyên dùng)</span>
                                     <span className="block text-[10px] text-muted-foreground mt-0.5 leading-normal">
-                                        Giữ lại các tin nhắn và dữ liệu nhưng thay thế thông tin cá nhân bằng "Deleted User". Đảm bảo tính toàn vẹn của cuộc hội thoại cũ.
+                                        Giữ lại các tin nhắn và dữ liệu nhưng thay thế thông tin cá nhân bằng &quot;Deleted User&quot;. Đảm bảo tính toàn vẹn của cuộc hội thoại cũ.
                                     </span>
                                 </Label>
                             </div>
@@ -636,7 +639,7 @@ export function UserTable({ onInviteUser, onEditUser }: UserTableProps) {
                     <div className="py-3 space-y-3">
                         <div className="p-2.5 bg-green-50/60 dark:bg-green-950/10 border border-green-200 dark:border-green-900/30 rounded-lg space-y-0.5">
                             <p className="text-[11px] font-bold text-green-800 dark:text-green-400">Thông tin đình chỉ trước đó:</p>
-                            <p className="text-[11px] text-green-700 dark:text-green-300 italic">"{selectedUser?.suspendReason || 'Không có dữ liệu'}"</p>
+                            <p className="text-[11px] text-green-700 dark:text-green-300 italic">&quot;{selectedUser?.suspendReason || 'Không có dữ liệu'}&quot;</p>
                         </div>
 
                         <div className="space-y-1.5">

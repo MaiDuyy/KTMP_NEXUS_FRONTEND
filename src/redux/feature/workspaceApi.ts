@@ -147,7 +147,7 @@ export const workspaceApi = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ["Workspaces"],
     }),
-    updateWorkspace: builder.mutation<Workspace, { workspaceId: string; name?: string; description?: string; icon?: string; slug?: string }>({
+    updateWorkspace: builder.mutation<Workspace, { workspaceId: string; name?: string; description?: string; icon?: string; slug?: string; departmentId?: string | null }>({
       query: ({ workspaceId, ...body }) => ({
         url: `/workspaces/${workspaceId}`,
         method: "PUT",

@@ -42,6 +42,15 @@ export const LoginForm: React.FC = () => {
 
   const callbackUrl = searchParams ? searchParams.get('callbackUrl') || '/chat' : '/chat';
 
+  React.useEffect(() => {
+    if (searchParams && searchParams.get('reason') === 'session_expired') {
+      const timer = setTimeout(() => {
+        toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại để tiếp tục.");
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams]);
+
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {

@@ -43,11 +43,16 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
       const release = await mutex.acquire();
       
       try {
-        // Gọi API refresh token (server đọc refreshToken từ cookie)
+        // Lấy refreshToken từ store hoặc localStorage để dự phòng cookie bị chặn
+        const state = api.getState() as RootState;
+        const refreshToken = state.auth.refreshToken || (typeof window !== 'undefined' ? localStorage.getItem("refreshToken") : null);
+
+        // Gọi API refresh token
         const refreshResult = await baseQuery(
           {
             url: "/auth/refresh-token",
             method: "POST",
+            body: { refreshToken },
           },
           api,
           extraOptions
@@ -57,18 +62,31 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
           // Refresh thành công - server đã set cookie mới
           const data = refreshResult.data as { accessToken: string; refreshToken: string };
           
-          // Dispatch để cập nhật state (không lưu token, chỉ mark authenticated)
+          // Dispatch để cập nhật state
           api.dispatch(tokenReceived(data));
           
-          // Retry request ban đầu với cookie mới
+          // Retry request ban đầu với token mới
           result = await baseQuery(args, api, extraOptions);
         } else {
-          // Refresh thất bại -> Force logout
+          // Refresh thất bại -> Force logout và chuyển hướng về /login với thông báo lỗi
           api.dispatch(logOut());
+          if (typeof window !== 'undefined') {
+            const currentPath = window.location.pathname + window.location.search;
+            const searchParams = new URLSearchParams();
+            searchParams.set('reason', 'session_expired');
+            searchParams.set('callbackUrl', currentPath);
+            window.location.href = `/login?${searchParams.toString()}`;
+          }
         }
       } finally {
         release();
       }
+    } else {
+      // Đợi cho đến khi mutex được mở khoá (làm mới token ở request đầu tiên hoàn tất)
+      await mutex.waitForUnlock();
+      
+      // Thử lại request ban đầu với token mới vừa được cập nhật
+      result = await baseQuery(args, api, extraOptions);
     }
   }
 
@@ -126,6 +144,7 @@ export const apiSlice = createApi({
     "ReadReceipts",
     "Tasks",
     "MediaMessages",
+    "Polls",
     // Dashboard
     "Dashboard",
     "DashboardHealth",

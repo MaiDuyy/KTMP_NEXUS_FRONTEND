@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Pin, ChevronRight, X, ChevronLeft, Hash, MessageSquare } from 'lucide-react';
 import { PinnedMessage } from '@/src/type/chat.types';
+import { MessageSnippet } from './message-snippet';
 import { Button } from '@/components/ui/button';
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
@@ -54,9 +55,16 @@ export const PinnedBanner: React.FC<PinnedBannerProps> = ({
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <p className="text-sm text-slate-600 truncate max-w-md font-medium">
-              <span className="font-bold text-slate-800">{currentMessage.senderName}:</span> {currentMessage.content}
-            </p>
+            <div className="text-sm text-slate-600 truncate max-w-md font-medium flex items-center">
+              <span className="font-bold text-slate-800 mr-1 shrink-0">{currentMessage.senderName}:</span>
+              <MessageSnippet 
+                type={currentMessage.type} 
+                content={currentMessage.content} 
+                file={(currentMessage as any).file}
+                className="truncate"
+                iconClassName="h-3.5 w-3.5 inline-block align-middle shrink-0 mr-1 text-slate-500"
+              />
+            </div>
           </div>
         </div>
       </div>

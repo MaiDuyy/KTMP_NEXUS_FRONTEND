@@ -7,12 +7,7 @@ export const getInitials = (name: string) =>
         .toUpperCase()
         .slice(0, 2);
 
-export const normalizeUrl = (url: string) => {
-    if (!url) return "";
-    return url.startsWith("http://") || url.startsWith("https://")
-        ? url
-        : `https://${url}`;
-};
+
 
 export const AVATAR_COLORS = [
     "bg-blue-100 text-blue-800",

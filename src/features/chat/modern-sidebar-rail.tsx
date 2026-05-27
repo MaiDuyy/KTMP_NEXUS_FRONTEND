@@ -28,6 +28,7 @@ import {
   Circle,
   Clock,
   BellOff,
+  Building2,
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/src/redux/store';
@@ -450,24 +451,24 @@ export default function ModernSidebarRail() {
         ))}
 
         {/* Admin tools */}
-        {currentWorkspaceId && (
-          <RequirePermission anyRole={['SUPER_ADMIN', 'ADMIN', 'WORKSPACE_MANAGER']} silent>
-            <div className="flex flex-col items-center gap-2">
-              <div className="w-7 h-px bg-white/10 my-0.5" />
+        <RequirePermission anyRole={['SUPER_ADMIN', 'ADMIN', 'WORKSPACE_MANAGER']} silent>
+          <div className="flex flex-col items-center gap-2">
+            <div className="w-7 h-px bg-white/10 my-0.5" />
+            {currentWorkspaceId && (
               <RailBtn
                 label="Quản trị Workspace"
                 icon={<Shield size={18} />}
                 active={pathname.startsWith('/workspace/settings')}
                 onClick={() => router.push('/workspace/settings')}
               />
-              <RailBtn
-                label="Kho lưu trữ"
-                icon={<Archive size={18} />}
-                onClick={() => setIsDissolvedModalOpen(true)}
-              />
-            </div>
-          </RequirePermission>
-        )}
+            )}
+            <RailBtn
+              label="Kho lưu trữ"
+              icon={<Archive size={18} />}
+              onClick={() => setIsDissolvedModalOpen(true)}
+            />
+          </div>
+        </RequirePermission>
       </div>
 
       {/* ── Divider ── */}
@@ -475,17 +476,23 @@ export default function ModernSidebarRail() {
 
       {/* ── Main Navigation ── */}
       <nav className="flex flex-col items-center gap-1 w-full px-[10px] flex-1">
-        <RailBtn
+        {/* <RailBtn
           href="/dashboard"
           icon={<LayoutGrid size={18} />}
           label="Bảng điều khiển"
           active={pathname === '/dashboard' || pathname === '/'}
-        />
+        /> */}
         <RailBtn
           href="/chat"
           icon={<MessageCircle size={18} />}
           label="Tin nhắn"
-          active={pathname?.startsWith('/chat')}
+          active={pathname === '/chat' || (pathname?.startsWith('/chat') && !pathname.startsWith('/chat/department'))}
+        />
+        <RailBtn
+          href="/chat/department"
+          icon={<Building2 size={18} />}
+          label="Phòng ban của tôi"
+          active={pathname?.startsWith('/chat/department')}
         />
         <RailBtn
           href="/ai"
@@ -577,7 +584,7 @@ export default function ModernSidebarRail() {
 
             <RequirePermission anyRole={['SUPER_ADMIN', 'ADMIN', 'WORKSPACE_MANAGER']} silent>
               <DropdownMenuItem asChild className="rounded-[4px] py-1.5 px-2.5 cursor-pointer hover:bg-white/10">
-                <Link href="/workspace/settings" className="flex items-center gap-2.5">
+                <Link href="/admin/users" className="flex items-center gap-2.5">
                   <Shield className="w-4 h-4 text-blue-400" />
                   <span className="text-xs font-semibold text-blue-400">Quản trị</span>
                 </Link>

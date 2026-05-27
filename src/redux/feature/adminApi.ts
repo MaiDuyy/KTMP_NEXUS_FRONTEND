@@ -109,6 +109,7 @@ export interface InviteUserRequest {
   email: string;
   role?: string;
   department?: string;
+  departmentRole?: 'HEAD' | 'MANAGER' | 'MEMBER' | 'GUEST';
   message?: string;
 }
 
@@ -288,6 +289,16 @@ export const adminApi = apiSlice.injectEndpoints({
       invalidatesTags: ['Invitations'],
     }),
 
+    // Provision user (Flow A)
+    provisionUser: builder.mutation<any, { email: string; name: string; role: string; departmentId?: string; departmentRole?: string }>({
+      query: (body) => ({
+        url: '/users/provision',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['Users'],
+    }),
+
     // Resend invitation
     resendInvitation: builder.mutation<{ invitation: Invitation }, string>({
       query: (id) => ({
@@ -464,6 +475,7 @@ export const {
   // Invitations
   useListInvitationsQuery,
   useInviteUserMutation,
+  useProvisionUserMutation,
   useResendInvitationMutation,
   useCancelInvitationMutation,
   // Org Settings

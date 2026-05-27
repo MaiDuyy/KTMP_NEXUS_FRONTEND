@@ -172,13 +172,24 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
 
            // Skip message toast if it's a mention (let onMention handle it)
            const content = data.message.content || '';
-           const hasMention = /@\[([^\]]+)\]\(([a-zA-Z0-9_-]+)\)/.test(content) || /@(here|channel)\b/i.test(content);
+           const hasMention = /@\[([^\]]+)\]\(([a-zA-Z0-9_-]+)\)/.test(content) || /@(here|channel|all|everyone)\b/i.test(content);
 
            if (!hasMention) {
              const toastContent = `MSG:${data.chatId}:${data.message.id}`;
+             // Build display text for different message types
+             const callTypeLabels: Record<string, string> = {
+               call_started: '[📞 Cuộc gọi mới]',
+               call_ended: '[📞 Cuộc gọi kết thúc]',
+               call_missed: '[📞 Cuộc gọi nhỡ]',
+               call_declined: '[📞 Cuộc gọi bị từ chối]',
+               call_cancelled: '[📞 Cuộc gọi đã hủy]',
+               call_participant_joined: '[📞 Tham gia cuộc gọi]',
+               call_participant_left: '[📞 Rời cuộc gọi]',
+             };
+             const msgTypeLabel = callTypeLabels[data.message.type] || `[${data.message.type}]`;
              showToastWithDeduplication(toastContent, () => {
                toast.info(`Tin nhắn từ ${data.message.sender?.name || 'Ai đó'}`, {
-                   description: `Tại ${workspaceName}: ${data.message.type === 'text' ? content : `[${data.message.type}]`}`,
+                   description: `Tại ${workspaceName}: ${data.message.type === 'text' ? content : msgTypeLabel}`,
                    duration: 5000,
                    action: {
                      label: 'Xem ngay',
@@ -238,12 +249,16 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
                 if (chat) {
                   // Update last message info
                   chat.lastMessage = {
+                    id: enrichedMessage.id,
                     content: enrichedMessage.content,
                     type: enrichedMessage.type,
-                    senderName: enrichedMessage.sender?.name || 'User',
-                    time: enrichedMessage.createdAt
+                    time: enrichedMessage.time || new Date().toISOString(),
+                    sender: {
+                      id: enrichedMessage.sender?.id || enrichedMessage.senderId || "",
+                      name: enrichedMessage.sender?.name || "User"
+                    }
                   };
-                  chat.updatedAt = enrichedMessage.createdAt;
+                  chat.updatedAt = enrichedMessage.time || new Date().toISOString();
                   
                   // Only increment unread if not from current user
                   if (!isMyMessage) {
@@ -420,11 +435,11 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
         const isCurrentChat = currentPath.includes(data.chatId);
 
         if (!isCurrentChat) {
-          const mentionLabel = data.types?.includes('CHANNEL') ? '@everyone' : '@here';
+          const mentionLabel = data.types?.includes('ALL') ? '@all' : data.types?.includes('CHANNEL') ? '@everyone' : '@here';
           const toastContent = `BROADCAST:${data.chatId}:${mentionLabel}`;
           
           showToastWithDeduplication(toastContent, () => {
-            toast.message(`${data.senderName || 'Ai đó'} đã nhắc đến ${mentionLabel === '@everyone' ? 'mọi người' : 'tất cả'}`, {
+            toast.message(`${data.senderName || 'Ai đó'} đã nhắc đến ${mentionLabel === '@all' ? 'tất cả mọi người' : mentionLabel === '@everyone' ? 'mọi người' : 'tất cả'}`, {
               description: `Trong cuộc hội thoại: ${data.chatName || 'Chat'}`,
               duration: 8000,
               icon: '🔔',
@@ -709,6 +724,11 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
 
       onTaskUpdated: (data) => {
         console.log("[RealtimeChat] ✅ Task updated:", data.chatId);
+        dispatch(apiSlice.util.invalidateTags([{ type: "Tasks" as any, id: data.chatId }]));
+      },
+
+      onTaskDeleted: (data) => {
+        console.log("[RealtimeChat] 🗑️ Task deleted:", data.chatId);
         dispatch(apiSlice.util.invalidateTags([{ type: "Tasks" as any, id: data.chatId }]));
       },
 
@@ -1056,6 +1076,23 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
         dispatch(apiSlice.util.invalidateTags(["Notifications"] as any));
       },
 
+      onPollUpdated: (data) => {
+        console.log("[RealtimeChat] 📊 Poll updated event:", data.pollId);
+        dispatch(
+          chatApi.util.updateQueryData("getPoll" as any, data.pollId, (draft: any) => {
+            if (draft) {
+              draft.options = data.options;
+              draft.totalVotes = data.totalVotes;
+            }
+          })
+        );
+
+        // DISPATCH GLOBAL EVENT
+        window.dispatchEvent(new CustomEvent("chat:poll_updated", {
+          detail: data
+        }));
+      },
+
       onError: (error) => {
         console.error("[RealtimeChat] ❗ Error:", error.message);
       },
@@ -1081,6 +1118,33 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
       },
       onCallActiveSync: (data) => {
         window.dispatchEvent(new CustomEvent("call:active_sync", { detail: data }));
+      },
+      onDepartmentMemberAdded: (data) => {
+        console.log("[RealtimeChat] 🏢 Department member added:", data);
+        dispatch(apiSlice.util.invalidateTags(["Departments"] as any));
+        
+        // Show nice toast notification if this is the current user
+        const authUser = store.getState().auth?.user;
+        if (data.userId === authUser?.id) {
+           const roleLabels: Record<string, string> = {
+             HEAD: 'Trưởng phòng',
+             MANAGER: 'Phó phòng',
+             GUEST: 'Khách',
+             MEMBER: 'Thành viên'
+           };
+           const roleLabel = roleLabels[data.role] || 'Thành viên';
+           toast.info(`Bạn đã được bổ nhiệm vào phòng ban mới với vai trò: ${roleLabel}`);
+        }
+      },
+      onDepartmentMemberRemoved: (data) => {
+        console.log("[RealtimeChat] 🏢 Department member removed:", data);
+        dispatch(apiSlice.util.invalidateTags(["Departments"] as any));
+        
+        // Show nice warning toast if this is the current user
+        const authUser = store.getState().auth?.user;
+        if (data.userId === authUser?.id) {
+           toast.warning("Bạn đã được gỡ khỏi phòng ban.");
+        }
       },
     };
 

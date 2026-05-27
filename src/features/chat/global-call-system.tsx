@@ -220,6 +220,12 @@ export function GlobalCallSystem() {
 
     const onDeclined = (e: Event) => {
       const data = (e as CustomEvent).detail;
+      
+      if (data.callType === "group") {
+        toast.info(`${data.declinedByName} đã từ chối tham gia cuộc gọi.`);
+        return;
+      }
+
       if (callStateRef.current === "ringing_out") {
         toast.info(`${data.declinedByName} đã từ chối cuộc gọi.`);
         setEndReason("declined");
@@ -274,6 +280,21 @@ export function GlobalCallSystem() {
       const data = (e as CustomEvent).detail;
       if (data.participantId === user.id) return;
       toast.info(`${data.participantName} đã rời cuộc gọi.`);
+
+      // If a new host was promoted, update local callData initiator state
+      if (data.newCallerId) {
+        setCallData((prev) => prev ? {
+          ...prev,
+          callerId: data.newCallerId,
+          callerName: data.newCallerName || prev.callerName,
+        } : prev);
+
+        if (data.newCallerId === user.id) {
+          toast.success("Bạn đã được chuyển quyền Trưởng cuộc gọi.");
+        } else {
+          toast.info(`${data.newCallerName || "Thành viên khác"} đã trở thành Trưởng cuộc gọi mới.`);
+        }
+      }
     };
 
     const onParticipantJoined = (e: Event) => {

@@ -187,7 +187,9 @@ export type MessageType =
   | "call_ended"
   | "call_missed"
   | "call_declined"
-  | "call_cancelled";
+  | "call_cancelled"
+  | "poll"
+  | "task";
   
 
 export interface MessageReaction {
@@ -320,6 +322,7 @@ export interface TypingEvent {
 export interface MessageReadEvent {
   chatId: string;
   userId: string;
+  workspaceId?: string;
 }
 
 export interface UserOnlineEvent {
@@ -335,4 +338,5 @@ export interface MessageReactedEvent {
   userName: string;
   emoji: string;
   action: "added" | "removed" | "changed";
+  count?: number;
 }

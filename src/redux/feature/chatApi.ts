@@ -316,7 +316,33 @@ export const chatApi = apiSlice.injectEndpoints({
             method: "DELETE",
         }),
         invalidatesTags: (_result, _error, { chatId }) => [{ type: "Tasks" as any, id: chatId }],
-            }),
+      }),
+
+      // Create Poll
+      createPoll: builder.mutation<any, { chatId: string; title: string; options: string[]; endsAt?: string }>({
+        query: (body) => ({
+          url: '/polls',
+          method: 'POST',
+          body,
+        }),
+        invalidatesTags: [{ type: 'Chats', id: 'LIST' }],
+      }),
+
+      // Get Poll Details
+      getPoll: builder.query<any, string>({
+        query: (pollId) => `/polls/${pollId}`,
+        providesTags: (_result, _error, pollId) => [{ type: 'Polls' as any, id: pollId }],
+      }),
+
+      // Vote on Poll Option
+      votePoll: builder.mutation<any, { pollId: string; optionId: string }>({
+        query: ({ pollId, optionId }) => ({
+          url: `/polls/${pollId}/vote`,
+          method: 'POST',
+          body: { optionId },
+        }),
+        invalidatesTags: (_result, _error, { pollId }) => [{ type: 'Polls' as any, id: pollId }],
+      }),
   }),
 });
 
@@ -343,4 +369,7 @@ export const {
   useCreateTaskMutation,
   useUpdateTaskStatusMutation,
   useDeleteTaskMutation,
+  useCreatePollMutation,
+  useGetPollQuery,
+  useVotePollMutation,
 } = chatApi;

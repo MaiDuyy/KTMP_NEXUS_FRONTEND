@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import Sidebar from '@/src/features/chat/modern-sidebar-rail';
 import { AuthGuard } from '@/src/components/guards/AuthGuard';
 
-const noSidebarRoutes = ['/', '/login', '/register', '/auth', '/join', '/invite'];
+const noSidebarRoutes = ['/', '/login', '/register', '/auth', '/join', '/invite' , '/setup-password'];
 
 export default function ClientLayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || '';
