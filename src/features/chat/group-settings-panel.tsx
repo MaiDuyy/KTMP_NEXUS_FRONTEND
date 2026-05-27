@@ -47,7 +47,7 @@ import { TransferLeadershipDialog } from "../../components/group-settings/dialog
 
 // Types & utils
 import { GroupSettingsPanelProps, Participant, TabKey } from "../../components/group-settings/types";
-import { getInitials, normalizeUrl, avatarColor } from "../../components/group-settings/shared/utils";
+import { getInitials, avatarColor } from "../../components/group-settings/shared/utils";
 import { getAvatarUrl } from "@/src/utils/image-utils";
 import { useSelector } from "react-redux";
 import { RootState } from "@/src/redux/store";
@@ -183,6 +183,7 @@ export default function GroupSettingsPanel({
         try {
             const fd = new FormData();
             fd.append("file", file);
+            fd.append("chatId", chatId);
             const res = await uploadGroupAvatar(fd).unwrap();
             await updateChat({ chatId, avatar: res.url }).unwrap();
             toast.success("Đã cập nhật ảnh nhóm");
@@ -254,6 +255,13 @@ export default function GroupSettingsPanel({
 
     const handleCreateTask = async () => {
         if (!taskTitle.trim()) return toast.error("Vui lòng nhập tiêu đề");
+        
+        const start = taskStartTime ? new Date(taskStartTime) : null;
+        const deadline = taskDeadline ? new Date(taskDeadline) : null;
+        if (start && deadline && start >= deadline) {
+            return toast.error("Thời gian bắt đầu phải trước thời gian kết thúc!");
+        }
+
         try {
             await createTask({
                 chatId,
@@ -516,7 +524,6 @@ export default function GroupSettingsPanel({
                     groupName={chat?.name || ""}
                     getInitials={getInitials}
                     getMemberAvatar={getMemberAvatar}
-                    normalizeUrl={normalizeUrl}
                 />
             </SheetContent>
         </Sheet>

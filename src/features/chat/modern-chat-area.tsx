@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import {
   Search, Phone, Video, Info, Paperclip, Smile, Mic, Send,
   Sparkles, Bold, Italic, Link2, List as ListIcon, Reply, X,
-  Loader2, ImageIcon, File, Ban, Hash, Lock,
+  Loader2, ImageIcon, File, Ban, Hash, Lock, BarChart3,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
@@ -24,6 +24,7 @@ import EmojiPicker from './emoji-picker';
 import ChatInfoPanel from './chat-info-panel';
 import GroupSettingsPanel from './group-settings-panel';
 import { ChannelInfoPanel } from './channel-info-panel';
+import CreatePollModal from './CreatePollModal';
 import { toast } from 'sonner';
 import { useUploadChatMediaMutation } from '@/src/redux/feature/uploadApi';
 import { messageApi } from '@/src/redux/feature/messageApi';
@@ -54,6 +55,7 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [activeCall, setActiveCall] = useState<{ roomName: string; isVideo: boolean; callerName: string; callerAvatar?: string } | null>(null);
   const [showPinnedPanel, setShowPinnedPanel] = useState(false);
+  const [showCreatePollModal, setShowCreatePollModal] = useState(false);
 
   // ──────── Mention system state ────────
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
@@ -130,6 +132,36 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
   // Detect if current chat is a Workspace Channel
   const { data: channelData } = useGetChannelQuery(chatId!, { skip: !chatId });
   const isChannel = !!channelData;
+
+  const canUseBroadcastMentions = useMemo(() => {
+    if (!chat) return true;
+    if (!chat.isGroup) return false;
+
+    const myParticipant = chat.participants?.find(p => p.accountId === user?.id);
+    const myRole = myParticipant?.role;
+
+    let isPublicOrLarge = false;
+    if (isChannel && channelData) {
+      if (channelData.type === 'PUBLIC' || channelData.type === 'ANNOUNCEMENT') {
+        isPublicOrLarge = true;
+      }
+    }
+
+    const participantCount = chat.participants?.length || 0;
+    if (participantCount >= 50) {
+      isPublicOrLarge = true;
+    }
+
+    const isGuest = myRole === 'CHANNEL_GUEST';
+    const isAdminOrMod = myRole && ['CHANNEL_OWNER', 'CHANNEL_MODERATOR'].includes(myRole);
+    const hasAdminPrivilege = isAdminOrMod || isAdmin;
+
+    if (isPublicOrLarge) {
+      return !!hasAdminPrivilege;
+    } else {
+      return !isGuest;
+    }
+  }, [chat, user?.id, isChannel, channelData, isAdmin]);
 
   const [triggerGetMessages, { isFetching }] = useLazyGetMessagesQuery();
   const { data: readReceipts } = useGetChatReadReceiptsQuery(chatId!, { skip: !chatId });
@@ -1123,6 +1155,7 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
                   onSelect={handleMentionSelect}
                   onClose={() => setMentionQuery(null)}
                   currentUserId={user?.id}
+                  canUseBroadcast={canUseBroadcastMentions}
                 />
               )}
             </div>
@@ -1180,6 +1213,18 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
                 >
                   <Paperclip size={15} />
                 </Button>
+
+                {chat?.isGroup && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-slate-500 hover:text-slate-850 hover:bg-slate-200/60 rounded-[4px] transition-colors"
+                    onClick={() => setShowCreatePollModal(true)}
+                    title="Tạo bình chọn"
+                  >
+                    <BarChart3 size={15} />
+                  </Button>
+                )}
 
                 <div className="h-4 w-[1px] bg-slate-200 mx-2" />
 
@@ -1277,6 +1322,15 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
         router.push(`/chat/${newChatId}`);
       }}
     />
+
+    {/* Create Poll Modal */}
+    {chatId && (
+      <CreatePollModal
+        open={showCreatePollModal}
+        onClose={() => setShowCreatePollModal(false)}
+        chatId={chatId}
+      />
+    )}
   </div>
   );
 };

@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Check, Loader2 } from "lucide-react";
+import { getAvatarUrl } from "@/src/utils/image-utils";
 
 interface Participant {
     id: string;
@@ -41,7 +42,6 @@ interface TransferLeadershipDialogProps {
     getMemberName: (p: Participant) => string;
     getMemberAvatar: (p: Participant) => string | null | undefined;
     getInitials: (name: string) => string;
-    normalizeUrl: (url: string) => string;
 }
 
 export function TransferLeadershipDialog({
@@ -58,7 +58,6 @@ export function TransferLeadershipDialog({
     getMemberName,
     getMemberAvatar,
     getInitials,
-    normalizeUrl,
 }: TransferLeadershipDialogProps) {
     const otherMembers = participants.filter(
         (p) => getMemberId(p) !== currentUserId
@@ -92,7 +91,7 @@ export function TransferLeadershipDialog({
                                     >
                                         <Avatar className="h-10 w-10">
                                             <AvatarImage
-                                                src={normalizeUrl(getMemberAvatar(p) || "")}
+                                                src={getAvatarUrl(getMemberAvatar(p), getMemberName(p))}
                                             />
                                             <AvatarFallback>
                                                 {getInitials(getMemberName(p))}

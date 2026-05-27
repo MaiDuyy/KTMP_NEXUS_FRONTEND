@@ -9,6 +9,7 @@ interface MentionSelectorProps {
   onSelect: (participant: ChatParticipant | { accountId: string; name: string; type: 'special' }) => void;
   onClose: () => void;
   currentUserId?: string;
+  canUseBroadcast?: boolean;
 }
 
 export const MentionSelector: React.FC<MentionSelectorProps> = ({
@@ -17,13 +18,16 @@ export const MentionSelector: React.FC<MentionSelectorProps> = ({
   onSelect,
   onClose,
   currentUserId,
+  canUseBroadcast = true,
 }) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
 
-  const specialOptions = [
-    { accountId: 'here', name: 'here', type: 'special' as const, description: 'Thông báo cho những người đang online' },
-    { accountId: 'channel', name: 'channel', type: 'special' as const, description: 'Thông báo cho tất cả mọi người' },
-  ];
+  const specialOptions = canUseBroadcast ? [
+    // { accountId: 'here', name: 'here', type: 'special' as const, description: 'Thông báo cho những người đang online' },
+    { accountId: 'all', name: 'all', type: 'special' as const, description: 'Thông báo cho tất cả mọi người' },
+    // { accountId: 'channel', name: 'channel', type: 'special' as const, description: 'Thông báo cho tất cả mọi người' },
+    // { accountId: 'everyone', name: 'everyone', type: 'special' as const, description: 'Thông báo cho tất cả mọi người' },
+  ] : [];
 
   const filteredParticipants = participants.filter((p) => {
     // Exclude current user

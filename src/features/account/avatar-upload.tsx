@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useUploadAvatarMutation } from "@/src/redux/feature/uploadApi";
+import { getAvatarUrl } from "@/src/utils/image-utils";
 import { useDeleteAvatarMutation, useGetAvatarHistoryQuery, useSelectAvatarMutation } from "@/src/redux/feature/accountApi";
 
 // import {
@@ -134,10 +135,7 @@ export function AvatarUpload({
         }
     };
 
-    let imageUrl = currentAvatar || "";
-    if (imageUrl && !imageUrl.startsWith("http://") && !imageUrl.startsWith("https://")) {
-        imageUrl = `https://${imageUrl}`;
-    }
+    const imageUrl = getAvatarUrl(currentAvatar, name);
 
     return (
         <Dialog open={isOpen} onOpenChange={(open: boolean) => open ? setIsOpen(true) : handleClose()}>

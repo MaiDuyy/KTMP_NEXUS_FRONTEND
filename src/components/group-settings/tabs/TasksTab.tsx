@@ -31,6 +31,15 @@ export function TasksTab({
     currentUserId,
     isAdmin,
 }: TasksTabProps) {
+    const [currentTime, setCurrentTime] = React.useState(new Date());
+
+    React.useEffect(() => {
+        const interval = setInterval(() => {
+            setCurrentTime(new Date());
+        }, 10000);
+        return () => clearInterval(interval);
+    }, []);
+
     return (
         <div className="space-y-5">
             <div className="grid grid-cols-3 gap-3 mb-2">
@@ -55,9 +64,8 @@ export function TasksTab({
                         const isAssignee = task.assignees?.some((a: any) => a.accountId === currentUserId);
                         const canUpdate = isAdmin || isAssignee;
 
-                        const now = new Date();
-                        const isEarly = task.startAt && new Date(task.startAt) > now;
-                        const isOverdue = task.deadlineAt && new Date(task.deadlineAt) < now;
+                        const isEarly = task.startAt && new Date(task.startAt) > currentTime;
+                        const isOverdue = task.deadlineAt && new Date(task.deadlineAt) < currentTime;
                         const isCancelled = task.status === "CANCELLED";
 
                         return (
@@ -69,17 +77,11 @@ export function TasksTab({
                                             return toast.error("Chỉ quản trị viên hoặc người được giao mới có quyền cập nhật!");
                                         }
 
-                                        // Restrictions: Only block going TO "DONE"
-                                        if (task.status !== "DONE") {
-                                            if (isEarly) {
-                                                return toast.error("Kế hoạch chưa đến thời gian thực hiện!");
-                                            }
-                                            if (isOverdue) {
-                                                return toast.error("Kế hoạch đã quá hạn, không thể đánh dấu hoàn thành!");
-                                            }
-                                        }
+                                        const nextStatus = task.status === "DONE"
+                                            ? (isEarly ? "TODO" : "IN_PROGRESS")
+                                            : "DONE";
 
-                                        handleUpdateTaskStatus(task.id, task.status === "DONE" ? "TODO" : "DONE");
+                                        handleUpdateTaskStatus(task.id, nextStatus);
                                     }}
                                     className={cn(
                                         "mt-0.5 w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors",
@@ -88,7 +90,7 @@ export function TasksTab({
                                             : isCancelled
                                             ? "border-slate-200 bg-slate-50 cursor-not-allowed"
                                             : "border-slate-300 hover:border-blue-400",
-                                        (!canUpdate || isCancelled || (task.status !== "DONE" && (isEarly || isOverdue))) && "opacity-50 cursor-not-allowed"
+                                        (!canUpdate || isCancelled) && "opacity-50 cursor-not-allowed"
                                     )}
                                     disabled={isCancelled}
                                 >
@@ -136,6 +138,24 @@ export function TasksTab({
                                     )}
                                 </div>
                                 <div className="flex items-center gap-1.5 self-start pt-0.5">
+                                    {canUpdate && !isCancelled && task.status === "TODO" && (
+                                        <button
+                                            onClick={() => handleUpdateTaskStatus(task.id, "IN_PROGRESS")}
+                                            className="p-1 px-1.5 rounded bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800 transition-all text-[10px] font-semibold flex items-center gap-1"
+                                            title="Bắt đầu thực hiện kế hoạch"
+                                        >
+                                            Bắt đầu
+                                        </button>
+                                    )}
+                                    {canUpdate && !isCancelled && task.status === "IN_PROGRESS" && (
+                                        <button
+                                            onClick={() => handleUpdateTaskStatus(task.id, "TODO")}
+                                            className="p-1 px-1.5 rounded bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-800 transition-all text-[10px] font-semibold flex items-center gap-1"
+                                            title="Tạm dừng thực hiện kế hoạch"
+                                        >
+                                            Tạm dừng
+                                        </button>
+                                    )}
                                     {isAdmin && (
                                         <div className="flex items-center gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity">
                                             {!isCancelled && task.status !== "DONE" && (

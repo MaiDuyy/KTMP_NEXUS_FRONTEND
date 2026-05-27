@@ -24,9 +24,10 @@ import {
 } from '@/src/redux/feature/channelApi';
 import { useGetWorkspaceMembersQuery } from '@/src/redux/feature/workspaceApi';
 import { useGetPinnedMessagesQuery, useGetMediaMessagesQuery, useTogglePinMessageMutation } from '@/src/redux/feature/messageApi';
-import { getAvatarUrl } from '@/src/utils/image-utils';
+import { getAvatarUrl, getMediaUrl } from '@/src/utils/image-utils';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
+import { MessageSnippet } from './message-snippet';
 
 interface ChannelInfoPanelProps {
   channelId: string;
@@ -64,11 +65,7 @@ export const ChannelInfoPanel: React.FC<ChannelInfoPanelProps> = ({
   const { data: mediaData, isLoading: loadingMedia } = useGetMediaMessagesQuery({ chatId: channelId, type: mediaFilter }, { skip: !channelId || !isOpen || activeTab !== 'files' });
   const [togglePin] = useTogglePinMessageMutation();
 
-  const normalizeUrl = (url: string) => {
-    if (!url) return "";
-    if (url.startsWith("http://") || url.startsWith("https://")) return url;
-    return `https://${url}`;
-  };
+
 
   const renderMediaItem = (message: any) => {
     if (message.type === "image") {
@@ -78,7 +75,7 @@ export const ChannelInfoPanel: React.FC<ChannelInfoPanelProps> = ({
                 className="relative aspect-square rounded-lg overflow-hidden group cursor-pointer"
             >
                 <img
-                    src={normalizeUrl(message.content || "")}
+                    src={getMediaUrl(message.content || "")}
                     alt="Media"
                     className="w-full h-full object-cover"
                 />
@@ -89,7 +86,7 @@ export const ChannelInfoPanel: React.FC<ChannelInfoPanelProps> = ({
                         className="h-7 w-7"
                         onClick={(e) => {
                             e.stopPropagation();
-                            window.open(normalizeUrl(message.content || ""), "_blank");
+                            window.open(getMediaUrl(message.content || ""), "_blank");
                         }}
                     >
                         <MoreHorizontal className="h-3 w-3" />
@@ -106,7 +103,7 @@ export const ChannelInfoPanel: React.FC<ChannelInfoPanelProps> = ({
                 className="relative aspect-video rounded-lg overflow-hidden group cursor-pointer bg-slate-900"
             >
                 <video
-                    src={normalizeUrl(message.content || "")}
+                    src={getMediaUrl(message.content || "")}
                     className="w-full h-full object-cover opacity-60"
                 />
                 <div className="absolute inset-0 flex items-center justify-center">
@@ -355,7 +352,7 @@ export const ChannelInfoPanel: React.FC<ChannelInfoPanelProps> = ({
                               <div className="grid grid-cols-4 gap-2">
                                   {(mediaData?.media || []).filter((m: any) => m.type === 'image').slice(0, 4).map((msg: any) => (
                                       <div key={msg.id} className="aspect-square rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity border border-slate-100 dark:border-slate-800">
-                                          <img src={normalizeUrl(msg.content || "")} alt="" className="w-full h-full object-cover" />
+                                          <img src={getMediaUrl(msg.content || "")} alt="" className="w-full h-full object-cover" />
                                       </div>
                                   ))}
                                   {(mediaData?.media || []).filter((m: any) => m.type === 'image').length === 0 && (
@@ -391,9 +388,15 @@ export const ChannelInfoPanel: React.FC<ChannelInfoPanelProps> = ({
                                    <span className="text-[10px] font-bold truncate">{msg.sender?.name}</span>
                                    <span className="text-[9px] text-slate-400 ml-auto">{msg.time ? format(new Date(msg.time), 'HH:mm') : '--:--'}</span>
                                 </div>
-                                <p className="text-[11px] text-slate-600 line-clamp-2 leading-relaxed">
-                                  {msg.content || (msg.file ? '📎 Tệp đính kèm' : '...')}
-                                </p>
+                                <div className="text-[11px] text-slate-600 line-clamp-2 leading-relaxed">
+                                  <MessageSnippet 
+                                    type={msg.type} 
+                                    content={msg.content} 
+                                    file={(msg as any).file} 
+                                    className="text-[11px] text-slate-600 line-clamp-2 leading-relaxed"
+                                    iconClassName="h-3 w-3 inline-block align-middle shrink-0 mr-1 text-slate-500"
+                                  />
+                                </div>
                                 <button 
                                   onClick={() => togglePin({ messageId: msg.id, chatId: channelId })}
                                   className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-slate-200 rounded"

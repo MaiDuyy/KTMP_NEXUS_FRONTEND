@@ -15,9 +15,11 @@ import {
   Crown,
   ChevronRight,
   Users,
+  Building2,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useListDepartmentsQuery } from '@/src/redux/feature/departmentApi';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -126,9 +128,14 @@ export default function GeneralSettings() {
 
   const currentWorkspace = workspaceData;
   const myMemberRecord = (membersData as any)?.items?.find((m: any) => m.userId === currentUser?.id);
+  const currentUserRoles = useSelector((state: RootState) => state.auth?.roles) || [];
+  
+  const isSystemManager = currentUserRoles.includes('SUPER_ADMIN') || 
+                           currentUserRoles.includes('ADMIN') || 
+                           currentUserRoles.includes('WORKSPACE_MANAGER');
 
-  const userRole = (myMemberRecord?.role || (currentWorkspace as any)?.myRole || 'EMPLOYEE').toUpperCase();
-  const isOwner = userRole === "OWNER";
+  const userRole = (myMemberRecord?.role || (currentWorkspace as any)?.myRole || (isSystemManager ? 'WORKSPACE_ADMIN' : 'EMPLOYEE')).toUpperCase();
+  const isOwner = userRole === "OWNER" || userRole === "WORKSPACE_OWNER";
 
   const totalMemberCount = (membersData as any)?.total || (currentWorkspace as any)?.memberCount || (membersData as any)?.items?.length || 0;
   const totalChannelCount = channels?.length || (currentWorkspace as any)?.channelCount || 0;
@@ -143,12 +150,16 @@ export default function GeneralSettings() {
 
   const [name, setName] = useState(currentWorkspace?.name || "");
   const [description, setDescription] = useState(currentWorkspace?.description || "");
+  const [departmentId, setDepartmentId] = useState(currentWorkspace?.departmentId || "");
+
+  const { data: departments = [] } = useListDepartmentsQuery();
 
   // Sync state when workspace data changes
   useEffect(() => {
     if (currentWorkspace) {
       setName(currentWorkspace.name);
       setDescription(currentWorkspace.description || "");
+      setDepartmentId(currentWorkspace.departmentId || "");
     }
   }, [currentWorkspace]);
 
@@ -206,6 +217,17 @@ export default function GeneralSettings() {
       toast.success("Đã cập nhật mô tả thành công!");
     } catch (err: any) {
       toast.error(err?.data?.message || "Không thể cập nhật mô tả");
+    }
+  };
+
+  const handleSaveDepartment = async () => {
+    if (!currentWorkspaceId) return;
+    try {
+      const cleanDeptId = (departmentId && departmentId !== 'none') ? departmentId : null;
+      await updateWorkspace({ workspaceId: currentWorkspaceId, departmentId: cleanDeptId }).unwrap();
+      toast.success("Đã cập nhật phòng ban trực thuộc thành công!");
+    } catch (err: any) {
+      toast.error(err?.data?.message || "Không thể cập nhật phòng ban trực thuộc");
     }
   };
 
@@ -403,6 +425,27 @@ export default function GeneralSettings() {
             className="min-h-[80px] rounded-[4px] border-slate-200 focus:border-blue-500 resize-none text-xs"
             placeholder="Ví dụ: Đội ngũ phát triển sản phẩm Mobile App..."
           />
+        </SettingsField>
+
+        {/* Department */}
+        <SettingsField
+          label="Phòng ban trực thuộc"
+          description="Liên kết Workspace này với một phòng ban để đồng bộ hóa thành viên tự động."
+          icon={Building2}
+          onSave={handleSaveDepartment}
+        >
+          <select
+            value={departmentId || "none"}
+            onChange={(e) => setDepartmentId(e.target.value)}
+            className="flex h-8 w-full rounded-[4px] border border-slate-200 focus:border-blue-500 bg-white px-3 py-1 text-xs shadow-none transition-colors focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <option value="none">-- Không trực thuộc (Dự án độc lập) --</option>
+            {departments.map((dept) => (
+              <option key={dept.id} value={dept.id}>
+                {dept.name}
+              </option>
+            ))}
+          </select>
         </SettingsField>
 
         {/* URL / Slug */}

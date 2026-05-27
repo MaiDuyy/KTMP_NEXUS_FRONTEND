@@ -47,11 +47,11 @@ export const uploadApi = apiSlice.injectEndpoints({
       },
     }),
 
-    // Upload group avatar (POST /api/upload/avatar)
+    // Upload group avatar (POST /upload/group-avatar)
     uploadGroupAvatar: builder.mutation<UploadResponse, FormData>({
       query: (formData) => {
         return {
-          url: "/upload/avatar",
+          url: "/upload/group-avatar",
           method: "POST",
           body: formData,
         };

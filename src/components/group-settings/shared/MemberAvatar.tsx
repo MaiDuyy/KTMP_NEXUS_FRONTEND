@@ -2,7 +2,7 @@ import React from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { Participant } from "../types";
-import { getInitials, normalizeUrl, avatarColor } from "./utils";
+import { getInitials, avatarColor } from "./utils";
 import { getAvatarUrl } from "@/src/utils/image-utils";
 interface MemberAvatarProps {
     participant: Participant;

@@ -13,7 +13,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Search, Loader2, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getInitials, normalizeUrl, avatarColor } from "../shared/utils";
+import { getInitials, avatarColor } from "../shared/utils";
+import { getAvatarUrl } from "@/src/utils/image-utils";
 
 interface AddMemberDialogProps {
     open: boolean;
@@ -88,7 +89,7 @@ export function AddMemberDialog({
                                     >
                                         <div className="flex items-center gap-2.5">
                                             <Avatar className="h-8 w-8 rounded-lg">
-                                                <AvatarImage src={normalizeUrl(u.avatar || "")} />
+                                                <AvatarImage src={getAvatarUrl(u.avatar || "", u.name)} />
                                                 <AvatarFallback className={cn("rounded-lg text-xs font-semibold", avatarColor(u.name))}>
                                                     {getInitials(u.name)}
                                                 </AvatarFallback>

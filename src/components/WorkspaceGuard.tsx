@@ -3,7 +3,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '@/src/redux/store';
 import { useGetUserWorkspacesQuery } from '@/src/redux/feature/workspaceApi';
 
-type WorkspaceRole = 'WORKSPACE_OWNER' | 'WORKSPACE_ADMIN' | 'WORKSPACE_MEMBER' | 'WORKSPACE_GUEST';
+type WorkspaceRole = 'WORKSPACE_OWNER' | 'WORKSPACE_ADMIN' | 'WORKSPACE_MEMBER' | 'WORKSPACE_GUEST' | 'WORKSPACE_MANAGER';
 
 interface WorkspaceGuardProps {
   children: React.ReactNode;
@@ -20,7 +20,7 @@ interface WorkspaceGuardProps {
  */
 export const WorkspaceGuard: React.FC<WorkspaceGuardProps> = ({
   children,
-  allowedRoles = ['WORKSPACE_OWNER', 'WORKSPACE_ADMIN', 'WORKSPACE_MEMBER'],
+  allowedRoles = ['WORKSPACE_OWNER', 'WORKSPACE_ADMIN', 'WORKSPACE_MEMBER', 'WORKSPACE_MANAGER'],
   fallback = null
 }) => {
   const currentWorkspaceId = useSelector((state: RootState) => state.workspace.currentWorkspaceId);

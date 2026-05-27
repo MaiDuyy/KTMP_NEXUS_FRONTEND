@@ -20,7 +20,8 @@ import {
 import { cn } from "@/lib/utils";
 import { SectionLabel } from "./shared/SectionLabel";
 import { NavItem } from "./shared/NavItem";
-import { getInitials, normalizeUrl, avatarColor } from "./shared/utils";
+import { getInitials, avatarColor } from "./shared/utils";
+import { getAvatarUrl } from "@/src/utils/image-utils";
 import { TabKey } from "./types";
 
 interface GroupSettingsSidebarProps {
@@ -70,7 +71,7 @@ export function GroupSettingsSidebar({
             <div className="p-4 border-b border-slate-100">
                 <div className="relative group w-fit mb-3">
                     <Avatar className="h-12 w-12 rounded-xl">
-                        <AvatarImage src={normalizeUrl(chat?.avatar || "")} />
+                        <AvatarImage src={getAvatarUrl(chat?.avatar || "", chat?.name || "G")} />
                         <AvatarFallback
                             className={cn(
                                 "rounded-xl text-sm font-semibold",

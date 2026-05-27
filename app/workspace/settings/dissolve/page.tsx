@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/src/redux/store';
-import { useGetUserWorkspacesQuery, useDissolveWorkspaceMutation } from '@/src/redux/feature/workspaceApi';
+import { useGetUserWorkspacesQuery, useDissolveWorkspaceMutation, useGetWorkspaceStatsQuery } from '@/src/redux/feature/workspaceApi';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -28,6 +28,8 @@ export default function DissolveWorkspace() {
   const { data: workspaces } = useGetUserWorkspacesQuery();
   const currentWorkspace = workspaces?.find(w => w.id === currentWorkspaceId);
   const workspaceName = currentWorkspace?.name || "";
+
+  const { data: stats, isLoading: statsLoading } = useGetWorkspaceStatsQuery(currentWorkspaceId!, { skip: !currentWorkspaceId });
 
   const [confirmName, setConfirmName] = useState("");
   const [dissolveWorkspace, { isLoading }] = useDissolveWorkspaceMutation();
@@ -91,10 +93,30 @@ export default function DissolveWorkspace() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-              <ImpactItem icon={Users} label="Thành viên sẽ mất quyền" value="158" color="bg-blue-600" />
-              <ImpactItem icon={MessageSquare} label="Nhóm chat sẽ bị xóa" value="42" color="bg-indigo-600" />
-              <ImpactItem icon={FileText} label="Dung lượng giải phóng" value="12.5 GB" color="bg-emerald-600" />
-              <ImpactItem icon={History} label="Tin nhắn sẽ bị ẩn" value="150k+" color="bg-amber-600" />
+              <ImpactItem 
+                icon={Users} 
+                label="Thành viên sẽ mất quyền" 
+                value={statsLoading ? "Đang tải..." : (stats?.memberCount ?? "0")} 
+                color="bg-blue-600" 
+              />
+              <ImpactItem 
+                icon={MessageSquare} 
+                label="Nhóm chat sẽ bị xóa" 
+                value={statsLoading ? "Đang tải..." : (stats?.chatCount ?? "0")} 
+                color="bg-indigo-600" 
+              />
+              <ImpactItem 
+                icon={FileText} 
+                label="Dung lượng giải phóng" 
+                value={statsLoading ? "Đang tải..." : (stats?.storageSize ?? "0 Bytes")} 
+                color="bg-emerald-600" 
+              />
+              <ImpactItem 
+                icon={History} 
+                label="Tin nhắn sẽ bị ẩn" 
+                value={statsLoading ? "Đang tải..." : `${(stats?.messageCount ?? 0).toLocaleString()} tin nhắn`} 
+                color="bg-amber-600" 
+              />
             </div>
 
             <div className="p-4 rounded-[4px] bg-red-50/60 border border-red-100/80 space-y-3">

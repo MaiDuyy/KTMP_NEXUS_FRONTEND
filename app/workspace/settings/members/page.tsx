@@ -132,9 +132,19 @@ export default function MembersManagement() {
   };
 
   const myMemberInfo = membersData?.items?.find(m => m.userId === currentUser?.id);
-  const isAdmin = myMemberInfo?.role === 'WORKSPACE_OWNER' || myMemberInfo?.role === 'WORKSPACE_ADMIN';
+  const currentUserRoles = useSelector((state: RootState) => state.auth?.roles) || [];
+  
+  const isSystemManager = currentUserRoles.includes('SUPER_ADMIN') || 
+                           currentUserRoles.includes('ADMIN') || 
+                           currentUserRoles.includes('WORKSPACE_MANAGER');
+
+  const isAdmin = isSystemManager || 
+                  myMemberInfo?.role === 'WORKSPACE_OWNER' || 
+                  myMemberInfo?.role === 'WORKSPACE_ADMIN' || 
+                  myMemberInfo?.role === 'WORKSPACE_MANAGER';
   const isOwner = myMemberInfo?.role === 'WORKSPACE_OWNER';
 
+  console.log("Check role" , myMemberInfo)
   const filteredMembers = membersData?.items?.filter(member => {
     const matchesSearch =
       member.user?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||

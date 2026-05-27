@@ -516,7 +516,7 @@ export const ModernChannelSidebar: React.FC = () => {
   const wsDisplayName = currentWorkspace?.name || 'Nexus Global';
 
   return (
-    <div className="w-[240px] flex flex-col bg-[#F8F8F8] dark:bg-[#19191B] border-r border-slate-200/80 dark:border-white/[0.06] h-screen shrink-0">
+    <div className="w-[300px] flex flex-col bg-[#F8F8F8] dark:bg-[#19191B] border-r border-slate-200/80 dark:border-white/[0.06] h-screen shrink-0">
 
       {/* ══ HEADER: Workspace identity ══ */}
       <div className="shrink-0 border-b border-slate-200/80 dark:border-white/[0.06] bg-[#F8F8F8] dark:bg-[#19191B]">
@@ -571,7 +571,7 @@ export const ModernChannelSidebar: React.FC = () => {
               </div>
 
               {workspaceId && (
-                <WorkspaceGuard allowedRoles={['WORKSPACE_OWNER', 'WORKSPACE_ADMIN']}>
+                <WorkspaceGuard allowedRoles={['WORKSPACE_OWNER', 'WORKSPACE_ADMIN', 'WORKSPACE_MANAGER']}>
                   <DropdownMenuItem
                     onClick={() => router.push('/workspace/settings')}
                     className="rounded-[4px] py-1.5 cursor-pointer flex items-center gap-2 text-xs"

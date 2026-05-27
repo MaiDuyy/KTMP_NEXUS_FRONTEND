@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pin, X, ArrowRight, MessageSquare, User, Calendar, Trash2 } from 'lucide-react';
 import { PinnedMessage } from '@/src/type/chat.types';
+import { MessageSnippet } from './message-snippet';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow, format } from 'date-fns';
@@ -76,9 +77,9 @@ export const PinnedMessagesPanel: React.FC<PinnedMessagesPanelProps> = ({
                 </div>
 
                 <div className="pl-1 border-l-2 border-blue-200 ml-3.5 mb-3">
-                    <p className="text-sm text-slate-700 line-clamp-3 leading-relaxed">
-                        {msg.content}
-                    </p>
+                    <div className="text-sm text-slate-700 line-clamp-3 leading-relaxed">
+                        <MessageSnippet type={msg.type} content={msg.content} file={(msg as any).file} />
+                    </div>
                 </div>
 
                 <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-slate-100">

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useDispatch } from "react-redux";
 import {
@@ -18,7 +18,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, UserPlus, CheckCircle2, AlertCircle, ArrowRight, ShieldCheck, Mail, User } from "lucide-react";
+import { Loader2, UserPlus, CheckCircle2, AlertCircle, ArrowRight, ShieldCheck, Mail, User, Building2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function InvitePage() {
@@ -215,10 +215,10 @@ function InvitePageContent() {
           </div>
 
           <CardTitle className="text-3xl font-extrabold text-slate-900 tracking-tight">
-            Gia nhập Workspace
+            Gia nhập NEXUS
           </CardTitle>
           <CardDescription className="text-lg mt-2 font-medium">
-            Bạn được mời gia nhập <span className="text-blue-600">"{invitation.workspace?.name || 'Workspace'}"</span>
+            Bạn được mời gia nhập <span className="text-blue-600">&quot;{invitation.workspace?.name || 'NEXUS'}&quot;</span>
           </CardDescription>
         </CardHeader>
 
@@ -238,6 +238,16 @@ function InvitePageContent() {
                 <p className="text-sm font-semibold text-slate-700">{invitation.role}</p>
               </div>
             </div>
+            {invitation.department && (
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center gap-3 col-span-2">
+                <Building2 className="w-5 h-5 text-amber-500" />
+                <div>
+                  <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Phòng ban liên kết</p>
+                  <p className="text-sm font-semibold text-slate-700">{invitation.department.name}</p>
+                  <p className="text-xs text-amber-700 font-medium">Vai trò: {invitation.departmentRole}</p>
+                </div>
+              </div>
+            )}
           </div>
 
           {profile ? (

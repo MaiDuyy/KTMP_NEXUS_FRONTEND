@@ -44,7 +44,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
-import { getAvatarUrl } from "@/src/utils/image-utils";
+import { getAvatarUrl, getMediaUrl } from "@/src/utils/image-utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
     useGetChatByIdQuery,
@@ -55,6 +55,7 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Users, File, Layers, Filter } from "lucide-react";
+import { MessageSnippet } from "./message-snippet";
 
 interface ChatInfoPanelProps {
     chatId: string;
@@ -115,60 +116,20 @@ export default function ChatInfoPanel({
             window.removeEventListener("socket:message:pinned", handleMessagePinned as EventListener);
         };
     }, [chatId, isOpen, refetchPinned]);
-    const normalizeUrl = (url: string) => {
-        if (!url) return "";
-        if (url.startsWith("http://") || url.startsWith("https://")) return url;
-        return `https://${url}`;
-    };
+
 
     const renderMessageItem = (message: Message) => {
         const msgType = message.type || "text";
 
-
-        let contentDisplay = null;
-
-        if (msgType === "text" || !msgType) {
-            contentDisplay = (
-                <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2">
-                    {message.content || "[Tin nhắn trống]"}
-                </p>
-            );
-        } else if (msgType === "image") {
-            const imageUrl = normalizeUrl(message.content || "");
-            contentDisplay = (
-                <div className="rounded-lg overflow-hidden max-w-xs mt-1">
-                    <img
-                        src={imageUrl}
-                        alt="Image"
-                        className="w-full h-auto cursor-pointer hover:opacity-90 transition-opacity"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            window.open(imageUrl, "_blank");
-                        }}
-                    />
-                </div>
-            );
-        } else if (msgType === "video") {
-            const videoUrl = normalizeUrl(message.content || "");
-            contentDisplay = (
-                <div className="rounded-lg overflow-hidden max-w-xs mt-1">
-                    <video
-                        src={videoUrl}
-                        controls
-                        className="w-full h-auto"
-                        onClick={(e) => e.stopPropagation()}
-                    />
-                </div>
-            );
-        } else if (msgType === "file") {
-            contentDisplay = (
-                <span className="flex items-center gap-1">
-                    <FileText className="h-4 w-4" /> {message.file?.name || "File"}
-                </span>
-            );
-        } else {
-            contentDisplay = <span>{message.content || `[${msgType}]`}</span>;
-        }
+        const contentDisplay = (
+            <MessageSnippet
+                type={msgType}
+                content={message.content}
+                file={message.file}
+                className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2"
+                iconClassName="h-4 w-4 inline-block align-middle shrink-0 mr-1.5 text-slate-500"
+            />
+        );
 
         return (
             <div
@@ -201,7 +162,7 @@ export default function ChatInfoPanel({
                     onClick={() => onMessageClick?.(message.id)}
                 >
                     <img
-                        src={normalizeUrl(message.content || "")}
+                        src={getMediaUrl(message.content || "")}
                         alt="Media"
                         className="w-full h-full object-cover"
                     />
@@ -212,13 +173,13 @@ export default function ChatInfoPanel({
                             className="h-8 w-8"
                             onClick={(e) => {
                                 e.stopPropagation();
-                                window.open(normalizeUrl(message.content || ""), "_blank");
+                                window.open(getMediaUrl(message.content || ""), "_blank");
                             }}
                         >
                             <ExternalLink className="h-4 w-4" />
                         </Button>
                         <a
-                            href={normalizeUrl(message.content || "")}
+                            href={getMediaUrl(message.content || "")}
                             download
                             onClick={(e) => e.stopPropagation()}
                         >
@@ -228,7 +189,7 @@ export default function ChatInfoPanel({
                         </a>
                     </div>
                     <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/70 to-transparent">
-                        <p className="text-xs text-white truncate">{normalizeUrl(message.content || "")}</p>
+                        <p className="text-xs text-white truncate">{getMediaUrl(message.content || "")}</p>
                     </div>
                 </div>
             );
@@ -242,7 +203,7 @@ export default function ChatInfoPanel({
                     onClick={() => onMessageClick?.(message.id)}
                 >
                     <video
-                        src={normalizeUrl(message.content || "")}
+                        src={getMediaUrl(message.content || "")}
                         className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 flex items-center justify-center bg-black/30">
@@ -251,7 +212,7 @@ export default function ChatInfoPanel({
                         </div>
                     </div>
                     <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/70 to-transparent">
-                        <p className="text-xs text-white truncate">{normalizeUrl(message.content || "")}</p>
+                        <p className="text-xs text-white truncate">{getMediaUrl(message.content || "")}</p>
                     </div>
                 </div>
             );
@@ -456,7 +417,7 @@ export default function ChatInfoPanel({
                                 <div className="grid grid-cols-4 gap-2">
                                     {mediaMessages.filter(m => m.type === 'image').slice(0, 4).map((msg) => (
                                         <div key={msg.id} className="aspect-square rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity" onClick={() => onMessageClick?.(msg.id)}>
-                                            <img src={normalizeUrl(msg.content || "")} alt="" className="w-full h-full object-cover" />
+                                            <img src={getMediaUrl(msg.content || "")} alt="" className="w-full h-full object-cover" />
                                         </div>
                                     ))}
                                     {mediaMessages.filter(m => m.type === 'image').length === 0 && (
@@ -525,9 +486,15 @@ export default function ChatInfoPanel({
                                                           <span className="text-[10px] font-bold truncate">{msg.sender?.name}</span>
                                                           <span className="text-[9px] text-slate-400 ml-auto">{msg.time ? format(new Date(msg.time), 'HH:mm') : '--:--'}</span>
                                                        </div>
-                                                       <p className="text-[11px] text-slate-600 line-clamp-2 leading-relaxed">
-                                                         {msg.content || (msg.file ? '📎 Tệp đính kèm' : '...')}
-                                                       </p>
+                                                        <div className="text-[11px] text-slate-600 line-clamp-2 leading-relaxed">
+                                                          <MessageSnippet
+                                                            type={msg.type}
+                                                            content={msg.content}
+                                                            file={(msg as any).file}
+                                                            className="text-[11px] text-slate-600 line-clamp-2 leading-relaxed"
+                                                            iconClassName="h-3 w-3 inline-block align-middle shrink-0 mr-1 text-slate-500"
+                                                          />
+                                                        </div>
                                                        <button 
                                                         //  onClick={() => togglePin({ messageId: msg.id, chatId: channelId })}
                                                          className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-slate-200 rounded"

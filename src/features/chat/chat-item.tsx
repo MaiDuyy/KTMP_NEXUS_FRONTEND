@@ -62,6 +62,7 @@ import { Chat } from "@/src/type/chat.types";
 import { socketService } from "@/src/services/socket.service";
 import { LeaveGroupDialog } from "@/src/components/group-settings/dialogs";
 import { getAvatarUrl } from "@/src/utils/image-utils";
+import { MessageSnippet } from "./message-snippet";
 
 // Định nghĩa lại Categories
 const FRIEND_CATEGORIES = [
@@ -363,19 +364,13 @@ export const ChatItem = ({
                                             )}
                                         </span>
                                     )}
-                                    {(() => {
-                                        const t = chat.lastMessage.type;
-                                        if (t === "text") return chat.lastMessage.content;
-                                        if (t === "call_ended") return "📞 Cuộc gọi";
-                                        if (t === "call_missed") return "📵 Cuộc gọi nhỡ";
-                                        if (t === "call_declined") return "📵 Từ chối cuộc gọi";
-                                        if (t === "image") return "🖼️ Hình ảnh";
-                                        if (t === "video") return "🎥 Video";
-                                        if (t === "file") return "📎 Tệp đính kèm";
-                                        if (t === "audio") return "🎵 Âm thanh";
-                                        if (t === "sticker" || t === "gif") return "🎭 Sticker";
-                                        return `[${t}]`;
-                                    })()}
+                                    <MessageSnippet 
+                                        type={chat.lastMessage.type} 
+                                        content={chat.lastMessage.content} 
+                                        file={(chat.lastMessage as any).file} 
+                                        className="text-xs text-gray-400 dark:text-gray-500 truncate align-middle max-w-[200px]"
+                                        iconClassName="h-3 w-3 inline-block align-middle shrink-0 mr-1 text-slate-400 dark:text-slate-500"
+                                    />
                                 </>
                             ) : (
                                 <span className="italic">Bắt đầu trò chuyện...</span>
