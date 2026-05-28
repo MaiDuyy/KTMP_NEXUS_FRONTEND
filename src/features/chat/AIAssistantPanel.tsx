@@ -12,6 +12,7 @@ import { AIMessage, useAIAssistant } from '@/src/hooks/useAIAssistant';
 import { AIMessageBubble } from '../ai/AIMessageBubble';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useGetConversationMessagesQuery, useGetConversationsQuery } from '@/src/redux/feature/aiApi';
+import { useSelector } from 'react-redux';
 
 const formatTitle = (title: string) => {
   if (!title) return '';
@@ -49,15 +50,27 @@ interface AIAssistantPanelProps {
 }
 
 export function AIAssistantPanel({ chatId, initialQuery, onClose }: AIAssistantPanelProps) {
-  const { aiMessages: currentMessages, isStreaming, sendAIQuery, sendAgentQuery, clearAI } = useAIAssistant(chatId);
-  const { data: conversations, isLoading: isLoadingConv } = useGetConversationsQuery();
+  const [agentMode, setAgentMode] = useState(false);
+  const [forceNewConv, setForceNewConv] = useState(false);
+  const { data: conversations, isLoading: isLoadingConv, refetch: refetchConversations } = useGetConversationsQuery();
   
-  // Find the relevant conversation for this chatId
-  // RAG titles are "Chat {chatId}", Agent titles are "Agent — {chatId}"
+  // Find the relevant conversation for this chatId and mode
+  // Agent titles start with "Agent", RAG titles do not
   const activeConv = useMemo(() => {
+    if (forceNewConv) return null;
     if (!conversations || !chatId) return null;
-    return conversations.find(c => c.chatId === chatId);
-  }, [conversations, chatId]);
+    return conversations.find(c => {
+      const isAgentTitle = c.title.startsWith('Agent');
+      return c.chatId === chatId && (agentMode ? isAgentTitle : !isAgentTitle);
+    });
+  }, [conversations, chatId, agentMode, forceNewConv]);
+
+  const { aiMessages: currentMessages, isStreaming, sendAIQuery, sendAgentQuery, clearAI } = useAIAssistant(chatId, activeConv?.id || undefined);
+
+  // Clear active session messages when toggling mode
+  useEffect(() => {
+    clearAI();
+  }, [agentMode, clearAI]);
 
   const { data: historyMessages, isLoading: isLoadingHistoryMessages } = useGetConversationMessagesQuery(
     activeConv?.id as number,
@@ -65,7 +78,6 @@ export function AIAssistantPanel({ chatId, initialQuery, onClose }: AIAssistantP
   );
   
   const [inputValue, setInputValue] = useState('');
-  const [agentMode, setAgentMode] = useState(false);
   const [view, setView] = useState<'chat' | 'history'>('chat');
   
   const scrollEndRef = useRef<HTMLDivElement>(null);
@@ -74,15 +86,15 @@ export function AIAssistantPanel({ chatId, initialQuery, onClose }: AIAssistantP
 
   // Map history messages to AIMessage format
   const mappedHistory: AIMessage[] = useMemo(() => {
-    if (!historyMessages) return [];
+    if (!activeConv?.id || !historyMessages) return [];
     return historyMessages.map(m => ({
       id: `hist_${m.id}`,
       role: m.role as 'user' | 'assistant',
       content: m.content,
       timestamp: m.createdAt,
-      mode: activeConv?.title.startsWith('Agent') ? 'agent' : 'rag'
+      mode: agentMode ? 'agent' : 'rag'
     }));
-  }, [historyMessages, activeConv]);
+  }, [historyMessages, agentMode, activeConv?.id]);
 
   // Combine history and current session messages
   const allMessages = useMemo(() => {
@@ -104,17 +116,28 @@ export function AIAssistantPanel({ chatId, initialQuery, onClose }: AIAssistantP
     }
   }, [allMessages, view]);
 
+  const currentWorkspaceId = useSelector((state: any) => state.workspace?.currentWorkspaceId);
+
+  const prevStreamingRef = useRef(false);
+  useEffect(() => {
+    if (prevStreamingRef.current && !isStreaming) {
+      refetchConversations();
+    }
+    prevStreamingRef.current = isStreaming;
+  }, [isStreaming, refetchConversations]);
+
   const handleSend = useCallback(() => {
     const text = inputValue.trim();
     if (!text || isStreaming) return;
+    setForceNewConv(false);
     if (agentMode) {
-      sendAgentQuery(text);
+      sendAgentQuery(text, currentWorkspaceId || undefined);
     } else {
       sendAIQuery(text);
     }
     setInputValue('');
     textareaRef.current?.focus();
-  }, [inputValue, isStreaming, agentMode, sendAIQuery, sendAgentQuery]);
+  }, [inputValue, isStreaming, agentMode, sendAIQuery, sendAgentQuery, currentWorkspaceId]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -125,6 +148,7 @@ export function AIAssistantPanel({ chatId, initialQuery, onClose }: AIAssistantP
 
   const handleClear = () => {
     clearAI();
+    setForceNewConv(true);
     sentInitialRef.current = false;
     setView('chat');
   };

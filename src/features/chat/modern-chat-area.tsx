@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import {
   Search, Phone, Video, Info, Paperclip, Smile, Mic, Send,
   Sparkles, Bold, Italic, Link2, List as ListIcon, Reply, X,
-  Loader2, ImageIcon, File, Ban, Hash, Lock, BarChart3,
+  Loader2, ImageIcon, File, Ban, Hash, Lock, BarChart3, Pin,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
@@ -36,6 +36,7 @@ import FriendProfileSheet from './friend-profile-sheet';
 import { useLazyGetUserByIdQuery } from '@/src/redux/feature/userApi';
 import { PinnedBanner } from './pinned-banner';
 import { PinnedMessagesPanel } from './pinned-messages-panel';
+import { SearchMessagesPanel } from './search-messages-panel';
 import { useTogglePinMessageMutation } from '@/src/redux/feature/messageApi';
 import { apiSlice } from '@/src/redux/api/baseApi';
 
@@ -55,6 +56,7 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [activeCall, setActiveCall] = useState<{ roomName: string; isVideo: boolean; callerName: string; callerAvatar?: string } | null>(null);
   const [showPinnedPanel, setShowPinnedPanel] = useState(false);
+  const [showSearchPanel, setShowSearchPanel] = useState(false);
   const [showCreatePollModal, setShowCreatePollModal] = useState(false);
 
   // ──────── Mention system state ────────
@@ -936,6 +938,34 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
           )}
           <Button variant="ghost" size="icon" onClick={() => startCall(false)} className="h-8 w-8 rounded-[4px] text-slate-500 hover:text-blue-600 hover:bg-slate-100 transition-colors" title="Bắt đầu cuộc gọi thoại"><Phone size={15} /></Button>
           <Button variant="ghost" size="icon" onClick={() => startCall(true)} className="h-8 w-8 rounded-[4px] text-slate-500 hover:text-blue-600 hover:bg-slate-100 transition-colors" title="Bắt đầu cuộc gọi video"><Video size={15} /></Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => {
+              setShowSearchPanel(!showSearchPanel);
+              setShowPinnedPanel(false);
+              setShowInfoPanel(false);
+              setShowGroupSettings(false);
+            }} 
+            className={`h-8 w-8 rounded-[4px] transition-colors ${showSearchPanel ? 'text-blue-600 bg-blue-50/55' : 'text-slate-500 hover:text-blue-600 hover:bg-slate-100'}`}
+            title="Tìm kiếm tin nhắn"
+          >
+            <Search size={15} />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => {
+              setShowPinnedPanel(!showPinnedPanel);
+              setShowSearchPanel(false);
+              setShowInfoPanel(false);
+              setShowGroupSettings(false);
+            }} 
+            className={`h-8 w-8 rounded-[4px] transition-colors ${showPinnedPanel ? 'text-blue-600 bg-blue-50/55' : 'text-slate-500 hover:text-blue-600 hover:bg-slate-100'}`}
+            title="Tin nhắn đã ghim"
+          >
+            <Pin size={15} className={showPinnedPanel ? 'fill-current' : ''} />
+          </Button>
           <div className="h-4 w-[1px] bg-slate-200 mx-1" />
           <Button variant="ghost"
             size="icon"
@@ -1309,6 +1339,15 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
           onJumpToMessage={handleJumpToMessage}
           onUnpin={handleTogglePin}
           canUnpin={canPost}
+        />
+      )}
+
+      {/* Search Messages Panel */}
+      {showSearchPanel && chatId && (
+        <SearchMessagesPanel 
+          chatId={chatId}
+          onClose={() => setShowSearchPanel(false)}
+          onJumpToMessage={handleJumpToMessage}
         />
       )}
 

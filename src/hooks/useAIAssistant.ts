@@ -29,10 +29,15 @@ export interface AIMessage {
   mode?: 'agent' | 'rag';
 }
 
-export function useAIAssistant(chatId: string | undefined) {
+export function useAIAssistant(chatId: string | undefined, initialConversationId?: number) {
   const [aiMessages, setAIMessages] = useState<AIMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
-  const conversationIdRef = useRef<number | undefined>(undefined);
+  const conversationIdRef = useRef<number | undefined>(initialConversationId);
+
+  // Sync ref when initialConversationId changes (e.g., when switching RAG/Agent mode)
+  useEffect(() => {
+    conversationIdRef.current = initialConversationId;
+  }, [initialConversationId]);
 
   useEffect(() => {
     if (!chatId) return;
