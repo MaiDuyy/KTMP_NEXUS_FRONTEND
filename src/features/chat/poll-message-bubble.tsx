@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useGetPollQuery, useVotePollMutation, useGetChatByIdQuery } from "@/src/redux/feature/chatApi";
+import { useGetPollQuery, useVotePollMutation, useGetChatByIdQuery, useEndPollMutation } from "@/src/redux/feature/chatApi";
 import { useGetWorkspaceMembersQuery } from "@/src/redux/feature/workspaceApi";
 import { useSelector } from "react-redux";
 import { RootState } from "@/src/redux/store";
@@ -33,6 +33,7 @@ interface PollMessageBubbleProps {
 export default function PollMessageBubble({ pollId, isMe }: PollMessageBubbleProps) {
   const { data: response, isLoading, error, refetch } = useGetPollQuery(pollId);
   const [votePoll, { isLoading: isVoting }] = useVotePollMutation();
+  const [endPoll, { isLoading: isEnding }] = useEndPollMutation();
 
   const currentWorkspaceId = useSelector((state: RootState) => state.workspace.currentWorkspaceId);
   const { data: membersData } = useGetWorkspaceMembersQuery(
@@ -94,7 +95,7 @@ export default function PollMessageBubble({ pollId, isMe }: PollMessageBubblePro
   const isExpired = poll.isExpired || isExpiredLocal;
   const totalVotes = poll.options.reduce((sum: number, opt: any) => sum + (opt._count?.votes || 0), 0);
   const hasVoted = poll.votedOptionId !== null;
-  const showResults = hasVoted || isExpired;
+  const showResults = hasVoted || isExpired || isMe;
 
   // Find the winning vote count if expired
   const maxVotes = Math.max(...poll.options.map((opt: any) => opt._count?.votes || 0));
@@ -113,6 +114,15 @@ export default function PollMessageBubble({ pollId, isMe }: PollMessageBubblePro
       toast.success("Bình chọn thành công!");
     } catch (err: any) {
       toast.error(err?.data?.message || "Lỗi khi thực hiện bình chọn!");
+    }
+  };
+
+  const handleEndPoll = async () => {
+    try {
+      await endPoll(pollId).unwrap();
+      toast.success("Đã kết thúc cuộc khảo sát thành công!");
+    } catch (err: any) {
+      toast.error(err?.data?.message || "Lỗi khi kết thúc cuộc khảo sát!");
     }
   };
 
@@ -345,6 +355,25 @@ export default function PollMessageBubble({ pollId, isMe }: PollMessageBubblePro
           </div>
         )}
       </div>
+
+      {/* End Poll Button for Creator */}
+      {isMe && !isExpired && (
+        <button
+          onClick={handleEndPoll}
+          disabled={isEnding}
+          className="mt-2 w-full py-1.5 rounded-[4px] text-[10px] font-bold uppercase tracking-wider text-center transition-all select-none border border-red-500/30 active:scale-[0.98] cursor-pointer bg-red-500/20 hover:bg-red-500/35 text-red-100 flex items-center justify-center gap-1"
+        >
+          {isEnding ? (
+            <>
+              <Loader2 className="h-3 w-3 animate-spin" /> Đang kết thúc...
+            </>
+          ) : (
+            <>
+              <span>🛑 Kết thúc khảo sát</span>
+            </>
+          )}
+        </button>
+      )}
 
       {/* Voters List Modal */}
       <Dialog open={votersModalOpen} onOpenChange={setVotersModalOpen}>

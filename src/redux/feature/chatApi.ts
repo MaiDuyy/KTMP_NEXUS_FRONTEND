@@ -343,6 +343,15 @@ export const chatApi = apiSlice.injectEndpoints({
         }),
         invalidatesTags: (_result, _error, { pollId }) => [{ type: 'Polls' as any, id: pollId }],
       }),
+
+      // End Poll manually (only creator)
+      endPoll: builder.mutation<any, string>({
+        query: (pollId) => ({
+          url: `/polls/${pollId}/end`,
+          method: 'POST',
+        }),
+        invalidatesTags: (_result, _error, pollId) => [{ type: 'Polls' as any, id: pollId }],
+      }),
   }),
 });
 
@@ -372,4 +381,5 @@ export const {
   useCreatePollMutation,
   useGetPollQuery,
   useVotePollMutation,
+  useEndPollMutation,
 } = chatApi;

@@ -305,8 +305,14 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
         const targetChatId = data.chatId;
         
         if (targetChatId) {
+          const updateArgs = [
+            { chatId: targetChatId, limit: 50 },
+            { chatId: targetChatId }
+          ];
+
+          updateArgs.forEach(args => {
             dispatch(
-              messageApi.util.updateQueryData("getMessages", { chatId: targetChatId, limit: 50 }, (draft) => {
+              messageApi.util.updateQueryData("getMessages", args as any, (draft) => {
                 if (draft && draft.messages) {
                   const targetId = data.messageId || data.id;
                   const msg = draft.messages.find((m) => m.id === targetId);
@@ -317,6 +323,7 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
                 }
               })
             );
+          });
         }
         dispatch(apiSlice.util.invalidateTags(["Messages"])); // Fallback to ensure UI updates
 
@@ -521,8 +528,14 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
         console.log("[RealtimeChat] ❤️ Message reacted", data);
         
         if (data.chatId) {
+          const updateArgs = [
+            { chatId: data.chatId, limit: 50 },
+            { chatId: data.chatId }
+          ];
+
+          updateArgs.forEach(args => {
             dispatch(
-              messageApi.util.updateQueryData("getMessages", { chatId: data.chatId, limit: 50 }, (draft) => {
+              messageApi.util.updateQueryData("getMessages", args as any, (draft) => {
                 if (draft && draft.messages) {
                   const msg = draft.messages.find((m) => m.id === data.messageId);
                   if (msg) {
@@ -564,6 +577,7 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
                 }
               })
             );
+          });
         }
         dispatch(apiSlice.util.invalidateTags(["Messages"]));
 
@@ -1078,11 +1092,32 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
 
       onPollUpdated: (data) => {
         console.log("[RealtimeChat] 📊 Poll updated event:", data.pollId);
+        const authUser = store.getState().auth?.user;
+        const currentUserId = authUser?.id;
+
         dispatch(
           chatApi.util.updateQueryData("getPoll" as any, data.pollId, (draft: any) => {
-            if (draft) {
-              draft.options = data.options;
-              draft.totalVotes = data.totalVotes;
+            if (draft && draft.poll) {
+              draft.poll.options = data.options;
+              
+              if (data.endsAt !== undefined) {
+                draft.poll.endsAt = data.endsAt;
+              }
+              if (data.isExpired !== undefined) {
+                draft.poll.isExpired = data.isExpired;
+              }
+              
+              // Recalculate votedOptionId based on currentUserId
+              if (currentUserId) {
+                let votedOptionId = null;
+                for (const opt of data.options) {
+                  if (Array.isArray(opt.votes) && opt.votes.includes(currentUserId)) {
+                    votedOptionId = opt.id;
+                    break;
+                  }
+                }
+                draft.poll.votedOptionId = votedOptionId;
+              }
             }
           })
         );
