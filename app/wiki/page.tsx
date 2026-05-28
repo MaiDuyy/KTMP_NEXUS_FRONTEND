@@ -35,6 +35,7 @@ import { getPageType } from "./components/WikilinkAutocomplete";
 import { useHasRole } from "@/src/lib/rbac/usePermission";
 import { WikiPagination } from "./components/WikiPagination";
 import { DocumentManagement } from "@/src/features/admin/DocumentManagement";
+import { WikiAIChatPanel, WikiAIChatButton } from "./components/WikiAIChatPanel";
 
 export default function WikiDashboard() {
   const currentWorkspaceId = useSelector((state: any) => state.workspace.currentWorkspaceId);
@@ -45,6 +46,9 @@ export default function WikiDashboard() {
   const isAdmin = useHasRole("ADMIN");
   const isWorkspaceManager = useHasRole("WORKSPACE_MANAGER");
   const canManageWiki = isSuperAdmin || isAdmin || isWorkspaceManager;
+
+  // AI Chat panel state
+  const [showAIChat, setShowAIChat] = React.useState(false);
 
   // Active Tab state
   const [activeTab, setActiveTab] = React.useState<"knowledge" | "documents">("knowledge");
@@ -263,6 +267,12 @@ export default function WikiDashboard() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {/* Wiki AI Chat button */}
+            <WikiAIChatButton
+              onClick={() => setShowAIChat((v) => !v)}
+              hasMessages={false}
+            />
+
             <button
               onClick={() => setSearchOpen(true)}
               className="px-2.5 py-1.5 text-xs font-mono font-bold uppercase tracking-wide border border-border bg-secondary hover:bg-secondary/85 text-secondary-foreground transition-all rounded-lg shadow-sm active:translate-y-[0.5px] flex items-center gap-1.5 cursor-pointer"
@@ -617,6 +627,13 @@ export default function WikiDashboard() {
 
       {/* Global Wiki Search palette */}
       <WikiSearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
+
+      {/* Floating Wiki AI Chat Panel */}
+      {showAIChat && (
+        <div className="fixed bottom-4 right-4 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300">
+          <WikiAIChatPanel onClose={() => setShowAIChat(false)} />
+        </div>
+      )}
     </div>
   );
 }

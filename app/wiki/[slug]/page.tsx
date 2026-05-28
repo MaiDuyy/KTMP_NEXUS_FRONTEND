@@ -20,6 +20,7 @@ import { WikiSearchDialog } from "../components/WikiSearchDialog";
 import { getPageType } from "../components/WikilinkAutocomplete";
 import { useHasRole } from "@/src/lib/rbac/usePermission";
 import { useSelector } from "react-redux";
+import { WikiAIChatPanel, WikiAIChatButton } from "../components/WikiAIChatPanel";
 import {
   Calendar,
   Layers,
@@ -93,6 +94,7 @@ export default function WikiPageDetail() {
   };
 
   const [searchOpen, setSearchOpen] = React.useState(false);
+  const [showAIChat, setShowAIChat] = React.useState(false);
 
   // Key bindings for Ctrl+K
   React.useEffect(() => {
@@ -208,7 +210,7 @@ export default function WikiPageDetail() {
         
         {/* Detail Page Navigation Header */}
         <div className="flex items-center justify-between border-b border-border pb-2 select-none">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <Link
               href="/wiki"
               className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium border border-border bg-secondary hover:bg-secondary/80 text-secondary-foreground transition-colors rounded-lg shadow-sm active:scale-[0.98]"
@@ -224,6 +226,11 @@ export default function WikiPageDetail() {
               <Search className="w-3 h-3" />
               Tìm nhanh (Ctrl+K)
             </button>
+
+            {/* AI chat button — context-aware for current page */}
+            <WikiAIChatButton
+              onClick={() => setShowAIChat((v) => !v)}
+            />
           </div>
 
           <div className="flex items-center gap-1.5">
@@ -368,6 +375,17 @@ export default function WikiPageDetail() {
 
       {/* Global Wiki Search palette */}
       <WikiSearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
+
+      {/* Floating context-aware AI Chat Panel */}
+      {showAIChat && (
+        <div className="fixed bottom-4 right-4 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300">
+          <WikiAIChatPanel
+            currentPageSlug={slug}
+            currentPageTitle={page?.title}
+            onClose={() => setShowAIChat(false)}
+          />
+        </div>
+      )}
     </div>
   );
 }
