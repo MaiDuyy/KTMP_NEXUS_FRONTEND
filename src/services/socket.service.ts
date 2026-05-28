@@ -142,7 +142,7 @@ export interface SocketCallbacks {
   onCompilationPlanStatusChanged?: (data: CompilationPlanStatusChangedEvent) => void;
   onWikiDraftStatusChanged?: (data: WikiDraftStatusChangedEvent) => void;
   onChatCallStatus?: (data: { chatId: string; roomName: string | null; isActive: boolean; [key: string]: any }) => void;
-  onPollUpdated?: (data: { chatId: string; pollId: string; options: any[]; totalVotes: number }) => void;
+  onPollUpdated?: (data: { chatId: string; pollId: string; options: any[]; totalVotes: number; endsAt?: string | null; isExpired?: boolean }) => void;
   onCallActiveStatus?: (data: { chatId: string; isActive: boolean; roomName?: string; [key: string]: any }) => void;
   onWorkspaceInvite?: (data: { workspaceName: string; role: string; token: string; inviterId: string; timestamp: string }) => void;
   onWorkspaceDissolved?: (data: { workspaceId: string; dissolvedBy: string }) => void;
