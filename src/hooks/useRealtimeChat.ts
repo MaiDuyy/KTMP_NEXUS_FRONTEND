@@ -701,12 +701,18 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
         console.log("[RealtimeChat] 👥 Chat member updated:", data.chatId);
         // Just refetch chat details to update members list UI if user is looking at it
         dispatch(apiSlice.util.invalidateTags([{ type: "Chats", id: data.chatId }]));
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("chat:member_updated", { detail: data }));
+        }
       },
 
       onChatRoleUpdated: (data) => {
         console.log("[RealtimeChat] 🛡️ Member role updated in chat:", data.chatId);
         // Invalidate tags so the UI reflects the new role (buttons availability etc)
         dispatch(apiSlice.util.invalidateTags([{ type: "Chats", id: data.chatId }, "Chats"]));
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("chat:role_updated", { detail: data }));
+        }
         
         // If it's the current user whose role was updated, we might want to show a toast
         const authUser = store.getState().auth?.user;
@@ -718,17 +724,22 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
       onChatUpdated: (data) => {
         console.log("[RealtimeChat] 🔄 Chat info updated:", data.chatId);
         dispatch(apiSlice.util.invalidateTags([{ type: "Chats", id: data.chatId }, "Chats"]));
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("chat:updated", { detail: data }));
+        }
       },
 
       onJoinRequestNew: (data) => {
         console.log("[RealtimeChat] 📩 New join request:", data.chatId);
         // Invalidate chat details to update joinRequests count/list (for admins)
         dispatch(apiSlice.util.invalidateTags([{ type: "Chats", id: data.chatId }]));
+        window.dispatchEvent(new CustomEvent("chat:join_request:new", { detail: data }));
       },
 
       onJoinRequestUpdated: (data) => {
         console.log("[RealtimeChat] ✅ Join request updated:", data.chatId);
         dispatch(apiSlice.util.invalidateTags([{ type: "Chats", id: data.chatId }]));
+        window.dispatchEvent(new CustomEvent("chat:join_request:updated", { detail: data }));
       },
 
       onTaskNew: (data) => {

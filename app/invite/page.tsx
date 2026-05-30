@@ -48,7 +48,10 @@ function InvitePageContent() {
     skip: !token,
   });
 
-  const { data: profile, isLoading: isCheckingAuth } = useGetProfileQuery();
+  const hasToken = typeof window !== "undefined" && !!localStorage.getItem("accessToken");
+  const { data: profile, isLoading: isCheckingAuth } = useGetProfileQuery(undefined, {
+    skip: !hasToken,
+  });
   const [acceptInvite, { isLoading: isAccepting }] = useAcceptInviteMutation();
   const [joinInvite, { isLoading: isJoining }] = useJoinInviteMutation();
   const [rejectInvite, { isLoading: isRejecting }] = useRejectInviteMutation();

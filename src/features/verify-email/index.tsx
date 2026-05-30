@@ -24,6 +24,7 @@ import {
     useSendVerificationOTPMutation,
     useResendOTPMutation,
 } from "@/src/redux/feature/otpApi";
+import { useCooldown } from "@/src/hooks";
 
 const otpSchema = z.object({
     code: z.string().length(6, "Mã OTP phải có 6 chữ số"),
@@ -36,8 +37,12 @@ function VerifyEmailContent() {
     const email = searchParams.get("email") || "";
 
     const [otpValue, setOtpValue] = useState("");
-    const [countdown, setCountdown] = useState(0);
     const [isVerified, setIsVerified] = useState(false);
+
+    const { cooldown, startCooldown } = useCooldown(`verify_email_otp_${email}`, {
+        cooldownTimeMs: 60000,
+        behavior: 'disable',
+    });
 
     const [verifyOTP, { isLoading: isVerifying }] = useVerifyEmailOTPMutation();
     const [sendOTP, { isLoading: isSending }] = useSendVerificationOTPMutation();
@@ -50,20 +55,15 @@ function VerifyEmailContent() {
         },
     });
 
-    // Countdown timer
+    // Auto send OTP when page loads (only if no active cooldown exists)
     useEffect(() => {
-        if (countdown > 0) {
-            const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-            return () => clearTimeout(timer);
+        if (email) {
+            const saved = localStorage.getItem(`cooldown_verify_email_otp_${email}`);
+            if (!saved || parseInt(saved, 10) <= Date.now()) {
+                handleSendOTP();
+            }
         }
-    }, [countdown]);
-
-    // Auto send OTP when page loads
-    useEffect(() => {
-        if (email && countdown === 0) {
-            handleSendOTP();
-        }
-    }, []);
+    }, [email]);
 
     const handleSendOTP = async () => {
         if (!email) {
@@ -75,28 +75,29 @@ function VerifyEmailContent() {
         try {
             const result = await sendOTP({ email }).unwrap();
             toast.success(result.message);
-            setCountdown(result.expiresIn ? Math.min(60, result.expiresIn) : 60);
+            const timeMs = result.resendAvailableIn ? Math.min(60, result.resendAvailableIn) * 1000 : 60000;
+            startCooldown(timeMs);
         } catch (error: any) {
             const msg = error?.data?.message || "Không thể gửi OTP!";
             if (error?.data?.retryAfter) {
-                setCountdown(error.data.retryAfter);
+                startCooldown(error.data.retryAfter * 1000);
             }
             toast.error(msg);
         }
     };
 
     const handleResendOTP = async () => {
-        if (!email || countdown > 0) return;
+        if (!email || cooldown > 0) return;
 
         try {
             const result = await resendOTP({ email, type: "VERIFY_EMAIL" }).unwrap();
             toast.success(result.message);
-            setCountdown(60);
+            startCooldown(60000);
             setOtpValue("");
         } catch (error: any) {
             const msg = error?.data?.message || "Không thể gửi lại OTP!";
             if (error?.data?.retryAfter) {
-                setCountdown(error.data.retryAfter);
+                startCooldown(error.data.retryAfter * 1000);
             }
             toast.error(msg);
         }
@@ -196,7 +197,7 @@ function VerifyEmailContent() {
                         <Button
                             variant="ghost"
                             onClick={handleResendOTP}
-                            disabled={countdown > 0 || isResending || isSending}
+                            disabled={cooldown > 0 || isResending || isSending}
                             className="text-primary"
                         >
                             {isResending ? (
@@ -204,8 +205,8 @@ function VerifyEmailContent() {
                             ) : (
                                 <RefreshCw className="mr-2 h-4 w-4" />
                             )}
-                            {countdown > 0
-                                ? `Gửi lại sau ${countdown}s`
+                            {cooldown > 0
+                                ? `Gửi lại sau ${cooldown}s`
                                 : "Gửi lại mã OTP"
                             }
                         </Button>

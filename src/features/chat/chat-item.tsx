@@ -278,25 +278,25 @@ export const ChatItem = ({
             <div
                 onClick={handleSelectChat}
                 className={`
-          group relative flex items-center gap-2.5 p-2 cursor-pointer transition-all duration-200 mx-1.5 my-0.25 rounded-xl
-          hover:bg-slate-200/60 dark:hover:bg-gray-700
-          ${isSelected ? "bg-blue-600/10 dark:bg-gray-700 shadow-sm border border-blue-200/30" : ""}
-          ${!chat.readed ? "bg-white dark:bg-gray-800" : ""}
+          group relative flex items-center gap-2.5 p-2 cursor-pointer transition-all duration-150 mx-1.5 my-0.5 rounded-[2px] border border-transparent
+          hover:bg-slate-200/40 dark:hover:bg-white/[0.02]
+          ${isSelected ? "bg-blue-600/10 dark:bg-white/[0.04] shadow-sm border-blue-200/30 dark:border-white/[0.06]" : ""}
+          ${!chat.readed ? "bg-white dark:bg-[#19191B]" : ""}
         `}
             >
                 {/* Active Indicator Line */}
                 {isSelected && (
-                    <div className="absolute left-0 top-2 bottom-2 w-1 bg-blue-600 rounded-r-full" />
+                    <div className="absolute left-0 top-2 bottom-2 w-1 bg-blue-600 dark:bg-blue-500 rounded-r-[2px]" />
                 )}
                 {/* Avatar Section */}
                 <div className="relative flex-shrink-0">
-                    <Avatar className="h-9 w-9 ring-1 ring-slate-100 dark:ring-gray-800">
-                        <AvatarImage src={imageUrl} alt={displayName} />
+                    <Avatar className="h-9 w-9 rounded-[2px] ring-1 ring-slate-100 dark:ring-white/[0.04]">
+                        <AvatarImage src={imageUrl} alt={displayName} className="rounded-[2px]" />
                         <AvatarFallback
                             className={`${chat.isGroup
-                                ? "bg-gradient-to-br from-green-400 to-green-600"
-                                : "bg-gradient-to-br from-blue-400 to-blue-600"
-                                } text-white font-medium`}
+                                ? "bg-gradient-to-br from-green-600 to-emerald-600"
+                                : "bg-gradient-to-br from-blue-600 to-indigo-600"
+                                } text-white font-mono font-bold rounded-[2px]`}
                         >
                             {initials}
                         </AvatarFallback>
@@ -318,8 +318,8 @@ export const ChatItem = ({
                             {chat.pin && <PinIcon className="w-3 h-3 text-blue-500 flex-shrink-0" />}
                             <span
                                 className={`truncate text-[12.5px] tracking-tight ${!chat.readed
-                                    ? "text-slate-900 font-black"
-                                    : isSelected ? "text-blue-700 font-bold" : "text-slate-700 font-semibold"
+                                    ? "text-slate-900 dark:text-white font-black"
+                                    : isSelected ? "text-blue-700 dark:text-blue-400 font-bold" : "text-slate-700 dark:text-zinc-300 font-semibold"
                                     }`}
                             >
                                 {displayName}
@@ -327,7 +327,7 @@ export const ChatItem = ({
 
                             {/* Hiển thị Icon category nếu có */}
                             {selectedCategory && (
-                                <Badge variant="outline" className="h-5 px-1 ml-1 hidden sm:flex">
+                                <Badge variant="outline" className="h-5 px-1 ml-1 hidden sm:flex rounded-[2px]">
                                     {(() => {
                                         const CatIcon = FRIEND_CATEGORIES.find(c => c.id === selectedCategory)?.icon;
                                         return CatIcon ? <CatIcon className="w-3 h-3" /> : null;
@@ -335,7 +335,7 @@ export const ChatItem = ({
                                 </Badge>
                             )}
                         </div>
-                        <span className="text-xs text-gray-400 flex-shrink-0 ml-2">
+                        <span className="text-xs text-gray-400 dark:text-zinc-500 flex-shrink-0 ml-2 font-mono">
                             {lastMessageTime}
                         </span>
                     </div>
@@ -379,92 +379,74 @@ export const ChatItem = ({
 
                         {/* Unread Badge - Ẩn nếu đang được chọn/đang chat */}
                         {chat.unreadCount > 0 && !isSelected && (
-                            <Badge className="bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 h-4.5 min-w-[18px] flex items-center justify-center rounded-full shadow-sm ring-2 ring-white animate-in zoom-in duration-300">
+                            <Badge className="bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 h-4.5 min-w-[18px] flex items-center justify-center rounded-[2px] shadow-sm ring-2 ring-white dark:ring-[#111113] animate-in zoom-in duration-300">
                                 {chat.unreadCount > 99 ? "99+" : chat.unreadCount}
                             </Badge>
                         )}
 
                         {/* DROPDOWN MENU TRIGGER */}
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute right-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-md shadow-sm">
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute right-2 bg-white/80 dark:bg-[#19191B]/90 border border-slate-200/50 dark:border-white/[0.04] backdrop-blur-sm rounded-[2px] shadow-sm">
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                                        <MoreVertical className="h-4 w-4 text-gray-500" />
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-[2px]">
+                                        <MoreVertical className="h-4 w-4 text-gray-500 dark:text-zinc-400" />
                                     </Button>
                                 </DropdownMenuTrigger>
 
                                 {/* Menu cho chat 1-1 */}
                                 {!chat.isGroup ? (
-                                    <DropdownMenuContent align="end" className="w-52" onClick={(e) => e.stopPropagation()}>
+                                    <DropdownMenuContent align="end" className="w-52 rounded-[2px] bg-white dark:bg-[#19191B] border border-slate-200/80 dark:border-white/[0.06] p-1 shadow-md font-mono text-[11px]" onClick={(e) => e.stopPropagation()}>
                                         {/* Ghim/Bỏ ghim */}
-                                        <DropdownMenuItem onClick={handleTogglePin}>
+                                        <DropdownMenuItem onClick={handleTogglePin} className="rounded-[2px] cursor-pointer py-1.5">
                                             {chat.pin ? (
                                                 <>
-                                                    <PinOff className="h-4 w-4 mr-2" />
+                                                    <PinOff className="h-3.5 w-3.5 mr-2" />
                                                     Bỏ ghim
                                                 </>
                                             ) : (
                                                 <>
-                                                    <Pin className="h-4 w-4 mr-2" />
+                                                    <Pin className="h-3.5 w-3.5 mr-2" />
                                                     Ghim cuộc trò chuyện
                                                 </>
                                             )}
                                         </DropdownMenuItem>
 
                                         {/* Tắt/Bật thông báo */}
-                                        <DropdownMenuItem onClick={handleToggleNotify}>
+                                        <DropdownMenuItem onClick={handleToggleNotify} className="rounded-[2px] cursor-pointer py-1.5">
                                             {chat.notify === false ? (
                                                 <>
-                                                    <Bell className="h-4 w-4 mr-2" />
+                                                    <Bell className="h-3.5 w-3.5 mr-2" />
                                                     Bật thông báo
                                                 </>
                                             ) : (
                                                 <>
-                                                    <BellOff className="h-4 w-4 mr-2" />
+                                                    <BellOff className="h-3.5 w-3.5 mr-2" />
                                                     Tắt thông báo
                                                 </>
                                             )}
                                         </DropdownMenuItem>
 
-                                        <DropdownMenuSeparator />
-
-                                        {/* Category selection */}
-                                        {/* <DropdownMenuItem className="font-medium text-gray-500" disabled>
-                                            <Tag className="h-4 w-4 mr-2" />
-                                            Phân loại
-                                        </DropdownMenuItem>
-                                        {FRIEND_CATEGORIES.map((cat) => (
-                                            <DropdownMenuItem
-                                                key={cat.id}
-                                                onClick={() => handleCategoryChange(cat.id)}
-                                                className={selectedCategory === cat.id ? "bg-gray-100 dark:bg-gray-700" : ""}
-                                            >
-                                                <cat.icon className={`h-4 w-4 mr-2 ${cat.color}`} />
-                                                {cat.label}
-                                            </DropdownMenuItem>
-                                        ))}
-
-                                        <DropdownMenuSeparator /> */}
+                                        <DropdownMenuSeparator className="dark:bg-white/[0.06]" />
 
                                         {/* Kết bạn hoặc Hủy kết bạn tùy trạng thái */}
                                         {isFriend ? (
                                             <DropdownMenuItem
                                                 onClick={() => setShowUnfriendDialog(true)}
-                                                className="text-orange-600 focus:text-orange-700"
+                                                className="text-orange-600 focus:text-orange-700 rounded-[2px] cursor-pointer py-1.5"
                                             >
-                                                <UserMinus className="h-4 w-4 mr-2" />
+                                                <UserMinus className="h-3.5 w-3.5 mr-2" />
                                                 Hủy kết bạn
                                             </DropdownMenuItem>
                                         ) : (
                                             <DropdownMenuItem
                                                 onClick={handleSendFriendRequest}
                                                 disabled={isSendingRequest}
-                                                className="text-blue-600 focus:text-blue-700"
+                                                className="text-blue-600 focus:text-blue-700 rounded-[2px] cursor-pointer py-1.5"
                                             >
                                                 {isSendingRequest ? (
-                                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                    <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
                                                 ) : (
-                                                    <UserPlus className="h-4 w-4 mr-2" />
+                                                    <UserPlus className="h-3.5 w-3.5 mr-2" />
                                                 )}
                                                 Kết bạn
                                             </DropdownMenuItem>
@@ -475,12 +457,12 @@ export const ChatItem = ({
                                                 <DropdownMenuItem
                                                     onClick={handleUnblock}
                                                     disabled={isUnblocking}
-                                                    className="text-emerald-600 focus:text-emerald-700 font-bold"
+                                                    className="text-emerald-600 focus:text-emerald-700 font-bold rounded-[2px] cursor-pointer py-1.5"
                                                 >
                                                     {isUnblocking ? (
-                                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                        <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
                                                     ) : (
-                                                        <ShieldCheck className="h-4 w-4 mr-2" />
+                                                        <ShieldCheck className="h-3.5 w-3.5 mr-2" />
                                                     )}
                                                     Mở chặn
                                                 </DropdownMenuItem>
@@ -488,74 +470,74 @@ export const ChatItem = ({
                                         ) : (
                                             <DropdownMenuItem
                                                 onClick={() => setShowBlockDialog(true)}
-                                                className="text-red-600 focus:text-red-700"
+                                                className="text-red-600 focus:text-red-700 rounded-[2px] cursor-pointer py-1.5"
                                             >
-                                                <Ban className="h-4 w-4 mr-2" />
+                                                <Ban className="h-3.5 w-3.5 mr-2" />
                                                 Chặn
                                             </DropdownMenuItem>
                                         )}
 
-                                        <DropdownMenuSeparator />
+                                        <DropdownMenuSeparator className="dark:bg-white/[0.06]" />
 
                                         {/* Xóa cuộc hội thoại */}
                                         <DropdownMenuItem
                                             onClick={() => setShowDeleteChatDialog(true)}
-                                            className="text-red-600 focus:text-red-700"
+                                            className="text-red-600 focus:text-red-750 rounded-[2px] cursor-pointer py-1.5"
                                         >
-                                            <Trash2 className="h-4 w-4 mr-2" />
+                                            <Trash2 className="h-3.5 w-3.5 mr-2" />
                                             Xóa cuộc hội thoại
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>
                                 ) : (
                                     // Menu cho Group
-                                    <DropdownMenuContent align="end" className="w-52" onClick={(e) => e.stopPropagation()}>
+                                    <DropdownMenuContent align="end" className="w-52 rounded-[2px] bg-white dark:bg-[#19191B] border border-slate-200/80 dark:border-white/[0.06] p-1 shadow-md font-mono text-[11px]" onClick={(e) => e.stopPropagation()}>
                                         {/* Ghim/Bỏ ghim */}
-                                        <DropdownMenuItem onClick={handleTogglePin}>
+                                        <DropdownMenuItem onClick={handleTogglePin} className="rounded-[2px] cursor-pointer py-1.5">
                                             {chat.pin ? (
                                                 <>
-                                                    <PinOff className="h-4 w-4 mr-2" />
+                                                    <PinOff className="h-3.5 w-3.5 mr-2" />
                                                     Bỏ ghim
                                                 </>
                                             ) : (
                                                 <>
-                                                    <Pin className="h-4 w-4 mr-2" />
+                                                    <Pin className="h-3.5 w-3.5 mr-2" />
                                                     Ghim cuộc trò chuyện
                                                 </>
                                             )}
                                         </DropdownMenuItem>
 
                                         {/* Tắt/Bật thông báo */}
-                                        <DropdownMenuItem onClick={handleToggleNotify}>
+                                        <DropdownMenuItem onClick={handleToggleNotify} className="rounded-[2px] cursor-pointer py-1.5">
                                             {chat.notify === false ? (
                                                 <>
-                                                    <Bell className="h-4 w-4 mr-2" />
+                                                    <Bell className="h-3.5 w-3.5 mr-2" />
                                                     Bật thông báo
                                                 </>
                                             ) : (
                                                 <>
-                                                    <BellOff className="h-4 w-4 mr-2" />
+                                                    <BellOff className="h-3.5 w-3.5 mr-2" />
                                                     Tắt thông báo
                                                 </>
                                             )}
                                         </DropdownMenuItem>
 
-                                        <DropdownMenuSeparator />
+                                        <DropdownMenuSeparator className="dark:bg-white/[0.06]" />
 
                                         {/* Rời nhóm */}
                                         <DropdownMenuItem
                                             onClick={() => setShowLeaveGroupDialog(true)}
-                                            className="text-orange-600 focus:text-orange-700"
+                                            className="text-orange-600 focus:text-orange-750 rounded-[2px] cursor-pointer py-1.5"
                                         >
-                                            <LogOut className="h-4 w-4 mr-2" />
+                                            <LogOut className="h-3.5 w-3.5 mr-2" />
                                             Rời nhóm
                                         </DropdownMenuItem>
 
                                         {/* Xóa cuộc hội thoại */}
                                         <DropdownMenuItem
                                             onClick={() => setShowDeleteChatDialog(true)}
-                                            className="text-red-600 focus:text-red-700"
+                                            className="text-red-600 focus:text-red-750 rounded-[2px] cursor-pointer py-1.5"
                                         >
-                                            <Trash2 className="h-4 w-4 mr-2" />
+                                            <Trash2 className="h-3.5 w-3.5 mr-2" />
                                             Xóa cuộc hội thoại
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>

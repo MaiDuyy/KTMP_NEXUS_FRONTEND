@@ -3,6 +3,8 @@
 import React, { useState } from "react";
 import { Message } from "@/src/type/chat.types";
 import { cn } from "@/lib/utils";
+import { useDispatch } from "react-redux";
+import { setForwardingMessage } from "@/src/redux/feature/workspaceSlice";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -53,6 +55,7 @@ import {
     useReactMessageMutation,
     useTogglePinMessageMutation,
 } from "@/src/redux/feature/messageApi";
+import { useCooldown } from "@/src/hooks";
 import { socketService } from "@/src/services/socket.service";
 import { getAvatarUrl, getMediaUrl } from "@/src/utils/image-utils";
 import PollMessageBubble from "./poll-message-bubble";
@@ -72,6 +75,11 @@ interface MessageBubbleProps {
     onMessageDeleted?: (messageId: string) => void;
     onMessageUpdated?: (messageId: string) => void;
     readReceipts?: any[];
+    isFirst?: boolean;
+    isMiddle?: boolean;
+    isLast?: boolean;
+    isSingle?: boolean;
+    onJumpToMessage?: (messageId: string) => void;
 }
 
 export default function MessageBubble({
@@ -84,19 +92,41 @@ export default function MessageBubble({
     onMessageDeleted,
     onMessageUpdated,
     readReceipts,
+    isFirst = false,
+    isMiddle = false,
+    isLast = false,
+    isSingle = true,
+    onJumpToMessage,
 }: MessageBubbleProps) {
     const isMe = message.isMe;
+    const dispatch = useDispatch();
+    
+    const handleForward = () => {
+        dispatch(setForwardingMessage(message.id));
+    };
+
     const isCall = message.type.startsWith('call_');
     const isAI = message.senderId === '00000000-0000-0000-0000-000000000000' || message.sender?.id === '00000000-0000-0000-0000-000000000000';
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const [showRecallDialog, setShowRecallDialog] = useState(false);
     const [showReactions, setShowReactions] = useState(false);
-    const [messages, setMessages] = useState([]);
+
+    // Mobile swipe-to-reply touch gesture state
+    const [touchStartX, setTouchStartX] = useState<number | null>(null);
+    const [touchMoveX, setTouchMoveX] = useState<number>(0);
+    const [isSwiping, setIsSwiping] = useState(false);
+
     // API mutations
     const [deleteMessage, { isLoading: isDeleting }] = useDeleteMessageForMeMutation();
     const [recallMessage, { isLoading: isRecalling }] = useRecallMessageMutation();
     const [reactMessage, { isLoading: isReacting }] = useReactMessageMutation();
     const [togglePin, { isLoading: isPinning }] = useTogglePinMessageMutation();
+
+    const { triggerAction: triggerReactAction } = useCooldown(`chat_react_${message.id}`, {
+        cooldownTimeMs: 1000, // 1 second spam protection for message reactions
+        behavior: 'toast',
+        toastMessage: 'Bạn thao tác thả cảm xúc quá nhanh, vui lòng chậm lại một chút.',
+    });
 
     const handleCopy = () => {
         if (message.content) {
@@ -105,10 +135,43 @@ export default function MessageBubble({
         }
     };
 
+    // Swipe touch handlers
+    const handleTouchStart = (e: React.TouchEvent) => {
+        if (message.destroy || isCall || message.type === 'system') return;
+        setTouchStartX(e.touches[0].clientX);
+        setIsSwiping(true);
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (!touchStartX || !isSwiping) return;
+        const currentX = e.touches[0].clientX;
+        const deltaX = currentX - touchStartX;
+        
+        // Swipe to the right to reply
+        if (deltaX > 0) {
+            const swipeDistance = Math.min(deltaX, 60);
+            setTouchMoveX(swipeDistance);
+        }
+    };
+
+    const handleTouchEnd = () => {
+        if (!touchStartX) return;
+        
+        if (touchMoveX >= 45) {
+            onReply();
+            if (navigator.vibrate) {
+                navigator.vibrate(12);
+            }
+        }
+        
+        setTouchStartX(null);
+        setTouchMoveX(0);
+        setIsSwiping(false);
+    };
+
     // Handle delete message (for me only) - Chỉ API, không cần realtime
     const handleDelete = async () => {
         try {
-            // socketService.recallMessage(message.id, chatId);
             await deleteMessage(message.id).unwrap();
             toast.success("Đã xóa tin nhắn");
             setShowDeleteDialog(false);
@@ -118,11 +181,9 @@ export default function MessageBubble({
         }
     };
 
-
     // Handle recall message (delete for everyone) - Socket cho realtime
     const handleRecall = async () => {
         try {
-            // Sử dụng socket để realtime với người khác
             socketService.recallMessage(message.id, chatId);
             await recallMessage(message.id).unwrap();
             toast.success("Đã thu hồi tin nhắn");
@@ -135,16 +196,17 @@ export default function MessageBubble({
 
     // Handle react to message - Socket cho realtime
     const handleReact = async (emoji: string) => {
-        try {
-            // Sử dụng socket để realtime với người khác
-            socketService.reactMessage(message.id, chatId, emoji);
-            await reactMessage({ messageId: message.id, emoji, chatId }).unwrap();
-            setShowReactions(false);
-            toast.success(`Đã thêm ${emoji}`);
-            onMessageUpdated?.(message.id);
-        } catch (error: any) {
-            toast.error(error?.data?.message || "Lỗi reaction");
-        }
+        triggerReactAction(async () => {
+            try {
+                socketService.reactMessage(message.id, chatId, emoji);
+                await reactMessage({ messageId: message.id, emoji, chatId }).unwrap();
+                setShowReactions(false);
+                toast.success(`Đã thêm ${emoji}`);
+                onMessageUpdated?.(message.id);
+            } catch (error: any) {
+                toast.error(error?.data?.message || "Lỗi reaction");
+            }
+        });
     };
 
     // Handle pin/unpin message - Realtime handled by backend + socket listener
@@ -170,30 +232,26 @@ export default function MessageBubble({
 
     // Calculate read status
     const getReadStatus = () => {
-        // Chỉ hiện cho tin nhắn của tôi
         if (!isMe) return null;
 
-        // Trạng thái Loading/Data missing
         if (!readReceipts) {
             return <div className="flex items-center ml-1 opacity-50"><Loader2 className="h-2.5 w-2.5 animate-spin" /></div>;
         }
 
-        // Lọc bỏ chính mình khỏi danh sách receipts
         const otherReceipts = Array.isArray(readReceipts)
             ? readReceipts.filter(r => r.userId !== (message.senderId || message.sender?.id))
             : [];
 
-        // Tìm những người thực sự đã đọc tin nhắn này (readAt >= time của tin nhắn)
         const readers = otherReceipts.filter(r => {
             const readAt = new Date(r.readAt).getTime();
             const msgTime = new Date(message.time).getTime();
-            return readAt >= (msgTime - 1000); // Cho phép sai số 1 giây
+            return readAt >= (msgTime - 1000);
         });
 
         const isRead = readers.length > 0;
 
         if (isGroup) {
-            const unreadCount = Math.max(0, participantCount - readers.length - 1); // -1 for sender
+            const unreadCount = Math.max(0, participantCount - readers.length - 1);
             if (isRead) {
                 return (
                     <span className="text-[10px] text-blue-100/90 ml-1 flex items-center gap-0.5 font-medium whitespace-nowrap">
@@ -210,7 +268,6 @@ export default function MessageBubble({
             );
         }
 
-        // Với chat 1-1
         if (isRead) {
             return (
                 <span className="text-[10px] text-sky-100 ml-1 flex items-center gap-0.5 font-medium">
@@ -227,6 +284,7 @@ export default function MessageBubble({
             </span>
         );
     };
+
     const renderContent = (msg: any, isReply = false) => {
         if (msg.destroy) {
             return (
@@ -235,7 +293,6 @@ export default function MessageBubble({
                 </p>
             );
         }
-
 
         const parseMentions = (content: string) => {
             if (!content) return content;
@@ -330,7 +387,6 @@ export default function MessageBubble({
             case "image": {
                 const imageUrl = getMediaUrl(msg.content);
 
-                // Giao diện thu nhỏ cho phần Reply
                 if (isReply) {
                     return (
                         <div className="flex items-center gap-2 mt-1">
@@ -340,7 +396,6 @@ export default function MessageBubble({
                     );
                 }
 
-                // Giao diện cho tin nhắn chính
                 return (
                     <div className="rounded-lg overflow-hidden max-w-xs mt-1">
                         <img
@@ -393,9 +448,9 @@ export default function MessageBubble({
                         <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center text-xl">
                             📎
                         </div>
-                        <div className="min-w-0 flex-1">
-                            <p className="font-medium truncate">{msg.file?.name || "File"}</p>
-                            <p className="text-xs opacity-70">{msg.file?.size || ""}</p>
+                        <div className="min-w-0 flex-1 text-left">
+                          <p className="font-medium truncate">{msg.file?.name || "File"}</p>
+                          <p className="text-xs opacity-70">{msg.file?.size || ""}</p>
                         </div>
                     </a>
                 );
@@ -421,7 +476,7 @@ export default function MessageBubble({
 
             case "system":
                 return !isReply && (
-                    <p className="text-sm text-gray-500 italic text-center">
+                    <p className="text-sm text-gray-550 italic text-center">
                         {msg.content}
                     </p>
                 );
@@ -434,13 +489,13 @@ export default function MessageBubble({
                 const participantName = participantMeta.callerName || msg.sender?.name || "Ai đó";
                 return (
                     <div className="flex items-center justify-center gap-2 py-0.5">
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                            isJoined ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-500"
+                        <div className={`w-6 h-6 rounded-[2px] flex items-center justify-center ${
+                            isJoined ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400" : "bg-slate-100 text-slate-500 dark:bg-zinc-800 dark:text-zinc-400"
                         }`}>
                             <Phone size={12} />
                         </div>
-                        <span className={`text-[11px] font-medium ${
-                            isJoined ? "text-emerald-600" : "text-slate-500"
+                        <span className={`text-[11px] font-medium font-mono ${
+                            isJoined ? "text-emerald-600 dark:text-emerald-400" : "text-slate-500 dark:text-zinc-400"
                         }`}>
                             <span className="font-bold">{participantName}</span> {isJoined ? "đã tham gia cuộc gọi" : "đã rời cuộc gọi"}
                         </span>
@@ -533,14 +588,14 @@ export default function MessageBubble({
 
                 return (
                     <div className="flex flex-col gap-2 py-1">
-                        <div className="flex items-center gap-3">
-                            <div className={cn("w-8 h-8 rounded-full flex items-center justify-center bg-white shadow-sm ring-1 ring-slate-100", colorClass)}>
+                        <div className="flex items-center gap-3 text-left">
+                            <div className={cn("w-8 h-8 rounded-[2px] flex items-center justify-center bg-white dark:bg-zinc-800 shadow-sm border border-slate-200/80 dark:border-white/[0.06]", colorClass)}>
                                 <IconComponent size={16} />
                             </div>
-                            <div className="flex flex-col">
-                                <span className="text-[13px] font-bold text-slate-800">{label}</span>
-                                <span className="text-[11px] text-slate-500">{subLabel}</span>
-                                {durationStr && <span className="text-[10px] text-slate-400 font-medium">Thời gian: {durationStr}</span>}
+                            <div className="flex flex-col text-left">
+                                <span className="text-[13px] font-bold text-slate-800 dark:text-slate-200">{label}</span>
+                                <span className="text-[11px] text-slate-500 dark:text-zinc-400">{subLabel}</span>
+                                {durationStr && <span className="text-[10px] text-slate-400 dark:text-zinc-550 font-medium font-mono text-left">Thời gian: {durationStr}</span>}
                             </div>
                         </div>
                         
@@ -549,7 +604,7 @@ export default function MessageBubble({
                                 variant="outline" 
                                 size="sm" 
                                 onClick={handleCallback}
-                                className="h-7 px-3 text-[11px] font-bold bg-white/50 hover:bg-blue-50 text-blue-600 border-blue-100 rounded-lg w-fit flex items-center gap-1.5 transition-all active:scale-95 shadow-sm"
+                                className="h-7 px-3 text-[10px] font-mono font-bold uppercase tracking-wider bg-white/50 hover:bg-blue-50/50 dark:bg-zinc-800/40 dark:hover:bg-zinc-800/80 text-blue-600 dark:text-blue-400 border border-slate-200 dark:border-white/[0.06] rounded-[2px] w-fit flex items-center gap-1.5 transition-all active:scale-95 shadow-sm"
                             >
                                 {isVideoCall ? <Video size={12} /> : <Phone size={12} />}
                                 Gọi lại ngay
@@ -564,24 +619,39 @@ export default function MessageBubble({
         }
     };
 
-    // System message
+    const getBubbleRadiusClasses = () => {
+        if (isCall || message.type === 'system') return 'rounded-[2px]';
+        
+        if (isMe) {
+            if (isSingle) return "rounded-2xl";
+            if (isFirst) return "rounded-2xl rounded-br-[4px]";
+            if (isMiddle) return "rounded-l-2xl rounded-r-[4px]";
+            if (isLast) return "rounded-2xl rounded-tr-[4px]";
+        } else {
+            if (isSingle) return "rounded-2xl";
+            if (isFirst) return "rounded-2xl rounded-bl-[4px]";
+            if (isMiddle) return "rounded-r-2xl rounded-l-[4px]";
+            if (isLast) return "rounded-2xl rounded-tl-[4px]";
+        }
+        return "rounded-2xl";
+    };
+
     if (message.type === "system") {
         return (
             <div className="flex justify-center my-2">
-                <span className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded-full text-xs text-gray-600 dark:text-gray-300">
+                <span className="px-3 py-1 bg-slate-100 dark:bg-zinc-850/80 border border-slate-200 dark:border-white/[0.06] rounded-[2px] text-xs font-mono text-slate-655 dark:text-zinc-400">
                     {message.content}
                 </span>
             </div>
         );
     }
 
-    // Call events — render as centered pill, not inside the full bubble/ContextMenu
     if (isCall) {
         return (
-            <div className="flex justify-center my-1.5">
-                <div className="bg-white dark:bg-gray-800 border border-slate-100 dark:border-gray-700 rounded-2xl shadow-sm px-4 py-2 max-w-xs w-fit">
+            <div className="flex justify-center my-1.5 w-full">
+                <div className="bg-white dark:bg-[#19191B] border border-slate-200/80 dark:border-white/[0.06] rounded-[2px] shadow-sm px-4 py-2 max-w-xs w-fit">
                     {renderContent(message, false)}
-                    <p className="text-[9px] text-slate-400 text-center mt-1">
+                    <p className="text-[9px] font-mono text-slate-400 dark:text-zinc-550 text-center mt-1">
                         {format(new Date(message.time), "HH:mm")}
                     </p>
                 </div>
@@ -589,8 +659,8 @@ export default function MessageBubble({
         );
     }
 
-
     const imageUrl = getAvatarUrl(message.sender?.avatar, message.sender?.name);
+    const spacingClass = (isFirst || isSingle) ? "mt-3" : "mt-0.5";
 
     return (
         <>
@@ -598,18 +668,43 @@ export default function MessageBubble({
                 <ContextMenuTrigger>
                     <div
                         id={`message-${message.id}`}
-                        className={`flex items-end gap-2 group ${isMe ? "flex-row-reverse" : "flex-row"
-                            }`}
+                        onTouchStart={handleTouchStart}
+                        onTouchMove={handleTouchMove}
+                        onTouchEnd={handleTouchEnd}
+                        style={{
+                            transform: touchMoveX > 0 ? `translateX(${touchMoveX}px)` : undefined,
+                            transition: isSwiping ? 'none' : 'transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1)'
+                        }}
+                        className={cn(
+                            "flex items-end gap-2 group w-full text-left relative",
+                            isMe ? "flex-row-reverse" : "flex-row",
+                            spacingClass
+                        )}
                     >
-                        {/* Avatar */}
+                        {/* Hidden Reply Swipe Indicator on Mobile */}
+                        {touchMoveX > 0 && (
+                            <div 
+                                className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center justify-center transition-opacity"
+                                style={{ 
+                                    width: '32px', 
+                                    opacity: Math.min(touchMoveX / 45, 1)
+                                }}
+                            >
+                                <Reply className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                            </div>
+                        )}
+
+                        {/* Avatar Column */}
                         {!isMe && (
-                            <div className="w-7 flex-shrink-0">
+                            <div className="w-7 flex-shrink-0 flex items-end justify-center">
                                 {showAvatar ? (
-                                    <Avatar className="h-7 w-7">
-                                        <AvatarImage src={imageUrl || undefined} />
+                                    <Avatar className="h-7 w-7 rounded-[2px] border border-slate-250/20 dark:border-white/[0.06] align-bottom">
+                                        <AvatarImage className="rounded-[2px] object-cover" src={imageUrl || undefined} />
                                         <AvatarFallback className={cn(
-                                            "text-white text-[10px]",
-                                            isAI ? "bg-gradient-to-br from-indigo-500 to-indigo-700" : "bg-gradient-to-br from-purple-400 to-purple-600"
+                                            "text-[10px] font-mono font-bold rounded-[2px] flex items-center justify-center w-full h-full",
+                                            isAI 
+                                                ? "bg-slate-750 dark:bg-zinc-800 text-blue-400 border border-blue-500/20" 
+                                                : "bg-slate-100 dark:bg-zinc-800 text-slate-655 dark:text-zinc-400 border border-slate-200/80 dark:border-white/[0.04]"
                                         )}>
                                             {isAI ? <Sparkles size={10} /> : initials(message.sender?.name)}
                                         </AvatarFallback>
@@ -618,58 +713,66 @@ export default function MessageBubble({
                             </div>
                         )}
 
-                        {/* Message bubble */}
+                        {/* Message Bubble Container */}
                         <div
-                            className={`max-w-[85%] ${isMe
-                                ? "bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl rounded-br-md mb-0.5"
-                                : isAI
-                                    ? "bg-gradient-to-br from-indigo-50 to-white border border-indigo-100 text-slate-800 rounded-2xl rounded-bl-md shadow-sm mb-0.5"
-                                    : "bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-2xl rounded-bl-md shadow-sm mb-0.5"
-                                }`}
+                            className={cn(
+                                "max-w-[85%] transition-all duration-200 shadow-none text-left",
+                                getBubbleRadiusClasses(),
+                                isMe
+                                    ? "bg-blue-600 dark:bg-blue-700/90 text-white border border-blue-500/20 dark:border-blue-800/40"
+                                    : isAI
+                                        ? "bg-slate-50 dark:bg-zinc-900/60 border border-slate-200/80 dark:border-white/[0.06] text-slate-800 dark:text-slate-200"
+                                        : "bg-slate-50 dark:bg-[#19191B] text-slate-900 dark:text-slate-100 border border-slate-200/60 dark:border-white/[0.04]"
+                            )}
                         >
                             {/* Reply preview */}
                             {message.replyTo && (
                                 <div
-                                    className={`px-3 pt-2 pb-2 ${isMe
-                                        ? "border-l-2 border-white/50 ml-3"
-                                        : "border-l-2 border-blue-500 ml-3"
-                                        }`}
+                                    onClick={() => message.replyTo?.id && onJumpToMessage?.(message.replyTo.id)}
+                                    className={cn(
+                                        "px-3 pt-2 pb-2 mr-3 text-left cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 rounded-[2px] transition-colors duration-150",
+                                        isMe
+                                            ? "border-l-2 border-white/30 ml-3"
+                                            : "border-l-2 border-blue-500/80 dark:border-blue-400/80 ml-3"
+                                    )}
                                 >
-                                    <p className={`text-xs font-bold ${isMe ? "text-blue-200" : "text-blue-600"}`}>
+                                    <p className={`text-xs font-bold text-left ${isMe ? "text-blue-200" : "text-blue-600 dark:text-blue-400"}`}>
                                         {message.replyTo.sender?.name || "Người dùng"}
                                     </p>
-                                    <div className={`text-xs truncate ${isMe ? "text-blue-100" : "text-gray-500"}`}>
+                                    <div className={`text-xs truncate text-left ${isMe ? "text-blue-100" : "text-gray-500 dark:text-zinc-400"}`}>
                                         <MessageSnippet 
                                             type={message.replyTo.type} 
                                             content={message.replyTo.content} 
                                             file={(message.replyTo as any).file} 
                                             chatId={chatId}
-                                            className="text-xs"
+                                            className="text-xs text-left"
                                             iconClassName={`h-3.5 w-3.5 inline-block align-middle shrink-0 mr-1 ${
-                                                isMe ? "text-blue-200" : "text-slate-500"
+                                                isMe ? "text-blue-200" : "text-slate-500 dark:text-zinc-450"
                                             }`}
                                         />
                                     </div>
                                 </div>
                             )}
 
-                            {/* Sender name — always visible for incoming messages */}
-                            {!isMe && message.sender?.name && (
-                                <p className={`px-3 pt-2 text-xs font-bold flex items-center gap-1 ${isAI ? "text-indigo-600" : "text-blue-600 dark:text-blue-400"}`}>
+                            {/* Sender name — visible only on first/single message of cluster */}
+                            {!isMe && message.sender?.name && (isFirst || isSingle) && (
+                                <p className={`px-3 pt-2 text-xs font-bold flex items-center gap-1 text-left ${isAI ? "text-indigo-650 dark:text-indigo-400" : "text-blue-600 dark:text-blue-400"}`}>
                                     {isAI && <Sparkles size={12} className="text-indigo-500" />}
                                     {message.sender.name}
                                 </p>
                             )}
 
                             {/* Content */}
-                            <div className="px-2.5 py-1.5 text-[13px] tracking-tight">{renderContent(message, false)}</div>
+                            <div className="px-2.5 py-1.5 text-[13px] tracking-tight text-left">{renderContent(message, false)}</div>
 
                             {/* Time & reactions */}
                             <div
-                                className={`px-2.5 pb-1.5 flex items-center gap-1.5 ${isMe ? "justify-end" : "justify-start"
-                                    }`}
+                                className={cn(
+                                    "px-2.5 pb-1.5 flex items-center gap-1.5",
+                                    isMe ? "justify-end" : "justify-start"
+                                )}
                             >
-                                <span className={`text-[9px] font-medium ${isMe ? "text-blue-100/80" : "text-slate-400"}`}>
+                                <span className={`text-[9px] font-medium ${isMe ? "text-blue-100/80" : "text-slate-400 dark:text-zinc-500"}`}>
                                     {format(new Date(message.time), "HH:mm")}
                                 </span>
 
@@ -680,14 +783,13 @@ export default function MessageBubble({
                                     <div className="flex items-center -space-x-1">
                                         {message.reactions.map((reaction) => (
                                             <span
-                                                key={reaction.emoji} // Dùng emoji làm key thay vì index
-                                                className="flex items-center gap-1 text-sm bg-white dark:bg-gray-600 rounded-full px-2 py-0.5 shadow-sm cursor-pointer hover:scale-110 transition-transform border border-gray-100 dark:border-gray-500"
+                                                key={reaction.emoji}
+                                                className="flex items-center gap-1 text-sm bg-white dark:bg-zinc-800 rounded-[2px] px-2 py-0.5 shadow-sm cursor-pointer hover:scale-110 transition-transform border border-slate-200/80 dark:border-white/[0.06]"
                                                 onClick={() => handleReact(reaction.emoji)}
                                             >
                                                 <span>{reaction.emoji}</span>
-                                                {/* Luôn hiện số lượng nếu bạn muốn giống Telegram/Zalo, hoặc giữ > 1 tùy bạn */}
                                                 {reaction.count > 0 && (
-                                                    <span className="text-[10px] font-medium text-gray-500 dark:text-gray-300">
+                                                    <span className="text-[10px] font-mono font-medium text-gray-500 dark:text-gray-300">
                                                         {reaction.count}
                                                     </span>
                                                 )}
@@ -706,16 +808,29 @@ export default function MessageBubble({
                         {/* Quick actions */}
                         {!message.destroy && (
                             <div
-                                className={`opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 ${isMe ? "flex-row-reverse" : "flex-row"
-                                    }`}
+                                className={cn(
+                                    "opacity-0 group-hover:opacity-100 transition-opacity flex gap-1",
+                                    isMe ? "flex-row-reverse" : "flex-row"
+                                )}
                             >
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-7 w-7 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
+                                    className="h-7 w-7 rounded-[2px] bg-slate-100 dark:bg-zinc-800 border border-slate-200/40 dark:border-white/[0.04] hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-655 dark:text-zinc-350"
                                     onClick={onReply}
+                                    title="Trả lời"
                                 >
                                     <Reply className="h-3.5 w-3.5" />
+                                </Button>
+
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 rounded-[2px] bg-slate-100 dark:bg-zinc-800 border border-slate-200/40 dark:border-white/[0.04] hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-655 dark:text-zinc-350"
+                                    onClick={handleForward}
+                                    title="Chuyển tiếp"
+                                >
+                                    <Forward className="h-3.5 w-3.5" />
                                 </Button>
 
                                 {/* Quick reaction button */}
@@ -724,7 +839,7 @@ export default function MessageBubble({
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="h-7 w-7 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
+                                            className="h-7 w-7 rounded-[2px] bg-slate-100 dark:bg-zinc-800 border border-slate-200/40 dark:border-white/[0.04] hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-655 dark:text-zinc-350"
                                             disabled={isReacting}
                                         >
                                             {isReacting ? (
@@ -734,7 +849,7 @@ export default function MessageBubble({
                                             )}
                                         </Button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-2" side="top">
+                                    <PopoverContent className="w-auto p-2 rounded-[2px] border border-slate-200 dark:border-white/[0.06] bg-white dark:bg-[#19191B]" side="top">
                                         <div className="flex gap-1">
                                             {QUICK_REACTIONS.map((emoji) => (
                                                 <button
@@ -752,7 +867,7 @@ export default function MessageBubble({
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-7 w-7 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
+                                    className="h-7 w-7 rounded-[2px] bg-slate-100 dark:bg-zinc-800 border border-slate-200/40 dark:border-white/[0.04] hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-655 dark:text-zinc-350"
                                 >
                                     <MoreHorizontal className="h-3.5 w-3.5" />
                                 </Button>
@@ -761,7 +876,7 @@ export default function MessageBubble({
                     </div>
                 </ContextMenuTrigger>
 
-                <ContextMenuContent>
+                <ContextMenuContent className="rounded-[2px] border border-slate-200 dark:border-white/[0.06] bg-white dark:bg-[#19191B]">
                     {!message.destroy && (
                         <ContextMenuItem onClick={onReply}>
                             <Reply className="h-4 w-4 mr-2" />
@@ -774,7 +889,7 @@ export default function MessageBubble({
                                 <Copy className="h-4 w-4 mr-2" />
                                 Sao chép
                             </ContextMenuItem>
-                            <ContextMenuItem>
+                            <ContextMenuItem onClick={handleForward}>
                                 <Forward className="h-4 w-4 mr-2" />
                                 Chuyển tiếp
                             </ContextMenuItem>
@@ -819,7 +934,7 @@ export default function MessageBubble({
 
                     {isMe && !message.destroy && (
                         <ContextMenuItem
-                            className="text-orange-600"
+                            className="text-orange-655"
                             onClick={() => setShowRecallDialog(true)}
                         >
                             <RotateCcw className="h-4 w-4 mr-2" />
@@ -836,20 +951,19 @@ export default function MessageBubble({
                 </ContextMenuContent>
             </ContextMenu>
 
-            {/* Delete confirmation dialog */}
             <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
+                <AlertDialogContent className="rounded-[2px] border border-slate-200/80 dark:border-white/[0.06] bg-white dark:bg-[#19191B] p-6 shadow-2xl [&>button]:rounded-[2px]">
+                    <AlertDialogHeader className="text-left">
                         <AlertDialogTitle>Xóa tin nhắn?</AlertDialogTitle>
                         <AlertDialogDescription>
                             Tin nhắn sẽ bị xóa khỏi hội thoại của bạn. Người khác vẫn có thể thấy tin nhắn này.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Hủy</AlertDialogCancel>
+                        <AlertDialogCancel className="rounded-[2px]">Hủy</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={handleDelete}
-                            className="bg-red-600 hover:bg-red-700"
+                            className="bg-red-600 hover:bg-red-700 rounded-[2px]"
                             disabled={isDeleting}
                         >
                             {isDeleting ? (
@@ -861,10 +975,9 @@ export default function MessageBubble({
                 </AlertDialogContent>
             </AlertDialog>
 
-            {/* Recall confirmation dialog */}
             <AlertDialog open={showRecallDialog} onOpenChange={setShowRecallDialog}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
+                <AlertDialogContent className="rounded-[2px] border border-slate-200/80 dark:border-white/[0.06] bg-white dark:bg-[#19191B] p-6 shadow-2xl [&>button]:rounded-[2px]">
+                    <AlertDialogHeader className="text-left">
                         <AlertDialogTitle>Thu hồi tin nhắn?</AlertDialogTitle>
                         <AlertDialogDescription>
                             Tin nhắn sẽ bị xóa với tất cả mọi người trong hội thoại.
@@ -872,10 +985,10 @@ export default function MessageBubble({
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Hủy</AlertDialogCancel>
+                        <AlertDialogCancel className="rounded-[2px]">Hủy</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={handleRecall}
-                            className="bg-orange-600 hover:bg-orange-700"
+                            className="bg-orange-600 hover:bg-orange-700 rounded-[2px]"
                             disabled={isRecalling}
                         >
                             {isRecalling ? (

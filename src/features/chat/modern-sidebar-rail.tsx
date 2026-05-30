@@ -79,7 +79,7 @@ const RailBtn: React.FC<RailBtnProps> = ({ icon, label, active, href, onClick, b
     <button
       onClick={onClick}
       className={`
-        relative flex items-center justify-center w-9 h-9 rounded-[4px]
+        relative flex items-center justify-center w-9 h-9 rounded-[2px]
         transition-all duration-150 cursor-pointer
         ${active
           ? 'bg-white/20 text-white shadow-inner'
@@ -90,14 +90,14 @@ const RailBtn: React.FC<RailBtnProps> = ({ icon, label, active, href, onClick, b
     >
       {/* Active indicator */}
       {active && (
-        <span className="absolute -left-[13px] top-1/2 -translate-y-1/2 w-1 h-5 bg-white rounded-r-full" />
+        <span className="absolute -left-[13px] top-1/2 -translate-y-1/2 w-1 h-5 bg-white rounded-r-[2px]" />
       )}
 
       <span className="flex items-center justify-center w-5 h-5">{icon}</span>
 
       {/* Unread badge */}
       {badge !== undefined && badge > 0 && (
-        <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-0.5 bg-red-500 border-2 border-[#1A1D21] rounded-full flex items-center justify-center text-[9px] font-bold text-white leading-none">
+        <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-0.5 bg-red-500 border border-[#1A1D21] rounded-[2px] flex items-center justify-center text-[9px] font-bold text-white leading-none">
           {badge > 99 ? '99+' : badge}
         </span>
       )}
@@ -112,7 +112,7 @@ const RailBtn: React.FC<RailBtnProps> = ({ icon, label, active, href, onClick, b
         </TooltipTrigger>
         <TooltipContent
           side="right"
-          className="text-xs font-semibold bg-slate-900 text-white border-slate-700 rounded-[4px] py-1 px-2"
+          className="text-xs font-mono font-semibold bg-slate-900 text-white border-slate-750 rounded-[2px] py-1 px-2"
         >
           {label}
         </TooltipContent>
@@ -147,17 +147,17 @@ const WsIcon: React.FC<WsIconProps> = ({ name, icon, active, badge, onClick, dep
             {/* Active pill indicator */}
             <span
               className={`
-                absolute -left-[13px] w-1 rounded-r-full bg-white transition-all duration-150
+                absolute -left-[13px] w-1 rounded-r-[2px] bg-white transition-all duration-150
                 ${active ? 'h-5' : 'h-0 group-hover:h-3'}
               `}
             />
             <div
               className={`
-                w-9 h-9 rounded-[8px] flex items-center justify-center text-xs font-bold
-                overflow-hidden transition-all duration-150
+                w-9 h-9 rounded-[2px] flex items-center justify-center text-xs font-bold
+                overflow-hidden transition-all duration-155
                 ${active
-                  ? 'rounded-[12px] ring-2 ring-white/80 ring-offset-2 ring-offset-[#1A1D21]'
-                  : 'hover:rounded-[12px]'
+                  ? 'ring-2 ring-white/80 ring-offset-2 ring-offset-[#1A1D21]'
+                  : ''
                 }
                 ${imageUrl ? '' : 'bg-gradient-to-br from-blue-600 to-blue-700 text-white'}
               `}
@@ -169,7 +169,7 @@ const WsIcon: React.FC<WsIconProps> = ({ name, icon, active, badge, onClick, dep
               )}
             </div>
             {badge !== undefined && badge > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-0.5 bg-red-500 border-2 border-[#1A1D21] rounded-full flex items-center justify-center text-[9px] font-bold text-white leading-none">
+              <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-0.5 bg-red-500 border border-[#1A1D21] rounded-[2px] flex items-center justify-center text-[9px] font-bold text-white leading-none">
                 {badge > 99 ? '99+' : badge}
               </span>
             )}
@@ -177,7 +177,7 @@ const WsIcon: React.FC<WsIconProps> = ({ name, icon, active, badge, onClick, dep
         </TooltipTrigger>
         <TooltipContent
           side="right"
-          className="text-xs bg-slate-900 text-white border border-slate-700 rounded-[4px] py-1 px-2 flex flex-col gap-0.5"
+          className="text-xs bg-slate-900 text-white border border-slate-750 rounded-[2px] py-1 px-2 flex flex-col gap-0.5 font-mono"
         >
           <span className="font-semibold">{name}</span>
           {departmentName ? (
@@ -200,7 +200,7 @@ const StatusDot: React.FC<{ status: UserStatus }> = ({ status }) => {
   const cfg = STATUS_CONFIG[status];
   return (
     <span className="relative flex items-center justify-center">
-      <span className={`w-3 h-3 rounded-full border-2 border-[#1A1D21] ${cfg.color} relative z-10`} />
+      <span className={`w-3 h-3 rounded-full border border-[#1A1D21] ${cfg.color} relative z-10`} />
       {cfg.pulse && (
         <span
           className={`absolute w-3 h-3 rounded-full ${cfg.color} opacity-60 animate-ping`}
@@ -244,7 +244,7 @@ const DeptFolder: React.FC<DeptFolderProps> = ({
                 {/* Active indicator bar */}
                 <span
                   className={`
-                    absolute -left-[13px] w-1 rounded-r-full bg-white transition-all duration-150
+                    absolute -left-[13px] w-1 rounded-r-[2px] bg-white transition-all duration-150
                     ${isFolderActive ? 'h-5' : 'h-0 group-hover:h-3'}
                   `}
                 />
@@ -252,11 +252,11 @@ const DeptFolder: React.FC<DeptFolderProps> = ({
                 {/* Folder Icon Container */}
                 <div
                   className={`
-                    w-9 h-9 rounded-[8px] flex flex-col items-center justify-center text-[10px] font-extrabold
+                    w-9 h-9 rounded-[2px] flex flex-col items-center justify-center text-[10px] font-extrabold
                     transition-all duration-155 relative border select-none
                     ${isFolderActive
-                      ? 'rounded-[12px] ring-2 ring-white/80 ring-offset-2 ring-offset-[#1A1D21] bg-gradient-to-br from-blue-600 to-blue-800 border-white/20 text-white'
-                      : 'hover:rounded-[12px] bg-slate-800/80 hover:bg-slate-700/80 border-white/5 text-slate-300 hover:text-white'
+                      ? 'ring-2 ring-white/80 ring-offset-2 ring-offset-[#1A1D21] bg-gradient-to-br from-blue-600 to-blue-800 border-white/20 text-white'
+                      : 'bg-slate-800/80 hover:bg-slate-700/80 border-white/5 text-slate-300 hover:text-white'
                     }
                   `}
                 >
@@ -266,7 +266,7 @@ const DeptFolder: React.FC<DeptFolderProps> = ({
 
                 {/* Cumulative unread badge */}
                 {totalUnread > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-0.5 bg-red-500 border-2 border-[#1A1D21] rounded-full flex items-center justify-center text-[9px] font-bold text-white leading-none">
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-0.5 bg-red-500 border border-[#1A1D21] rounded-[2px] flex items-center justify-center text-[9px] font-bold text-white leading-none">
                     {totalUnread > 99 ? '99+' : totalUnread}
                   </span>
                 )}
@@ -276,7 +276,7 @@ const DeptFolder: React.FC<DeptFolderProps> = ({
           
           <TooltipContent
             side="right"
-            className="text-xs font-semibold bg-slate-900 text-white border-slate-700 rounded-[4px] py-1 px-2"
+            className="text-xs font-mono font-semibold bg-slate-900 text-white border-slate-750 rounded-[2px] py-1 px-2"
           >
             {`Phòng ban: ${name}`}
           </TooltipContent>
@@ -286,9 +286,9 @@ const DeptFolder: React.FC<DeptFolderProps> = ({
       <DropdownMenuContent
         side="right"
         align="start"
-        className="w-56 p-1.5 rounded-[6px] shadow-2xl bg-[#1A1D21] border border-white/10 text-slate-200 ml-2"
+        className="w-56 p-1.5 rounded-[2px] shadow-2xl bg-[#1A1D21] border border-white/10 text-slate-200 ml-2"
       >
-        <DropdownMenuLabel className="text-[10px] text-slate-500 uppercase tracking-widest px-2.5 py-1">
+        <DropdownMenuLabel className="text-[10px] font-mono text-slate-500 uppercase tracking-widest px-2.5 py-1">
           {name} ({workspaces.length} Workspace)
         </DropdownMenuLabel>
         
@@ -306,7 +306,7 @@ const DeptFolder: React.FC<DeptFolderProps> = ({
                 key={ws.id}
                 onClick={() => onSelectWorkspace(ws.id)}
                 className={`
-                  flex items-center gap-2.5 rounded-[4px] py-1.5 px-2 cursor-pointer transition-colors text-xs
+                  flex items-center gap-2.5 rounded-[2px] py-1.5 px-2 cursor-pointer transition-colors text-xs font-mono
                   ${isWsActive 
                     ? 'bg-white/15 text-white font-bold' 
                     : 'hover:bg-white/10 text-slate-300 hover:text-white'
@@ -314,9 +314,9 @@ const DeptFolder: React.FC<DeptFolderProps> = ({
                 `}
               >
                 {/* Ws Avatar */}
-                <Avatar className="h-5 w-5 rounded-[4px] shrink-0 border border-white/10">
-                  <AvatarImage className="rounded-[4px] object-cover" src={wsImageUrl} />
-                  <AvatarFallback className="bg-blue-600 text-white text-[8px] font-bold rounded-[4px]">
+                <Avatar className="h-5 w-5 rounded-[2px] shrink-0 border border-white/10">
+                  <AvatarImage className="rounded-[2px] object-cover" src={wsImageUrl} />
+                  <AvatarFallback className="bg-blue-600 text-white text-[8px] font-bold rounded-[2px]">
                     {wsInitials}
                   </AvatarFallback>
                 </Avatar>
@@ -324,7 +324,7 @@ const DeptFolder: React.FC<DeptFolderProps> = ({
                 <span className="truncate flex-1">{ws.name}</span>
                 
                 {wsBadge > 0 && (
-                  <span className="bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-none shrink-0">
+                  <span className="bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-[2px] leading-none shrink-0">
                     {wsBadge > 99 ? '99+' : wsBadge}
                   </span>
                 )}
@@ -476,12 +476,6 @@ export default function ModernSidebarRail() {
 
       {/* ── Main Navigation ── */}
       <nav className="flex flex-col items-center gap-1 w-full px-[10px] flex-1">
-        {/* <RailBtn
-          href="/dashboard"
-          icon={<LayoutGrid size={18} />}
-          label="Bảng điều khiển"
-          active={pathname === '/dashboard' || pathname === '/'}
-        /> */}
         <RailBtn
           href="/chat"
           icon={<MessageCircle size={18} />}
@@ -529,9 +523,9 @@ export default function ModernSidebarRail() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="relative mt-1 cursor-pointer group" aria-label="Tài khoản của tôi">
-              <Avatar className="h-9 w-9 rounded-[8px] border border-white/10 transition-all duration-150 hover:rounded-[12px] group-hover:border-white/25">
+              <Avatar className="h-9 w-9 rounded-[2px] border border-white/10 transition-all duration-150 group-hover:border-white/25">
                 <AvatarImage src={imageUrl} className="object-cover" />
-                <AvatarFallback className="bg-blue-700 text-white text-xs font-bold rounded-[8px]">
+                <AvatarFallback className="bg-blue-700 text-white text-xs font-bold rounded-[2px]">
                   {user?.name?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || 'U'}
                 </AvatarFallback>
               </Avatar>
@@ -545,7 +539,7 @@ export default function ModernSidebarRail() {
           <DropdownMenuContent
             side="right"
             align="end"
-            className="w-52 p-1.5 rounded-[6px] shadow-2xl bg-[#1A1D21] border border-white/10 text-slate-200 ml-2"
+            className="w-52 p-1.5 rounded-[2px] shadow-2xl bg-[#1A1D21] border border-white/10 text-slate-200 ml-2"
           >
             {/* User info */}
             <div className="px-2.5 py-2.5 border-b border-white/10 mb-1">
@@ -557,14 +551,14 @@ export default function ModernSidebarRail() {
             </div>
 
             {/* Status options */}
-            <DropdownMenuLabel className="text-[10px] text-slate-500 uppercase tracking-widest px-2.5 py-1">
+            <DropdownMenuLabel className="text-[10px] font-mono text-slate-500 uppercase tracking-widest px-2.5 py-1">
               Trạng thái
             </DropdownMenuLabel>
             {(['online', 'away', 'dnd'] as UserStatus[]).map((s) => (
               <DropdownMenuItem
                 key={s}
                 onClick={() => setUserStatus(s)}
-                className="flex items-center gap-2.5 rounded-[4px] py-1.5 px-2.5 cursor-pointer hover:bg-white/10 text-slate-300"
+                className="flex items-center gap-2.5 rounded-[2px] py-1.5 px-2.5 cursor-pointer hover:bg-white/10 text-slate-300 font-mono"
               >
                 <span className={`w-2.5 h-2.5 rounded-full ${STATUS_CONFIG[s].color}`} />
                 <span className="text-xs font-medium">{STATUS_CONFIG[s].label}</span>
@@ -575,7 +569,7 @@ export default function ModernSidebarRail() {
             <DropdownMenuSeparator className="bg-white/10 my-1" />
 
             {/* Settings */}
-            <DropdownMenuItem asChild className="rounded-[4px] py-1.5 px-2.5 cursor-pointer hover:bg-white/10 text-slate-300">
+            <DropdownMenuItem asChild className="rounded-[2px] py-1.5 px-2.5 cursor-pointer hover:bg-white/10 text-slate-300 font-mono">
               <Link href="/settings" className="flex items-center gap-2.5">
                 <Settings className="w-4 h-4 text-slate-500" />
                 <span className="text-xs font-medium">Cài đặt cá nhân</span>
@@ -583,7 +577,7 @@ export default function ModernSidebarRail() {
             </DropdownMenuItem>
 
             <RequirePermission anyRole={['SUPER_ADMIN', 'ADMIN', 'WORKSPACE_MANAGER']} silent>
-              <DropdownMenuItem asChild className="rounded-[4px] py-1.5 px-2.5 cursor-pointer hover:bg-white/10">
+              <DropdownMenuItem asChild className="rounded-[2px] py-1.5 px-2.5 cursor-pointer hover:bg-white/10 font-mono">
                 <Link href="/admin/users" className="flex items-center gap-2.5">
                   <Shield className="w-4 h-4 text-blue-400" />
                   <span className="text-xs font-semibold text-blue-400">Quản trị</span>
@@ -595,7 +589,7 @@ export default function ModernSidebarRail() {
 
             <DropdownMenuItem
               onClick={handleLogout}
-              className="flex items-center gap-2.5 rounded-[4px] py-1.5 px-2.5 cursor-pointer hover:bg-red-500/10 text-red-400"
+              className="flex items-center gap-2.5 rounded-[2px] py-1.5 px-2.5 cursor-pointer hover:bg-red-500/10 text-red-400 font-mono"
             >
               <LogOut className="w-4 h-4" />
               <span className="text-xs font-semibold">Đăng xuất</span>

@@ -1,4 +1,4 @@
-import { createApi, fetchBaseQuery, BaseQueryFn, FetchArgs, FetchBaseQueryError } from "@reduxjs/toolkit/query/react";
+import { createApi, fetchBaseQuery, BaseQueryFn, FetchArgs, FetchBaseQueryError, retry } from "@reduxjs/toolkit/query/react";
 import { Mutex } from "async-mutex";
 import { logOut, tokenReceived } from "../feature/authSlice";
 import { RootState } from "../store";
@@ -46,6 +46,19 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
         // Lấy refreshToken từ store hoặc localStorage để dự phòng cookie bị chặn
         const state = api.getState() as RootState;
         const refreshToken = state.auth.refreshToken || (typeof window !== 'undefined' ? localStorage.getItem("refreshToken") : null);
+
+        if (!refreshToken) {
+          // Force logout và chuyển hướng nếu không có refreshToken
+          api.dispatch(logOut());
+          if (typeof window !== 'undefined') {
+            const currentPath = window.location.pathname + window.location.search;
+            const searchParams = new URLSearchParams();
+            searchParams.set('reason', 'session_expired');
+            searchParams.set('callbackUrl', currentPath);
+            window.location.href = `/login?${searchParams.toString()}`;
+          }
+          return result;
+        }
 
         // Gọi API refresh token
         const refreshResult = await baseQuery(
@@ -98,9 +111,49 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
   return result;
 };
 
+/**
+ * ⚡ NÂNG CẤP FAULT TOLERANCE: Bọc baseQueryWithReauth trong cơ chế tự động Retry của RTK Query
+ * Kịch bản áp dụng: Tự động thử lại khi gặp lỗi máy chủ (5xx) hoặc lỗi mất mạng (FETCH_ERROR)
+ * Độ trễ: Lần 1 chờ 3s, Lần 2 chờ 5s, Lần 3 chờ 5s trước khi dừng hẳn.
+ * Đồng thời hiển thị Toast thông báo cho người dùng biết để tránh reload trang thủ công.
+ */
+const baseQueryWithRetry = retry(
+  async (args, api, extraOptions) => {
+    const result = await baseQueryWithReauth(args, api, extraOptions);
+    
+    // Nếu gặp lỗi
+    if (result.error) {
+      const status = result.error.status;
+      // Chỉ tự động thử lại khi lỗi máy chủ (5xx) hoặc lỗi mạng
+      if (status === 'FETCH_ERROR' || (typeof status === 'number' && status >= 500)) {
+        return result; // Tiếp tục thử lại
+      }
+      
+      // Ngắt retry ngay lập tức đối với lỗi Client (4xx) để tránh lặp vô tận
+      retry.fail(result.error);
+    }
+    
+    return result;
+  },
+  {
+    maxRetries: 3,
+    backoff: async (attempt, maxRetries) => {
+      const delay = attempt === 1 ? 3000 : 5000;
+      
+      // Hiển thị thông báo Toast thông báo quá trình thử lại của hệ thống (Phương án B)
+      toast.warning(`Kết nối mạng không ổn định. Đang tự động kết nối lại lần ${attempt}/${maxRetries}...`, {
+        id: "api-retry-toast", // Dùng cố định ID để cập nhật cùng một toast, tránh spam nhiều bong bóng
+        duration: delay,
+      });
+      
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+);
+
 export const apiSlice = createApi({
   reducerPath: "api",
-  baseQuery: baseQueryWithReauth,
+  baseQuery: baseQueryWithRetry,
   tagTypes: [
     // Core
     "User",

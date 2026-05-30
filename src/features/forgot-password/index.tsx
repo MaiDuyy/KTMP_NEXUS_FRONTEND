@@ -22,12 +22,12 @@ import { AuthLayout } from "../auth";
 import { PasswordStrengthMeter } from "../auth/components/PasswordStrengthMeter";
 
 import {
- 
   useResendOTPMutation,
   useResetPasswordWithOTPMutation,
   useSendForgotPasswordOTPMutation,
   useVerifyEmailOTPMutation,
 } from "@/src/redux/feature/otpApi";
+import { useCooldown } from "@/src/hooks";
 
 export function ForgotPasswordPage() {
   const [step, setStep] = useState(1);
@@ -35,8 +35,12 @@ export function ForgotPasswordPage() {
   const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [countdown, setCountdown] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
+
+  const { cooldown, startCooldown } = useCooldown(`forgot_password_otp_${email}`, {
+    cooldownTimeMs: 60000,
+    behavior: 'disable',
+  });
 
   const router = useRouter();
 
@@ -45,20 +49,13 @@ export function ForgotPasswordPage() {
   const [resetPassword, { isLoading: isResetting }] = useResetPasswordWithOTPMutation();
   const [resendOTP, { isLoading: isResending }] = useResendOTPMutation();
 
-  useEffect(() => {
-    if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [countdown]);
-
   const handleRequestOTP = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       const result = await forgotPassword({ email }).unwrap();
       toast.success(result.message || "Mã xác thực đã được gửi đến email của bạn.");
       setStep(2);
-      setCountdown(60);
+      startCooldown(60000);
     } catch (error: any) {
       toast.error(error?.data?.message || "Không thể gửi mã xác thực. Vui lòng thử lại.");
     }
@@ -96,11 +93,11 @@ export function ForgotPasswordPage() {
   };
 
   const handleResendOTP = async () => {
-    if (countdown > 0) return;
+    if (cooldown > 0) return;
     try {
-      const result = await resendOTP({ email, type: "FORGOT_PASSWORD" }).unwrap();
+      const result = await resendOTP({ email, type: "RESET_PASSWORD" }).unwrap();
       toast.success(result.message || "Mã xác thực mới đã được gửi.");
-      setCountdown(60);
+      startCooldown(60000);
       setOtp("");
     } catch (error: any) {
       toast.error(error?.data?.message || "Không thể gửi lại mã.");
@@ -185,7 +182,7 @@ export function ForgotPasswordPage() {
                   type="button"
                   variant="ghost"
                   onClick={handleResendOTP}
-                  disabled={countdown > 0 || isResending}
+                  disabled={cooldown > 0 || isResending}
                   className="w-full text-sm font-semibold text-primary hover:bg-transparent hover:opacity-70"
                 >
                   {isResending ? (
@@ -193,7 +190,7 @@ export function ForgotPasswordPage() {
                   ) : (
                     <RefreshCw className="mr-2 h-4 w-4" />
                   )}
-                  {countdown > 0 ? `Gửi lại mã sau ${countdown}s` : "Gửi lại mã xác thực"}
+                  {cooldown > 0 ? `Gửi lại mã sau ${cooldown}s` : "Gửi lại mã xác thực"}
                 </Button>
               </div>
             </form>

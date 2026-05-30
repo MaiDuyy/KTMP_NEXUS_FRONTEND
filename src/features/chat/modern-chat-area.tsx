@@ -1,12 +1,10 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import {
-  Search, Phone, Video, Info, Paperclip, Smile, Mic, Send,
-  Sparkles, Bold, Italic, Link2, List as ListIcon, Reply, X,
-  Loader2, ImageIcon, File, Ban, Hash, Lock, BarChart3, Pin,
+  Search, Phone, Video, Info, Paperclip, Smile, Send,
+  Sparkles, Loader2, ImageIcon, File, Ban, Hash, Lock, BarChart3, Pin, Reply, X
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
 import { useGetChatByIdQuery, useMarkChatAsReadMutation, useGetChatReadReceiptsQuery } from '@/src/redux/feature/chatApi';
@@ -16,6 +14,7 @@ import { socketService } from '@/src/services/socket.service';
 import {
   useRealtimeChat, useChatRoom, useTypingUsers, useIsUserOnline,
 } from '@/src/hooks/useRealtimeChat';
+import { useCooldown } from '@/src/hooks';
 import { Message } from '@/src/type/chat.types';
 import { formatDistanceToNow, format, isToday, isYesterday } from 'date-fns';
 import { vi } from 'date-fns/locale';
@@ -39,6 +38,7 @@ import { PinnedMessagesPanel } from './pinned-messages-panel';
 import { SearchMessagesPanel } from './search-messages-panel';
 import { useTogglePinMessageMutation } from '@/src/redux/feature/messageApi';
 import { apiSlice } from '@/src/redux/api/baseApi';
+import ForwardMessageModal from './forward-message-modal';
 
 export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
   const [inputText, setInputText] = useState('');
@@ -49,6 +49,12 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
   const [showInfoPanel, setShowInfoPanel] = useState(false);
   const [showGroupSettings, setShowGroupSettings] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const { triggerAction: triggerSendAction } = useCooldown(`chat_send_${chatId}`, {
+    cooldownTimeMs: 1000,
+    behavior: 'toast',
+    toastMessage: 'Bạn thao tác gửi tin nhắn quá nhanh, vui lòng chậm lại một chút.',
+  });
   const isTypingRef = useRef(false);
   const isFirstRenderOfChat = useRef(true);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -59,17 +65,17 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
   const [showSearchPanel, setShowSearchPanel] = useState(false);
   const [showCreatePollModal, setShowCreatePollModal] = useState(false);
 
-  // ──────── Mention system state ────────
+  // Mention system state
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionPosition, setMentionPosition] = useState<{ start: number; end: number } | null>(null);
   const [activeMentions, setActiveMentions] = useState<{ id: string; name: string }[]>([]);
 
-  // ──────── Profile sheet state ────────
+  // Profile sheet state
   const [profileUser, setProfileUser] = useState<any>(null);
   const [showProfileSheet, setShowProfileSheet] = useState(false);
   const [triggerGetUser] = useLazyGetUserByIdQuery();
 
-  // ──────── AI Assistant Panel state ────────
+  // AI Assistant Panel state
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [aiInitialQuery, setAIInitialQuery] = useState<string | undefined>(undefined);
 
@@ -82,7 +88,7 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
     setShowAIPanel(false);
     setAIInitialQuery(undefined);
   };
-  // ──────────────────────────────────────────
+
   const user = useSelector((state: any) => state.auth?.user);
   const dispatch = useDispatch();
   const router = useRouter();
@@ -96,6 +102,7 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
   const [hasMore, setHasMore] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const messagesWrapperRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const isFetchingMore = useRef(false);
 
@@ -103,35 +110,31 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
   const { isConnected } = useRealtimeChat();
   const typingUsers = useTypingUsers(chatId || '');
 
-  // Join chat room for real-time events
+  // Join chat room
   useChatRoom(chatId);
 
-  // API - skip if no chatId
+  // API
   const { data: chatData, isLoading: chatLoading } = useGetChatByIdQuery(chatId!, { skip: !chatId });
   const chat = chatData?.chat;
 
-  // ──────── Permissions & Read-only Check ────────
+  // Permissions & Read-only Check
   const canPost = useMemo(() => {
     if (!chat) return true;
     if (!chat.isReadOnly) return true;
     
-    // In read-only mode, check user's role
     const myParticipant = chat.participants?.find(p => p.accountId === user?.id);
     const myRole = myParticipant?.role;
     
     const privilegedRoles = ['CHANNEL_OWNER', 'CHANNEL_MODERATOR'];
     
-    // Check Workspace Admin/Owner role from permissions or state if possible
-    // For now, prioritize Channel Owner/Moderator
     if (privilegedRoles.includes(myRole as any)) return true;
-    if (isAdmin) return true; // Global/Workspace admins
+    if (isAdmin) return true;
     
     return false;
   }, [chat, user?.id, isAdmin]);
 
   const isBlocked = useMemo(() => chat?.isBlocked || false, [chat]);
 
-  // Detect if current chat is a Workspace Channel
   const { data: channelData } = useGetChannelQuery(chatId!, { skip: !chatId });
   const isChannel = !!channelData;
 
@@ -172,7 +175,6 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
   const [uploadChatMedia] = useUploadChatMediaMutation();
   const isDirectMessage = !chat?.isGroup;
 
-  // Find partner for online status (enrichChatDetails already set chat.name/avatar)
   const partner = isDirectMessage
     ? chat?.participants?.find((p) => p.accountId !== user?.id) || chat?.participants?.[0]
     : null;
@@ -180,18 +182,14 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
   const partnerId = partner?.accountId;
   const isPartnerOnline = useIsUserOnline(partnerId);
 
-  // chat.name & chat.avatar already enriched by transformResponse in chatApi.ts
   const chatName = chat?.name || 'Loading...';
   const chatAvatar = chat?.avatar;
 
-  // Scroll to bottom
   const scrollToBottom = () => {
     if (chatContainerRef.current) {
       if (isFirstRenderOfChat.current) {
-        // Temporarily disable smooth scroll for instant initial jump
         chatContainerRef.current.style.scrollBehavior = 'auto';
         chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-        // Restore scroll behavior in next frame
         setTimeout(() => {
           if (chatContainerRef.current) {
             chatContainerRef.current.style.scrollBehavior = '';
@@ -199,7 +197,6 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
         }, 50);
         isFirstRenderOfChat.current = false;
       } else {
-        // Smooth scroll for subsequent active messages
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }
     } else {
@@ -207,7 +204,47 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
     }
   };
 
-  // Initial Load & Chat Change
+  useEffect(() => {
+    const container = chatContainerRef.current;
+    const wrapper = messagesWrapperRef.current;
+    if (!container || !wrapper || !chatId) return;
+
+    let isAtBottomBeforeResize = true;
+
+    const handleResize = () => {
+      if (isFirstRenderOfChat.current || isAtBottomBeforeResize) {
+        container.style.scrollBehavior = 'auto';
+        container.scrollTop = container.scrollHeight;
+        
+        if (isFirstRenderOfChat.current) {
+          setTimeout(() => {
+            isFirstRenderOfChat.current = false;
+          }, 300);
+        }
+      }
+    };
+
+    const resizeObserver = new ResizeObserver(() => {
+      handleResize();
+    });
+
+    resizeObserver.observe(wrapper);
+
+    const handleScroll = () => {
+      const threshold = 150;
+      isAtBottomBeforeResize = container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
+    };
+
+    container.addEventListener('scroll', handleScroll);
+
+    handleScroll();
+
+    return () => {
+      resizeObserver.disconnect();
+      container.removeEventListener('scroll', handleScroll);
+    };
+  }, [chatId, isInitialLoad]);
+
   useEffect(() => {
     if (!chatId) return;
 
@@ -225,7 +262,6 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
         setHasMore(!!result.nextCursor);
 
         setIsInitialLoad(false);
-        // Wait for render then scroll
         setTimeout(() => {
           scrollToBottom();
         }, 100);
@@ -238,13 +274,10 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
     loadInitialMessages();
   }, [chatId, triggerGetMessages]);
 
-  // Load More logic
   const loadMoreMessages = async () => {
     if (!chatId || !hasMore || isFetching || isFetchingMore.current) return;
 
     isFetchingMore.current = true;
-
-    // 1. Capture height before update
     const container = chatContainerRef.current;
     const previousScrollHeight = container?.scrollHeight || 0;
 
@@ -260,7 +293,6 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
         setNextCursor(result.nextCursor || null);
         setHasMore(!!result.nextCursor);
 
-        // 2. Adjust scroll position after render
         setTimeout(() => {
           if (container) {
             const newScrollHeight = container.scrollHeight;
@@ -278,7 +310,6 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
     }
   };
 
-  // Intersection Observer to detect scroll to top
   useEffect(() => {
     if (isInitialLoad || !hasMore) return;
 
@@ -303,19 +334,15 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
     };
   }, [nextCursor, hasMore, isInitialLoad, chatId]);
 
-  // Listen for new messages from socket/mutation - prepend to local state
-  // We need to sync with the real-time messages too
   useEffect(() => {
     const handleNewMessage = (e: any) => {
       const newMessage = e.detail;
       if (newMessage.chatId === chatId) {
         setAllMessages(prev => {
-          // Prevent duplicates
           if (prev.find(m => m.id === newMessage.id)) return prev;
           return [...prev, newMessage];
         });
 
-        // Auto scroll for new messages if user is near bottom
         const container = chatContainerRef.current;
         if (container) {
           const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 200;
@@ -332,7 +359,6 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
         setAllMessages(prev => prev.map(m =>
           m.id === messageId ? { ...m, content: 'Tin nhắn đã bị thu hồi', destroy: true, pin: false } : m
         ));
-        // Also refresh chat metadata in case this was a pinned message
         dispatch(apiSlice.util.invalidateTags([{ type: 'Chats', id: chatId }]));
       }
     };
@@ -352,7 +378,6 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
               if (!users.some((u: any) => u.id === data.userId)) {
                 users.push({ id: data.userId, name: data.userName || "User" });
               }
-              // Use total count from server for absolute accuracy in spam mode
               if (data.count !== undefined) {
                 existReaction.count = data.count;
               } else {
@@ -396,8 +421,6 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
         setAllMessages(prev => prev.map(m =>
           m.id === data.messageId ? { ...m, pin: data.pin } : m
         ));
-        
-        // Refetch chat data to update pinnedMessages list in Chat object
         dispatch(messageApi.util.invalidateTags([{ type: 'Chats', id: chatId }]));
       }
     };
@@ -405,8 +428,6 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
     const handleMessageRead = (e: any) => {
       const data = e.detail;
       if (data.chatId === chatId) {
-        // MessageBubble handles seen status via RTK Query readReceipts.
-        // We'll invalidate the receipts to force a refresh in the bubbles.
         dispatch(messageApi.util.invalidateTags([{ type: 'ReadReceipts', id: chatId }]));
       }
     };
@@ -428,7 +449,6 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
 
   const startCall = (video: boolean) => {
     if (!chatId) return;
-    // Fire global event — GlobalCallSystem handles ws-gateway signaling
     window.dispatchEvent(
       new CustomEvent("open-call-modal", {
         detail: {
@@ -464,12 +484,10 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
     }, []);
   }, [allMessages]);
 
-  // Handle file select
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, type: "image" | "file") => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
-    // Validate file size (max 10MB)
     const maxSize = 10 * 1024 * 1024;
     const validFiles = files.filter((file) => {
       if (file.size > maxSize) {
@@ -482,7 +500,6 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
     if (validFiles.length > 0) {
       setSelectedFiles(validFiles);
 
-      // Show preview for images
       if (type === "image" && validFiles[0].type.startsWith("image/")) {
         const reader = new FileReader();
         reader.onload = () => setFilePreview(reader.result as string);
@@ -492,17 +509,14 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
       }
     }
 
-    // Reset input
     e.target.value = "";
   };
 
-  // Clear selected files
   const clearSelectedFiles = () => {
     setSelectedFiles([]);
     setFilePreview(null);
   };
 
-  // Send file message
   const handleSendFile = async () => {
     if (selectedFiles.length === 0 || !user || !chatId) return;
 
@@ -510,19 +524,11 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
 
     try {
       const file = selectedFiles[0];
-
-      // Use FormData as required by uploadChatMedia
       const formData = new FormData();
       formData.append("file", file);
       formData.append("chatId", chatId);
 
       await uploadChatMedia(formData).unwrap();
-
-      // NOTE: Do NOT call socketService.sendMessage() here!
-      // The file-service publishes a NATS event (CHAT_FILE_UPLOADED) after upload,
-      // and the chat-service's file subscriber automatically creates the message.
-      // Sending via socket would create a DUPLICATE message.
-
       clearSelectedFiles();
       toast.success("Gửi file thành công!");
     } catch (error: any) {
@@ -531,7 +537,7 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
       setIsUploading(false);
     }
   };
-  // Handle typing
+
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInputText(e.target.value);
 
@@ -546,20 +552,17 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
       if (chatId) socketService.stopTyping(chatId);
     }, 1500);
 
-    // Mention detection
     const value = e.target.value;
     const selectionStart = e.target.selectionStart;
     const textBeforeCursor = value.substring(0, selectionStart);
     const lastAtSymbol = textBeforeCursor.lastIndexOf('@');
 
     if (lastAtSymbol !== -1) {
-      // Check if @ is at start of line or preceded by a space
       const charBeforeAt = lastAtSymbol > 0 ? textBeforeCursor[lastAtSymbol - 1] : ' ';
       const isWordStart = charBeforeAt === ' ' || charBeforeAt === '\n';
 
       if (isWordStart) {
         const query = textBeforeCursor.substring(lastAtSymbol + 1);
-        // Check if there's a space after @ or if it's too long
         if (!query.includes(' ') && query.length < 20) {
           setMentionQuery(query);
           setMentionPosition({ start: lastAtSymbol, end: selectionStart });
@@ -573,7 +576,6 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
       setMentionQuery(null);
     }
 
-    // Cleanup active mentions that are no longer in the text
     if (activeMentions.length > 0) {
       setActiveMentions(prev => prev.filter(m => value.includes(`@${m.name}`)));
     }
@@ -592,7 +594,6 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
       const displayName = participant.name || participant.account?.name || 'User';
       insertion = `@${displayName} `;
       
-      // Track this mention for conversion on send
       setActiveMentions(prev => {
         if (prev.find(m => m.id === participant.accountId)) return prev;
         return [...prev, { id: participant.accountId, name: displayName }];
@@ -604,7 +605,6 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
     setMentionQuery(null);
     setMentionPosition(null);
 
-    // Refocus and set cursor position
     setTimeout(() => {
       if (inputRef.current) {
         inputRef.current.focus();
@@ -614,69 +614,60 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
     }, 0);
   };
 
-  // Send message via REST API (chat-service saves to DB + publishes NATS → WS Gateway broadcasts)
   const handleSend = async () => {
     if (!inputText.trim() || !chatId || !user) return;
-    
-    let content = inputText.trim();
 
-    // Professional conversion: @Name -> @[Name](ID)
-    if (activeMentions.length > 0) {
-      // Sort by length descending to match longest names first (e.g. "@John Doe" before "@John")
-      const sortedMentions = [...activeMentions].sort((a, b) => b.name.length - a.name.length);
-      
-      sortedMentions.forEach(m => {
-        const mentionTag = `@${m.name}`;
-        // Create a regex to find @Name but avoid double-converting
-        // We look for @Name that is not followed by (id)
-        const escapedName = m.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const regex = new RegExp(`@${escapedName}(?!\\(${m.id}\\))`, 'g');
-        content = content.replace(regex, `@[${m.name}](${m.id})`);
-      });
-    }
+    triggerSendAction(async () => {
+      let content = inputText.trim();
 
-    // Clear active mentions for next message
-    setActiveMentions([]);
-
-    // ── /ai slash command interception ──
-    const AI_PREFIX_RE = /^\/ai\s+/i;
-    if (AI_PREFIX_RE.test(content)) {
-      const query = content.replace(AI_PREFIX_RE, '').trim();
-      setInputText('');
-      openAIPanel(query);
-      return;
-    }
-    // ────────────────────────────────────
-
-    setInputText('');
-    setReplyTo(null);
-    // Stop typing
-    if (isTypingRef.current) {
-      isTypingRef.current = false;
-      socketService.stopTyping(chatId);
-    }
-
-    try {
-      const result = await sendMessage({
-        chatId,
-        data: { content, type: 'text', replyToId: replyTo?.id, },
-      }).unwrap();
-
-      // Add to local state immediately if successful (Optimistic/UI update)
-      if (result.message) {
-        setAllMessages(prev => {
-          if (prev.find(m => m.id === result.message.id)) return prev;
-          return [...prev, { ...result.message, isMe: true }];
+      if (activeMentions.length > 0) {
+        const sortedMentions = [...activeMentions].sort((a, b) => b.name.length - a.name.length);
+        
+        sortedMentions.forEach(m => {
+          const mentionTag = `@${m.name}`;
+          const escapedName = m.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const regex = new RegExp(`@${escapedName}(?!\\(${m.id}\\))`, 'g');
+          content = content.replace(regex, `@[${m.name}](${m.id})`);
         });
-
-        // Use auto scroll for local update to be snappy
-        setTimeout(() => {
-          messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
-        }, 50);
       }
-    } catch (err) {
-      console.error('[ModernChatArea] Failed to send message:', err);
-    }
+
+      setActiveMentions([]);
+
+      const AI_PREFIX_RE = /^\/ai\s+/i;
+      if (AI_PREFIX_RE.test(content)) {
+        const query = content.replace(AI_PREFIX_RE, '').trim();
+        setInputText('');
+        openAIPanel(query);
+        return;
+      }
+
+      setInputText('');
+      setReplyTo(null);
+      if (isTypingRef.current) {
+        isTypingRef.current = false;
+        socketService.stopTyping(chatId);
+      }
+
+      try {
+        const result = await sendMessage({
+          chatId,
+          data: { content, type: 'text', replyToId: replyTo?.id, },
+        }).unwrap();
+
+        if (result.message) {
+          setAllMessages(prev => {
+            if (prev.find(m => m.id === result.message.id)) return prev;
+            return [...prev, { ...result.message, isMe: true }];
+          });
+
+          setTimeout(() => {
+            messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+          }, 50);
+        }
+      } catch (err) {
+        console.error('[ModernChatArea] Failed to send message:', err);
+      }
+    });
   };
 
   const handleTogglePin = async (messageId: string) => {
@@ -690,7 +681,6 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
   };
 
   const handleJumpToMessage = (messageId: string) => {
-    // Find the message in the current list
     const messageElement = document.getElementById(`message-${messageId}`);
     if (messageElement) {
       messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -703,14 +693,11 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
     }
   };
 
-  // Handle mark as read
   const [markAsRead] = useMarkChatAsReadMutation();
   useEffect(() => {
     if (chatId) {
       markAsRead(chatId as string);
       socketService.markRead(chatId as string);
-
-      // Check if there's an active call in this chat
       socketService.checkCallStatus(chatId);
     }
   }, [chatId, allMessages.length, markAsRead]);
@@ -774,7 +761,6 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
     };
   }, [chatId, triggerGetUser]);
 
-  // Auto-resize input textarea to fit content dynamically
   useEffect(() => {
     const textarea = inputRef.current;
     if (!textarea) return;
@@ -783,19 +769,15 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
     textarea.style.height = `${textarea.scrollHeight}px`;
   }, [inputText]);
 
-
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
-      // If mention selector is open, don't send message, let it handle selection
       if (mentionQuery !== null) {
         return;
       }
-      
       e.preventDefault();
       handleSend();
     }
   };
-
 
   const handleEmojiSelect = (emoji: string) => {
     setInputText((prev) => prev + emoji);
@@ -803,22 +785,18 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
     inputRef.current?.focus();
   };
 
-
-
-  // Show placeholder when no chat selected
   if (!chatId) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-white">
-        <div className="text-center text-slate-400">
-          <Sparkles className="w-12 h-12 mx-auto mb-4 opacity-30" />
-          <p className="text-lg font-medium">Chọn một cuộc trò chuyện</p>
-          <p className="text-sm mt-1">Chọn từ danh sách bên trái để bắt đầu</p>
+      <div className="flex-1 flex items-center justify-center bg-white dark:bg-[#111113]">
+        <div className="text-center text-slate-450 dark:text-zinc-600 font-mono">
+          <Sparkles className="w-10 h-10 mx-auto mb-4 opacity-40 text-blue-500 animate-pulse" />
+          <p className="text-sm font-semibold uppercase tracking-wider text-slate-800 dark:text-slate-200">Chọn một cuộc trò chuyện</p>
+          <p className="text-xs mt-2 text-slate-400 dark:text-zinc-500">Chọn từ danh sách bên trái để bắt đầu</p>
         </div>
       </div>
     );
   }
 
-  // Status text
   const getStatusText = () => {
     if (typingUsers.length > 0) {
       return `${typingUsers.map(u => u.userName).join(', ')} đang gõ...`;
@@ -836,11 +814,11 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
   const imageUrl = getAvatarUrl(chat?.avatar, chatName);
 
   return (
-    <div className="flex-1 flex h-screen bg-white relative overflow-hidden">
-    {/* Main chat column */}
-    <div className="flex flex-col flex-1 min-w-0 relative">
+    <div className="flex-1 flex h-screen bg-white dark:bg-[#111113] text-slate-800 dark:text-slate-200 relative overflow-hidden">
+      {/* Main chat column */}
+      <div className="flex flex-col flex-1 min-w-0 relative">
         {isAdmin && isDirectMessage && (
-          <div className="bg-amber-100 text-amber-800 text-xs font-bold px-4 py-2 text-center border-b border-amber-200 shadow-sm z-10 w-full">
+          <div className="bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-400 text-xs font-mono font-bold px-4 py-2 text-center border-b border-amber-250 z-10 w-full">
             ⚠️ AUDITED ACCESS: You are viewing a direct message room under Admin privileges. Actions are logged.
           </div>
         )}
@@ -860,437 +838,477 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
           />
         )}
 
-      {/* Connection indicator */}
-      {!isConnected && (
-        <div className="bg-red-50 text-red-600 text-xs px-4 py-1.5 text-center border-b border-red-200 flex items-center justify-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-          Đang kết nối lại...
-        </div>
-      )}
-
-      {/* Header */}
-      <header className="h-14 border-b border-slate-200/80 bg-white flex items-center justify-between px-6 shrink-0 select-none">
-        <div className="flex items-center gap-3 min-w-0">
-          {isChannel ? (
-            /* Channel header: show # or 🔒 icon */
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="h-8 w-8 rounded-[4px] bg-slate-50 border border-slate-200/60 flex items-center justify-center shrink-0">
-                {channelData?.type === 'PRIVATE' ? (
-                  <Lock size={15} className="text-slate-500" />
-                ) : (
-                  <Hash size={15} className="text-slate-500" />
-                )}
-              </div>
-              <div className="min-w-0">
-                <h3 className="font-bold text-slate-900 text-[14px] leading-tight truncate">{channelData?.name}</h3>
-                <p className="text-[11px] text-slate-500 truncate max-w-xs mt-0.5">
-                  {typingUsers.length > 0
-                    ? `${typingUsers.map(u => u.userName).join(', ')} đang gõ...`
-                    : channelData?.topic || `${channelData?._count?.members ?? 0} thành viên`}
-                </p>
-              </div>
-            </div>
-          ) : isDirectMessage ? (
-            /* DM header: show avatar + online status */
-            <div className="flex items-center gap-2.5">
-              <div className="relative">
-                <Avatar className="h-8 w-8 rounded-[4px] border border-slate-200/80">
-                  <AvatarImage className="rounded-[4px]" src={imageUrl || partner?.avatar || undefined} />
-                  <AvatarFallback className="rounded-[4px] bg-slate-100 text-slate-600 text-xs font-semibold">{chatName[0]}</AvatarFallback>
-                </Avatar>
-                {isPartnerOnline && (
-                  <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border border-white" />
-                )}
-              </div>
-              <div>
-                <h3 className="font-bold text-slate-900 text-[14px] leading-tight">{chatName}</h3>
-                <p className={`text-[11px] font-medium mt-0.5 ${typingUsers.length > 0 ? 'text-blue-600' : isPartnerOnline ? 'text-emerald-600' : 'text-slate-500'}`}>
-                  {getStatusText()}
-                </p>
-              </div>
-            </div>
-          ) : (
-            /* Group Chat header: show group avatar */
-            <div className="flex items-center gap-2.5">
-              <Avatar className="h-8 w-8 rounded-[4px] border border-slate-200/80">
-                <AvatarImage className="rounded-[4px]" src={imageUrl || undefined} />
-                <AvatarFallback className="rounded-[4px] bg-slate-100 text-slate-600 text-xs font-semibold">{chatName[0]}</AvatarFallback>
-              </Avatar>
-              <div>
-                <h3 className="font-bold text-slate-900 text-[14px] leading-tight">{chatName}</h3>
-                <p className="text-[11px] text-slate-500 mt-0.5">{getStatusText()}</p>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center gap-1">
-          {activeCall && (
-            <Button
-              size="sm"
-              onClick={() => {
-                window.dispatchEvent(new CustomEvent("call:rejoin", { detail: { ...activeCall, chatId } }));
-              }}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 h-8 px-3 rounded-[4px] text-xs font-semibold animate-pulse shadow-none transition-colors"
-            >
-              <Phone size={13} fill="currentColor" /> Tham gia
-            </Button>
-          )}
-          <Button variant="ghost" size="icon" onClick={() => startCall(false)} className="h-8 w-8 rounded-[4px] text-slate-500 hover:text-blue-600 hover:bg-slate-100 transition-colors" title="Bắt đầu cuộc gọi thoại"><Phone size={15} /></Button>
-          <Button variant="ghost" size="icon" onClick={() => startCall(true)} className="h-8 w-8 rounded-[4px] text-slate-500 hover:text-blue-600 hover:bg-slate-100 transition-colors" title="Bắt đầu cuộc gọi video"><Video size={15} /></Button>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => {
-              setShowSearchPanel(!showSearchPanel);
-              setShowPinnedPanel(false);
-              setShowInfoPanel(false);
-              setShowGroupSettings(false);
-            }} 
-            className={`h-8 w-8 rounded-[4px] transition-colors ${showSearchPanel ? 'text-blue-600 bg-blue-50/55' : 'text-slate-500 hover:text-blue-600 hover:bg-slate-100'}`}
-            title="Tìm kiếm tin nhắn"
-          >
-            <Search size={15} />
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => {
-              setShowPinnedPanel(!showPinnedPanel);
-              setShowSearchPanel(false);
-              setShowInfoPanel(false);
-              setShowGroupSettings(false);
-            }} 
-            className={`h-8 w-8 rounded-[4px] transition-colors ${showPinnedPanel ? 'text-blue-600 bg-blue-50/55' : 'text-slate-500 hover:text-blue-600 hover:bg-slate-100'}`}
-            title="Tin nhắn đã ghim"
-          >
-            <Pin size={15} className={showPinnedPanel ? 'fill-current' : ''} />
-          </Button>
-          <div className="h-4 w-[1px] bg-slate-200 mx-1" />
-          <Button variant="ghost"
-            size="icon"
-            onClick={() => {
-              if (isChannel) {
-                setShowGroupSettings(true); // reuse showGroupSettings flag for ChannelInfoPanel
-              } else if (chat?.isGroup) {
-                setShowGroupSettings(true);
-              } else {
-                setShowInfoPanel(true);
-              }
-            }}
-            title={isChannel ? 'Thông tin kênh' : chat?.isGroup ? 'Cài đặt nhóm' : 'Thông tin cuộc trò chuyện'}
-            className="h-8 w-8 rounded-[4px] text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors">
-            <Info size={15} />
-          </Button>
-        </div>
-      </header>
-
-      {/* Message Stream */}
-      <div
-        ref={chatContainerRef}
-        className="flex-1 overflow-y-auto px-4 py-2 space-y-1 custom-scrollbar bg-white scroll-smooth"
-        style={{ overflowAnchor: 'none' }} // We handle anchoring manually for better control
-      >
-        {isInitialLoad ? (
-          <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-            <Loader2 className="w-8 h-8 animate-spin mb-2 opacity-50" />
-            <p className="text-sm">Đang tải tin nhắn...</p>
+        {/* Connection indicator */}
+        {!isConnected && (
+          <div className="bg-red-50/50 dark:bg-red-950/20 text-red-650 dark:text-red-400 text-xs font-mono px-4 py-1.5 text-center border-b border-red-200 dark:border-red-900/30 flex items-center justify-center gap-2">
+            <div className="w-2 h-2 rounded-[2px] bg-red-500 animate-pulse" />
+            Đang kết nối lại...
           </div>
-        ) : (
-          <>
-            {/* Sentinel for infinite scroll up */}
-            {hasMore && (
-              <div ref={sentinelRef} className="flex justify-center py-4">
-                <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
-              </div>
-            )}
+        )}
 
-            {!hasMore && allMessages.length > 0 && (
-              <div className="text-center py-8 text-slate-300 text-[11px] font-medium uppercase tracking-widest flex items-center justify-center gap-4">
-                <div className="h-[1px] flex-1 bg-slate-50" />
-                Bắt đầu cuộc hội thoại
-                <div className="h-[1px] flex-1 bg-slate-50" />
-              </div>
-            )}
-
-            {groupedMessages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center text-slate-400 py-20">
-                <Sparkles className="w-8 h-8 mb-4 opacity-50" />
-                <p>Chưa có tin nhắn nào. Hãy bắt đầu cuộc trò chuyện!</p>
-              </div>
-            ) : (
-              groupedMessages.map((group) => (
-                <div key={group.date} className="space-y-1">
-                  <div className="flex items-center justify-center gap-3 py-2">
-                    <div className="h-[1px] flex-1 bg-slate-100" />
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50/50 px-2 py-0.5 rounded-full border border-slate-100">
-                      {group.date}
-                    </span>
-                    <div className="h-[1px] flex-1 bg-slate-100" />
-                  </div>
-
-                  {group.messages.map((msg, idx) => {
-                    const prevMsg = idx > 0 ? group.messages[idx - 1] : null;
-                    const prevSenderId = prevMsg?.senderId || prevMsg?.sender?.id;
-                    const currSenderId = msg.senderId || msg.sender?.id;
-
-                    // Show avatar if not me AND (is first message of date group OR sender changed)
-                    const showAvatar = !msg.isMe && (!prevMsg || prevSenderId !== currSenderId);
-
-                    return (
-                      <MessageBubble
-                        key={msg.id}
-                        message={msg}
-                        chatId={chatId!}
-                        isGroup={chat?.isGroup as boolean}
-                        participantCount={chat?.participantCount || 0}
-                        showAvatar={showAvatar}
-                        onReply={() => setReplyTo(msg)}
-                        onMessageDeleted={() => {
-                          setAllMessages(prev => prev.filter(m => m.id !== msg.id));
-                        }}
-                        readReceipts={readReceipts}
-                      />
-                    );
-                  })}
+        {/* Header */}
+        <header className="h-14 border-b border-slate-200/80 dark:border-white/[0.06] bg-white dark:bg-[#111113] flex items-center justify-between px-6 shrink-0 select-none">
+          <div className="flex items-center gap-3 min-w-0">
+            {isChannel ? (
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="h-8 w-8 rounded-[2px] bg-slate-50 dark:bg-[#19191B] border border-slate-200/60 dark:border-white/[0.04] flex items-center justify-center shrink-0">
+                  {channelData?.type === 'PRIVATE' ? (
+                    <Lock size={15} className="text-slate-500 dark:text-zinc-400" />
+                  ) : (
+                    <Hash size={15} className="text-slate-500 dark:text-zinc-400" />
+                  )}
                 </div>
-              ))
-            )}
-          </>
-        )}
-
-        {/* Typing indicator */}
-        {typingUsers.length > 0 && (
-          <div className="flex items-center gap-2 text-slate-400 text-sm pl-2">
-            <div className="flex gap-1">
-              <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-              <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-              <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-            </div>
-            <span className="text-xs">
-              {typingUsers.map(u => u.userName).join(', ')} đang gõ...
-            </span>
-          </div>
-        )}
-
-        <div ref={messagesEndRef} />
-      </div>
-
-      {replyTo && (
-        <div className="px-6 py-2 bg-slate-50 border-t border-slate-200/80 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5 min-w-0 flex-1">
-            <Reply className="h-3.5 w-3.5 text-blue-600 flex-shrink-0" />
-            <div className="flex-1 min-w-0 border-l-2 border-blue-600 pl-2.5">
-              <p className="text-[11px] text-blue-600 font-bold">
-                {replyTo.isMe ? "Bạn" : replyTo.sender?.name}
-              </p>
-              <p className="text-xs text-slate-500 truncate mt-0.5">
-                {replyTo.content || `[${replyTo.type}]`}
-              </p>
-            </div>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 rounded-[4px] text-slate-400 hover:text-slate-600 hover:bg-slate-150 transition-colors"
-            onClick={() => setReplyTo(null)}
-          >
-            <X className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-      )}
-      {/* File Preview */}
-      {selectedFiles.length > 0 && (
-        <div className="px-6 py-2 bg-slate-50 border-t border-slate-200/80">
-          <div className="flex items-center gap-3 p-2 bg-white border border-slate-200 rounded-[4px] shadow-sm">
-            {filePreview ? (
-              <img src={filePreview} alt="Preview" className="w-12 h-12 object-cover rounded-[4px] border border-slate-100" />
+                <div className="min-w-0 text-left">
+                  <h3 className="font-bold text-slate-900 dark:text-slate-100 text-[14px] leading-tight truncate">{channelData?.name}</h3>
+                  <p className="text-[11px] text-slate-500 dark:text-zinc-550 truncate max-w-xs mt-0.5">
+                    {typingUsers.length > 0
+                      ? `${typingUsers.map(u => u.userName).join(', ')} đang gõ...`
+                      : channelData?.topic || `${channelData?._count?.members ?? 0} thành viên`}
+                  </p>
+                </div>
+              </div>
+            ) : isDirectMessage ? (
+              <div className="flex items-center gap-2.5">
+                <div className="relative">
+                  <Avatar className="h-8 w-8 rounded-[2px] border border-slate-200/80 dark:border-white/[0.06]">
+                    <AvatarImage className="rounded-[2px] object-cover" src={imageUrl || partner?.avatar || undefined} />
+                    <AvatarFallback className="rounded-[2px] bg-slate-100 dark:bg-zinc-800 text-slate-655 dark:text-zinc-400 text-xs font-semibold">{chatName[0]}</AvatarFallback>
+                  </Avatar>
+                  {isPartnerOnline && (
+                    <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-[2px] bg-emerald-500 border border-white dark:border-zinc-900" />
+                  )}
+                </div>
+                <div className="text-left">
+                  <h3 className="font-bold text-slate-900 dark:text-slate-100 text-[14px] leading-tight">{chatName}</h3>
+                  <p className={`text-[11px] font-medium mt-0.5 font-mono ${typingUsers.length > 0 ? 'text-blue-600 dark:text-blue-405' : isPartnerOnline ? 'text-emerald-600 dark:text-emerald-450' : 'text-slate-500 dark:text-zinc-500'}`}>
+                    {getStatusText()}
+                  </p>
+                </div>
+              </div>
             ) : (
-              <div className="w-12 h-12 bg-slate-50 rounded-[4px] flex items-center justify-center border border-slate-200/80">
-                <File className="h-6 w-6 text-slate-400" />
+              <div className="flex items-center gap-2.5">
+                <Avatar className="h-8 w-8 rounded-[2px] border border-slate-200/80 dark:border-white/[0.06]">
+                  <AvatarImage className="rounded-[2px] object-cover" src={imageUrl || undefined} />
+                  <AvatarFallback className="rounded-[2px] bg-slate-100 dark:bg-zinc-800 text-slate-655 dark:text-zinc-400 text-xs font-semibold">{chatName[0]}</AvatarFallback>
+                </Avatar>
+                <div className="text-left">
+                  <h3 className="font-bold text-slate-900 dark:text-slate-100 text-[14px] leading-tight">{chatName}</h3>
+                  <p className="text-[11px] text-slate-500 dark:text-zinc-500 mt-0.5">{getStatusText()}</p>
+                </div>
               </div>
             )}
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-slate-800 truncate">{selectedFiles[0].name}</p>
-              <p className="text-[10px] text-slate-400 font-medium mt-0.5">
-                {(selectedFiles[0].size / 1024 / 1024).toFixed(2)} MB
-              </p>
+          </div>
+
+          <div className="flex items-center gap-1">
+            {activeCall && (
+              <Button
+                size="sm"
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent("call:rejoin", { detail: { ...activeCall, chatId } }));
+                }}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 h-8 px-3 rounded-[2px] text-xs font-mono font-medium uppercase tracking-wider animate-pulse shadow-none transition-colors"
+              >
+                <Phone size={13} fill="currentColor" /> Tham gia
+              </Button>
+            )}
+            <Button variant="ghost" size="icon" onClick={() => startCall(false)} className="h-8 w-8 rounded-[2px] text-slate-500 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-450 hover:bg-slate-100 dark:hover:bg-white/[0.02] transition-colors" title="Bắt đầu cuộc gọi thoại"><Phone size={15} /></Button>
+            <Button variant="ghost" size="icon" onClick={() => startCall(true)} className="h-8 w-8 rounded-[2px] text-slate-500 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-450 hover:bg-slate-100 dark:hover:bg-white/[0.02] transition-colors" title="Bắt đầu cuộc gọi video"><Video size={15} /></Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => {
+                setShowSearchPanel(!showSearchPanel);
+                setShowPinnedPanel(false);
+                setShowInfoPanel(false);
+                setShowGroupSettings(false);
+              }} 
+              className={`h-8 w-8 rounded-[2px] transition-colors ${showSearchPanel ? 'text-blue-600 bg-blue-50/55 dark:text-blue-400 dark:bg-blue-955/20' : 'text-slate-500 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-450 hover:bg-slate-100 dark:hover:bg-white/[0.02]'}`}
+              title="Tìm kiếm tin nhắn"
+            >
+              <Search size={15} />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => {
+                setShowPinnedPanel(!showPinnedPanel);
+                setShowSearchPanel(false);
+                setShowInfoPanel(false);
+                setShowGroupSettings(false);
+              }} 
+              className={`h-8 w-8 rounded-[2px] transition-colors ${showPinnedPanel ? 'text-blue-600 bg-blue-50/55 dark:text-blue-400 dark:bg-blue-955/20' : 'text-slate-500 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-455 hover:bg-slate-100 dark:hover:bg-white/[0.02]'}`}
+              title="Tin nhắn đã ghim"
+            >
+              <Pin size={15} className={showPinnedPanel ? 'fill-current' : ''} />
+            </Button>
+            <div className="h-4 w-[1px] bg-slate-200 dark:bg-white/[0.06] mx-1" />
+            <Button variant="ghost"
+              size="icon"
+              onClick={() => {
+                if (isChannel) {
+                  setShowGroupSettings(true);
+                } else if (chat?.isGroup) {
+                  setShowGroupSettings(true);
+                } else {
+                  setShowInfoPanel(true);
+                }
+              }}
+              title={isChannel ? 'Thông tin kênh' : chat?.isGroup ? 'Cài đặt nhóm' : 'Thông tin cuộc trò chuyện'}
+              className="h-8 w-8 rounded-[2px] text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/[0.02] transition-colors">
+              <Info size={15} />
+            </Button>
+          </div>
+        </header>
+
+        {/* Message Stream */}
+        <div
+          ref={chatContainerRef}
+          className="flex-1 overflow-y-auto px-4 py-2 custom-scrollbar bg-white dark:bg-[#111113] scroll-smooth"
+          style={{ overflowAnchor: 'none' }}
+        >
+          <div ref={messagesWrapperRef} className="flex flex-col min-h-full">
+            {isInitialLoad ? (
+              <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+                <Loader2 className="w-8 h-8 animate-spin mb-2 opacity-50" />
+                <p className="text-sm">Đang tải tin nhắn...</p>
+              </div>
+            ) : (
+              <>
+                {/* Sentinel for infinite scroll up */}
+                {hasMore && (
+                  <div ref={sentinelRef} className="flex justify-center py-4">
+                    <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+                  </div>
+                )}
+
+                {!hasMore && allMessages.length > 0 && (
+                  <div className="text-center py-8 text-slate-300 dark:text-zinc-600 text-[10px] font-mono font-medium uppercase tracking-widest flex items-center justify-center gap-4">
+                    <div className="h-[1px] flex-1 bg-slate-50 dark:bg-white/[0.02]" />
+                    Bắt đầu cuộc hội thoại
+                    <div className="h-[1px] flex-1 bg-slate-50 dark:bg-white/[0.02]" />
+                  </div>
+                )}
+
+                {groupedMessages.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center text-slate-450 dark:text-zinc-650 py-20 font-mono">
+                    <Sparkles className="w-8 h-8 mb-4 opacity-50 text-blue-500 animate-pulse" />
+                    <p className="text-xs uppercase tracking-wider text-slate-800 dark:text-slate-200">Chưa có tin nhắn nào</p>
+                    <p className="text-[10px] text-slate-400 dark:text-zinc-550 mt-1">Hãy bắt đầu cuộc trò chuyện!</p>
+                  </div>
+                ) : (
+                  groupedMessages.map((group) => (
+                    <div key={group.date} className="flex flex-col">
+                      <div className="flex items-center justify-center gap-3 py-2 mt-4">
+                        <div className="h-[1px] flex-1 bg-slate-100 dark:bg-white/[0.02]" />
+                        <span className="text-[10px] font-bold text-slate-450 dark:text-zinc-550 uppercase tracking-widest bg-slate-50/50 dark:bg-zinc-950/20 px-2.5 py-0.5 rounded-[2px] border border-slate-200/80 dark:border-white/[0.04] font-mono">
+                          {group.date}
+                        </span>
+                        <div className="h-[1px] flex-1 bg-slate-100 dark:bg-white/[0.02]" />
+                      </div>
+
+                      {group.messages.map((msg, idx) => {
+                        const isSystemOrCall = msg.type === "system" || msg.type.startsWith("call_");
+                        const isBubble = !isSystemOrCall;
+
+                        let prevRegularMsg = null;
+                        for (let i = idx - 1; i >= 0; i--) {
+                          const m = group.messages[i];
+                          if (m.type !== 'system' && !m.type.startsWith('call_')) {
+                            prevRegularMsg = m;
+                            break;
+                          }
+                        }
+
+                        let nextRegularMsg = null;
+                        for (let i = idx + 1; i < group.messages.length; i++) {
+                          const m = group.messages[i];
+                          if (m.type !== 'system' && !m.type.startsWith('call_')) {
+                            nextRegularMsg = m;
+                            break;
+                          }
+                        }
+
+                        const currSenderId = msg.senderId || msg.sender?.id;
+                        const prevSenderId = prevRegularMsg ? (prevRegularMsg.senderId || prevRegularMsg.sender?.id) : null;
+                        const nextSenderId = nextRegularMsg ? (nextRegularMsg.senderId || nextRegularMsg.sender?.id) : null;
+
+                        const msgTime = new Date(msg.time || msg.createdAt || Date.now()).getTime();
+                        const prevTime = prevRegularMsg ? new Date(prevRegularMsg.time || prevRegularMsg.createdAt || Date.now()).getTime() : 0;
+                        const nextTime = nextRegularMsg ? new Date(nextRegularMsg.time || nextRegularMsg.createdAt || Date.now()).getTime() : 0;
+
+                        const TIME_LIMIT = 5 * 60 * 1000; // 5 minutes max gap for clustering
+
+                        const isPrevSame = !!(isBubble && prevRegularMsg && (prevSenderId === currSenderId) && (msgTime - prevTime < TIME_LIMIT));
+                        const isNextSame = !!(isBubble && nextRegularMsg && (nextSenderId === currSenderId) && (nextTime - msgTime < TIME_LIMIT));
+
+                        const isSingle = !isPrevSame && !isNextSame;
+                        const isFirst = !isPrevSame && isNextSame;
+                        const isMiddle = isPrevSame && isNextSame;
+                        const isLast = isPrevSame && !isNextSame;
+
+                        const showAvatar = !msg.isMe && isBubble && (isLast || isSingle);
+
+                        return (
+                          <MessageBubble
+                            key={msg.id}
+                            message={msg}
+                            chatId={chatId!}
+                            isGroup={chat?.isGroup as boolean}
+                            participantCount={chat?.participantCount || 0}
+                            showAvatar={showAvatar}
+                            onReply={() => setReplyTo(msg)}
+                            onMessageDeleted={() => {
+                              setAllMessages(prev => prev.filter(m => m.id !== msg.id));
+                            }}
+                            readReceipts={readReceipts}
+                            isFirst={isFirst}
+                            isMiddle={isMiddle}
+                            isLast={isLast}
+                            isSingle={isSingle}
+                            onJumpToMessage={handleJumpToMessage}
+                          />
+                        );
+                      })}
+                    </div>
+                  ))
+                )}
+              </>
+            )}
+
+            {/* Typing indicator */}
+            {typingUsers.length > 0 && (
+              <div className="flex items-center gap-2 text-slate-400 dark:text-zinc-500 text-sm pl-2 mt-2">
+                <div className="flex gap-1">
+                  <span className="w-1.5 h-1.5 bg-slate-400 dark:bg-zinc-650 rounded-[2px] animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-1.5 h-1.5 bg-slate-400 dark:bg-zinc-650 rounded-[2px] animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-1.5 h-1.5 bg-slate-400 dark:bg-zinc-650 rounded-[2px] animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+                <span className="text-[10px] font-mono">
+                  {typingUsers.map(u => u.userName).join(', ')} đang gõ...
+                </span>
+              </div>
+            )}
+
+            <div ref={messagesEndRef} />
+          </div>
+        </div>
+
+        {replyTo && (
+          <div className="px-6 py-2 bg-slate-50/50 dark:bg-[#19191B]/80 border-t border-slate-200/80 dark:border-white/[0.06] flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+              <Reply className="h-3.5 w-3.5 text-blue-600 dark:text-blue-405 flex-shrink-0" />
+              <div className="flex-1 min-w-0 border-l-2 border-blue-600 pl-2.5">
+                <p className="text-[11px] text-blue-600 dark:text-blue-400 font-mono font-bold uppercase tracking-wider">
+                  {replyTo.isMe ? "Bạn" : replyTo.sender?.name}
+                </p>
+                <p className="text-xs text-slate-500 dark:text-zinc-400 truncate mt-0.5">
+                  {replyTo.content || `[${replyTo.type}]`}
+                </p>
+              </div>
             </div>
             <Button
               variant="ghost"
               size="icon"
-              onClick={clearSelectedFiles}
-              disabled={isUploading}
-              className="h-8 w-8 rounded-[4px] text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+              className="h-6 w-6 rounded-[2px] text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-slate-255 hover:bg-slate-100 dark:hover:bg-white/[0.02] transition-colors"
+              onClick={() => setReplyTo(null)}
             >
-              <X className="h-4 w-4" />
+              <X className="h-3.5 w-3.5" />
             </Button>
-            <Button
-              onClick={handleSendFile}
-              disabled={isUploading}
-              className="bg-blue-600 hover:bg-blue-700 text-white rounded-[4px] h-8 px-3 text-xs font-semibold flex items-center gap-1.5 shadow-none transition-colors"
-            >
-              {isUploading ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          </div>
+        )}
+
+        {/* File Preview */}
+        {selectedFiles.length > 0 && (
+          <div className="px-6 py-2 bg-slate-50 dark:bg-[#19191B]/80 border-t border-slate-200/80 dark:border-white/[0.06]">
+            <div className="flex items-center gap-3 p-2 bg-white dark:bg-[#111113] border border-slate-200 dark:border-white/[0.06] rounded-[2px] shadow-none">
+              {filePreview ? (
+                <img src={filePreview} alt="Preview" className="w-12 h-12 object-cover rounded-[2px] border border-slate-100/50 dark:border-white/[0.04]" />
               ) : (
-                <>
-                  <Send className="h-3.5 w-3.5" />
-                  <span>Gửi file</span>
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Rich Text Composer */}
-      <div className="px-6 py-4 border-t border-slate-200/80 bg-white">
-        {chat?.isBlocked ? (
-          <div className="bg-slate-50 border border-slate-200 rounded-[4px] p-6 text-center">
-            <Ban className="w-8 h-8 mx-auto mb-2 text-slate-300" />
-            <p className="text-xs font-semibold text-slate-500">
-              {chat.isBlockedByMe
-                ? "Bạn đã chặn người dùng này. Bỏ chặn để gửi tin nhắn."
-                : "Bạn không thể gửi tin nhắn cho người này vì trạng thái chặn."}
-            </p>
-          </div>
-        ) : !canPost ? (
-          <div className="bg-slate-50 border border-slate-200 rounded-[4px] p-4 flex flex-col items-center justify-center gap-1.5 text-center animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <div className="h-8 w-8 rounded-[4px] bg-slate-100 flex items-center justify-center text-slate-500">
-              <Lock size={15} />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-slate-800">Kênh này đang ở chế độ chỉ đọc</p>
-              <p className="text-[11px] text-slate-500 mt-0.5">Chỉ quản trị viên mới có thể gửi tin nhắn trong cuộc hội thoại này.</p>
-            </div>
-          </div>
-        ) : (
-          <div className="bg-white border border-slate-200/80 focus-within:border-slate-400 rounded-[4px] flex flex-col shadow-none transition-colors duration-150">
-            {/* Input Area */}
-            <div className="px-3 pt-2 pb-1.5 min-h-[44px] relative">
-              <textarea
-                ref={inputRef}
-                value={inputText}
-                onChange={handleInputChange}
-                onKeyDown={handleKeyDown}
-                placeholder={`Nhắn cho ${chatName}...`}
-                className="w-full resize-none border-0 focus:ring-0 text-[14px] text-slate-800 placeholder:text-slate-400 outline-none bg-transparent py-1"
-                rows={1}
-                style={{ minHeight: '24px', maxHeight: '200px' }}
-              />
-              {mentionQuery !== null && (
-                <MentionSelector
-                  participants={chat?.participants || []}
-                  query={mentionQuery}
-                  onSelect={handleMentionSelect}
-                  onClose={() => setMentionQuery(null)}
-                  currentUserId={user?.id}
-                  canUseBroadcast={canUseBroadcastMentions}
-                />
-              )}
-            </div>
-
-            {/* Bottom Toolbar */}
-            <div className="bg-slate-50/70 border-t border-slate-100 px-3 py-1.5 flex items-center justify-between">
-              <div className="flex items-center gap-0.5">
-                <div className="relative">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-slate-500 hover:text-slate-850 hover:bg-slate-200/60 rounded-[4px] transition-colors"
-                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                  >
-                    <Smile size={15} />
-                  </Button>
-                  {showEmojiPicker && (
-                    <div className="absolute bottom-full left-0 mb-3 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                      <EmojiPicker onSelect={handleEmojiSelect} onClose={() => setShowEmojiPicker(false)} />
-                    </div>
-                  )}
+                <div className="w-12 h-12 bg-slate-50 dark:bg-zinc-900/60 rounded-[2px] flex items-center justify-center border border-slate-200/80 dark:border-white/[0.06]">
+                  <File className="h-6 w-6 text-slate-400 dark:text-zinc-555" />
                 </div>
-
-                <input
-                  ref={imageInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => handleFileSelect(e, "image")}
-                />
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="*/*"
-                  className="hidden"
-                  onChange={(e) => handleFileSelect(e, "file")}
-                />
-                
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-slate-500 hover:text-slate-850 hover:bg-slate-200/60 rounded-[4px] transition-colors"
-                  onClick={() => imageInputRef.current?.click()}
-                  title="Gửi ảnh"
-                >
-                  <ImageIcon size={15} />
-                </Button>
-                
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-slate-500 hover:text-slate-850 hover:bg-slate-200/60 rounded-[4px] transition-colors"
-                  onClick={() => fileInputRef.current?.click()}
-                  title="Gửi file"
-                >
-                  <Paperclip size={15} />
-                </Button>
-
-                {chat?.isGroup && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-slate-500 hover:text-slate-850 hover:bg-slate-200/60 rounded-[4px] transition-colors"
-                    onClick={() => setShowCreatePollModal(true)}
-                    title="Tạo bình chọn"
-                  >
-                    <BarChart3 size={15} />
-                  </Button>
+              )}
+              <div className="flex-1 min-w-0 text-left">
+                <p className="text-xs font-semibold font-mono text-slate-800 dark:text-slate-200 truncate">{selectedFiles[0].name}</p>
+                <p className="text-[10px] text-slate-400 dark:text-zinc-550 font-mono mt-0.5">
+                  {(selectedFiles[0].size / 1024 / 1024).toFixed(2)} MB
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={clearSelectedFiles}
+                disabled={isUploading}
+                className="h-8 w-8 rounded-[2px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/[0.02]"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+              <Button
+                onClick={handleSendFile}
+                disabled={isUploading}
+                className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white rounded-[2px] h-8 px-3 text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-none transition-colors"
+              >
+                {isUploading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <>
+                    <Send className="h-3.5 w-3.5" />
+                    <span>Gửi file</span>
+                  </>
                 )}
-
-                <div className="h-4 w-[1px] bg-slate-200 mx-2" />
-
-                <button
-                  onClick={() => openAIPanel()}
-                  className={`flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-[4px] border transition-all ${
-                    showAIPanel
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-blue-50/60 text-blue-600 border-blue-200/80 hover:bg-blue-100/70 hover:border-blue-200'
-                  }`}
-                >
-                  <Sparkles size={12} className={showAIPanel ? '' : 'animate-pulse text-blue-500'} />
-                  <span>AI Assistant</span>
-                </button>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <span className="text-[10px] text-slate-400 font-medium tracking-wide hidden sm:block">
-                  Nhấn Enter để gửi
-                </span>
-                <button
-                  onClick={handleSend}
-                  disabled={!inputText.trim() || sending}
-                  className="h-7 w-7 flex items-center justify-center bg-blue-600 hover:bg-blue-700 disabled:bg-slate-100 disabled:text-slate-400 text-white rounded-[4px] transition-all shadow-none"
-                >
-                  <Send size={13} />
-                </button>
-              </div>
+              </Button>
             </div>
           </div>
         )}
-        <div className="py-2 text-center text-[10px] text-slate-400/80 font-medium tracking-wider select-none bg-white">
-          NEXUS Enterprise Collaboration Chat • Secure & Encrypted
+
+        {/* Rich Text Composer */}
+        <div className="px-6 py-4 border-t border-slate-200/80 dark:border-white/[0.06] bg-white dark:bg-[#111113]">
+          {chat?.isBlocked ? (
+            <div className="bg-slate-50 dark:bg-[#19191B]/50 border border-slate-200/80 dark:border-white/[0.06] rounded-[2px] p-6 text-center">
+              <Ban className="w-8 h-8 mx-auto mb-2 text-slate-350 dark:text-zinc-700" />
+              <p className="text-xs font-mono font-semibold text-slate-500 dark:text-zinc-400">
+                {chat.isBlockedByMe
+                  ? "Bạn đã chặn người dùng này. Bỏ chặn để gửi tin nhắn."
+                  : "Bạn không thể gửi tin nhắn cho người này vì trạng thái chặn."}
+              </p>
+            </div>
+          ) : !canPost ? (
+            <div className="bg-slate-50 dark:bg-[#19191B]/50 border border-slate-200/80 dark:border-white/[0.06] rounded-[2px] p-4 flex flex-col items-center justify-center gap-1.5 text-center animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="h-8 w-8 rounded-[2px] bg-slate-100 dark:bg-zinc-800 border border-slate-200/60 dark:border-white/[0.04] flex items-center justify-center text-slate-500 dark:text-zinc-400">
+                <Lock size={15} />
+              </div>
+              <div>
+                <p className="text-xs font-mono font-bold text-slate-800 dark:text-slate-200">Kênh này đang ở chế độ chỉ đọc</p>
+                <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">Chỉ quản trị viên mới có thể gửi tin nhắn trong cuộc hội thoại này.</p>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-slate-50/30 dark:bg-[#19191B]/40 border border-slate-200/80 dark:border-white/[0.06] focus-within:border-blue-500 dark:focus-within:border-blue-650 rounded-[2px] flex flex-col shadow-none transition-colors duration-150">
+              {/* Input Area */}
+              <div className="px-3 pt-2 pb-1.5 min-h-[44px] relative text-left">
+                <textarea
+                  ref={inputRef}
+                  value={inputText}
+                  onChange={handleInputChange}
+                  onKeyDown={handleKeyDown}
+                  placeholder={`Nhắn cho ${chatName}...`}
+                  className="w-full resize-none border-0 focus:ring-0 text-[14px] text-slate-850 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-zinc-550 outline-none bg-transparent py-1"
+                  rows={1}
+                  style={{ minHeight: '24px', maxHeight: '200px' }}
+                />
+                {mentionQuery !== null && (
+                  <MentionSelector
+                    participants={chat?.participants || []}
+                    query={mentionQuery}
+                    onSelect={handleMentionSelect}
+                    onClose={() => setMentionQuery(null)}
+                    currentUserId={user?.id}
+                    canUseBroadcast={canUseBroadcastMentions}
+                  />
+                )}
+              </div>
+
+              {/* Bottom Toolbar */}
+              <div className="bg-slate-50/40 dark:bg-[#19191B]/50 border-t border-slate-200/40 dark:border-white/[0.04] px-3 py-1.5 flex items-center justify-between">
+                <div className="flex items-center gap-0.5">
+                  <div className="relative">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-slate-500 dark:text-zinc-400 hover:text-slate-850 dark:hover:text-slate-255 hover:bg-slate-200/60 dark:hover:bg-white/[0.04] rounded-[2px] transition-colors"
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                    >
+                      <Smile size={15} />
+                    </Button>
+                    {showEmojiPicker && (
+                      <div className="absolute bottom-full left-0 mb-3 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                        <EmojiPicker onSelect={handleEmojiSelect} onClose={() => setShowEmojiPicker(false)} />
+                      </div>
+                    )}
+                  </div>
+
+                  <input
+                    ref={imageInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => handleFileSelect(e, "image")}
+                  />
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="*/*"
+                    className="hidden"
+                    onChange={(e) => handleFileSelect(e, "file")}
+                  />
+                  
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-slate-500 dark:text-zinc-400 hover:text-slate-850 dark:hover:text-slate-255 hover:bg-slate-200/60 dark:hover:bg-white/[0.04] rounded-[2px] transition-colors"
+                    onClick={() => imageInputRef.current?.click()}
+                    title="Gửi ảnh"
+                  >
+                    <ImageIcon size={15} />
+                  </Button>
+                  
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-slate-500 dark:text-zinc-400 hover:text-slate-850 dark:hover:text-slate-255 hover:bg-slate-200/60 dark:hover:bg-white/[0.04] rounded-[2px] transition-colors"
+                    onClick={() => fileInputRef.current?.click()}
+                    title="Gửi file"
+                  >
+                    <Paperclip size={15} />
+                  </Button>
+
+                  {chat?.isGroup && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-slate-500 dark:text-zinc-400 hover:text-slate-850 dark:hover:text-slate-255 hover:bg-slate-200/60 dark:hover:bg-white/[0.04] rounded-[2px] transition-colors"
+                      onClick={() => setShowCreatePollModal(true)}
+                      title="Tạo bình chọn"
+                    >
+                      <BarChart3 size={15} />
+                    </Button>
+                  )}
+
+                  <div className="h-4 w-[1px] bg-slate-200/80 dark:bg-white/[0.06] mx-2" />
+
+                  <button
+                    onClick={() => openAIPanel()}
+                    className={`flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-[2px] border transition-all font-mono uppercase tracking-wider ${
+                      showAIPanel
+                        ? 'bg-blue-600 text-white border-blue-600 dark:bg-blue-700 dark:border-blue-700'
+                        : 'bg-blue-50/30 text-blue-600 dark:text-blue-450 border-blue-200/40 dark:border-blue-900/30 hover:bg-blue-100/30 dark:hover:bg-blue-955/20'
+                    }`}
+                  >
+                    <Sparkles size={12} className={showAIPanel ? '' : 'animate-pulse text-blue-500'} />
+                    <span>AI Assistant</span>
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] text-slate-400 dark:text-zinc-550 font-mono font-medium tracking-wide hidden sm:block">
+                    Nhấn Enter để gửi
+                  </span>
+                  <button
+                    onClick={handleSend}
+                    disabled={!inputText.trim() || sending}
+                    className="h-7 w-7 flex items-center justify-center bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 disabled:bg-slate-100 dark:disabled:bg-zinc-800 disabled:text-slate-400 dark:disabled:text-zinc-650 text-white rounded-[2px] transition-all shadow-none"
+                  >
+                    <Send size={13} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+          <div className="py-2 text-center text-[9px] text-slate-400/80 dark:text-zinc-600 font-mono font-medium tracking-wider select-none bg-white dark:bg-[#111113] border-t border-slate-100/50 dark:border-white/[0.02]">
+            NEXUS Enterprise Collaboration Chat • Secure & Encrypted
+          </div>
         </div>
       </div>
-
 
       {/* Chat Info Panel (DMs) */}
       <ChatInfoPanel
@@ -1311,7 +1329,7 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
         />
       )}
 
-      {/* Group Settings Panel (Group Chats - not channels) */}
+      {/* Group Settings Panel (Group Chats) */}
       {chat?.isGroup && !isChannel && (
         <GroupSettingsPanel
           chatId={chatId}
@@ -1320,10 +1338,9 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
           currentUserId={user?.id}
         />
       )}
-    </div>
 
-    {/* ── AI Assistant Side Panel (Phase 1) ── */}
-    {showAIPanel && chatId && (
+      {/* AI Assistant Side Panel */}
+      {showAIPanel && chatId && (
         <AIAssistantPanel 
           chatId={chatId}
           onClose={closeAIPanel} 
@@ -1351,25 +1368,28 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
         />
       )}
 
-    {/* ── Profile Sheet ── */}
-    <FriendProfileSheet
-      friend={profileUser}
-      isOpen={showProfileSheet}
-      onClose={() => setShowProfileSheet(false)}
-      onStartChat={(newChatId) => {
-        setShowProfileSheet(false);
-        router.push(`/chat/${newChatId}`);
-      }}
-    />
-
-    {/* Create Poll Modal */}
-    {chatId && (
-      <CreatePollModal
-        open={showCreatePollModal}
-        onClose={() => setShowCreatePollModal(false)}
-        chatId={chatId}
+      {/* Profile Sheet */}
+      <FriendProfileSheet
+        friend={profileUser}
+        isOpen={showProfileSheet}
+        onClose={() => setShowProfileSheet(false)}
+        onStartChat={(newChatId) => {
+          setShowProfileSheet(false);
+          router.push(`/chat/${newChatId}`);
+        }}
       />
-    )}
-  </div>
+
+      {/* Create Poll Modal */}
+      {chatId && (
+        <CreatePollModal
+          open={showCreatePollModal}
+          onClose={() => setShowCreatePollModal(false)}
+          chatId={chatId}
+        />
+      )}
+
+      {/* Forward Message Modal (Global Redux UI State Triggered) */}
+      <ForwardMessageModal />
+    </div>
   );
 };

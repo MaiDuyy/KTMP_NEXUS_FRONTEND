@@ -69,7 +69,10 @@ function DepartmentInviteContent() {
     error: validationError,
   } = useValidateDepartmentInviteTokenQuery(token || "", { skip: !token });
 
-  const { data: profile, isLoading: isCheckingAuth } = useGetProfileQuery();
+  const hasToken = typeof window !== "undefined" && !!localStorage.getItem("accessToken");
+  const { data: profile, isLoading: isCheckingAuth } = useGetProfileQuery(undefined, {
+    skip: !hasToken,
+  });
   const [acceptInvite, { isLoading: isAccepting }] = useAcceptDepartmentInviteMutation();
   const [rejectInvite, { isLoading: isRejecting }] = useRejectDepartmentInviteMutation();
 

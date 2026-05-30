@@ -21,6 +21,7 @@ import { useRouter } from "next/navigation";
 import { useAppDispatch } from "@/src/redux/hooks";
 import { performFullLogout } from "@/src/utils/auth-utils";
 import { cn } from "@/lib/utils";
+import { getAvatarUrl } from "@/src/utils/image-utils";
 
 export function NavUser() {
   const { isMobile, state } = useSidebar();
@@ -52,7 +53,7 @@ export function NavUser() {
             isCollapsed ? "justify-center hover:bg-secondary/60" : "gap-2 hover:bg-secondary/60"
           )}>
             <Avatar className="h-7 w-7 rounded">
-              <AvatarImage src={user.avatar} alt={user.name} />
+              <AvatarImage src={getAvatarUrl(user?.avatar)} alt={user.name} />
               <AvatarFallback className="rounded bg-primary/10 text-primary font-bold text-[10px]">
                 {initials}
               </AvatarFallback>
@@ -77,7 +78,7 @@ export function NavUser() {
           <DropdownMenuLabel className="p-0 font-normal">
             <div className="flex items-center gap-2 px-2.5 py-2 text-left text-xs border-b border-border/40">
               <Avatar className="h-7 w-7 rounded">
-                <AvatarImage src={user.avatar} alt={user.name} />
+                <AvatarImage src={getAvatarUrl(user?.avatar)} alt={user.name} />
                 <AvatarFallback className="rounded bg-primary/10 text-primary font-bold text-[10px]">
                     {initials}
                 </AvatarFallback>

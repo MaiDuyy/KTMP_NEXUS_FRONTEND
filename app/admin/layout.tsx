@@ -41,7 +41,7 @@ function AdminHeader() {
                     {pageTitle}
                 </h2>
                 <Badge variant="outline" className="text-[9px] px-1 py-0.5 uppercase font-semibold text-muted-foreground border-border bg-muted/40 rounded">
-                    Admin
+                   Admin
                 </Badge>
             </div>
             <div className="flex items-center gap-4">

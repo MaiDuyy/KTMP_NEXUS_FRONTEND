@@ -3,11 +3,12 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 interface WorkspaceState {
   currentWorkspaceId: string | null;
   currentDepartmentId: string | null;
+  forwardingMessageId: string | null;
 }
 
 const getInitialState = (): WorkspaceState => {
   if (typeof window === 'undefined') {
-    return { currentWorkspaceId: null, currentDepartmentId: null };
+    return { currentWorkspaceId: null, currentDepartmentId: null, forwardingMessageId: null };
   }
   
   const savedWsId = localStorage.getItem("currentWorkspaceId");
@@ -15,6 +16,7 @@ const getInitialState = (): WorkspaceState => {
   return { 
     currentWorkspaceId: savedWsId,
     currentDepartmentId: savedDeptId,
+    forwardingMessageId: null,
   };
 };
 
@@ -42,8 +44,11 @@ const workspaceSlice = createSlice({
         }
       }
     },
+    setForwardingMessage: (state, action: PayloadAction<string | null>) => {
+      state.forwardingMessageId = action.payload;
+    },
   },
 });
 
-export const { setWorkspace, setDepartment } = workspaceSlice.actions;
+export const { setWorkspace, setDepartment, setForwardingMessage } = workspaceSlice.actions;
 export default workspaceSlice.reducer;

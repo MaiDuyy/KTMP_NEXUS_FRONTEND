@@ -178,6 +178,19 @@ export const messageApi = apiSlice.injectEndpoints({
         }
       },
     }),
+
+    // Chuyển tiếp tin nhắn (Backend Alignment)
+    forwardMessage: builder.mutation<{ message: Message }, { targetChatId: string; originalMessageId: string }>({
+      query: ({ targetChatId, originalMessageId }) => ({
+        url: `/messages/forward`,
+        method: "POST",
+        body: { targetChatId, originalMessageId },
+      }),
+      invalidatesTags: (_result, _error, { targetChatId }) => [
+        { type: "Messages", id: targetChatId },
+        "Chats",
+      ],
+    }),
   }),
 });
 
@@ -193,4 +206,5 @@ export const {
   useRecallMessageMutation,
   useReactMessageMutation,
   useTogglePinMessageMutation,
+  useForwardMessageMutation,
 } = messageApi;

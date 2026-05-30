@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Eye, EyeOff, Loader2, Mail, Lock, User, Phone, CheckCircle2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Mail, Lock, User, Phone } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
@@ -30,9 +30,7 @@ const registerSchema = z.object({
   number: z.string().regex(/^[0-9]{10,11}$/, { message: 'Số điện thoại phải có 10-11 chữ số' }),
   password: z.string().min(6, { message: 'Mật khẩu phải có ít nhất 6 ký tự' }).max(100),
   confirmPassword: z.string(),
-  gender: z.enum(['male', 'female', 'other'], {
-    errorMap: () => ({ message: 'Vui lòng chọn giới tính' }),
-  }),
+  gender: z.enum(['male', 'female', 'other']),
   agreeToTerms: z.boolean().refine((val) => val === true, {
     message: 'Bạn phải đồng ý với Điều khoản Dịch vụ',
   }),
@@ -68,7 +66,7 @@ export const RegisterForm: React.FC = () => {
 
     const registerPromise = async () => {
       try {
-        await sleep(1000); // Giả lập delay nhẹ để tăng trải nghiệm UX
+        await sleep(1000); // UI delay simulation
 
         const { confirmPassword, ...requestData } = data;
         await register(requestData).unwrap();
@@ -102,40 +100,39 @@ export const RegisterForm: React.FC = () => {
   };
 
   const passwordValue = form.watch('password');
-  const confirmPasswordValue = form.watch('confirmPassword');
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col space-y-1.5">
-        <h1 className="text-xl font-bold tracking-tight text-slate-900">
+      <div className="flex flex-col space-y-1.5 text-left">
+        <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
           Đăng ký tài khoản
         </h1>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-slate-500 dark:text-zinc-500">
           Bắt đầu kết nối với cộng đồng NEXUS ngay hôm nay.
         </p>
       </div>
 
       {error && (
-        <div className="p-2.5 rounded-[4px] bg-red-50 border border-red-100 text-red-600 text-xs font-semibold animate-in fade-in slide-in-from-top-2">
+        <div className="p-2.5 rounded-[2px] bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 text-red-650 dark:text-red-400 text-xs font-semibold font-mono text-left animate-in fade-in slide-in-from-top-2">
           {error}
         </div>
       )}
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 text-left">
           <FormField
             control={form.control}
             name="name"
             render={({ field }) => (
               <FormItem className="space-y-1">
-                <FormLabel className="text-xs font-semibold text-slate-700">Họ và tên</FormLabel>
+                <FormLabel className="text-xs font-semibold text-slate-700 dark:text-slate-350">Họ và tên</FormLabel>
                 <FormControl>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                    <Input placeholder="Ví dụ: Nguyễn Văn A" className="pl-9 h-9 border-slate-200 focus:border-blue-500 focus:ring-0 rounded-[4px] text-sm transition-colors" {...field} />
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-450 dark:text-zinc-600" />
+                    <Input placeholder="Ví dụ: Nguyễn Văn A" className="pl-9 h-9 border-slate-200 dark:border-white/[0.06] bg-slate-50/50 dark:bg-[#111113]/40 focus:border-blue-500 dark:focus:border-blue-600 focus:ring-0 rounded-[2px] text-sm text-slate-850 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-zinc-600 transition-colors" {...field} />
                   </div>
                 </FormControl>
-                <FormMessage className="text-[11px]" />
+                <FormMessage className="text-[11px] font-mono text-red-500" />
               </FormItem>
             )}
           />
@@ -146,14 +143,14 @@ export const RegisterForm: React.FC = () => {
               name="email"
               render={({ field }) => (
                 <FormItem className="space-y-1">
-                  <FormLabel className="text-xs font-semibold text-slate-700">Email</FormLabel>
+                  <FormLabel className="text-xs font-semibold text-slate-700 dark:text-slate-350">Email</FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                      <Input placeholder="admin@vi-du.com" className="pl-9 h-9 border-slate-200 focus:border-blue-500 focus:ring-0 rounded-[4px] text-sm transition-colors" {...field} />
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-450 dark:text-zinc-600" />
+                      <Input placeholder="admin@vi-du.com" className="pl-9 h-9 border-slate-200 dark:border-white/[0.06] bg-slate-50/50 dark:bg-[#111113]/40 focus:border-blue-500 dark:focus:border-blue-600 focus:ring-0 rounded-[2px] text-sm text-slate-850 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-zinc-600 transition-colors" {...field} />
                     </div>
                   </FormControl>
-                  <FormMessage className="text-[11px]" />
+                  <FormMessage className="text-[11px] font-mono text-red-500" />
                 </FormItem>
               )}
             />
@@ -163,14 +160,14 @@ export const RegisterForm: React.FC = () => {
               name="number"
               render={({ field }) => (
                 <FormItem className="space-y-1">
-                  <FormLabel className="text-xs font-semibold text-slate-700">Số điện thoại</FormLabel>
+                  <FormLabel className="text-xs font-semibold text-slate-700 dark:text-slate-350">Số điện thoại</FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                      <Input placeholder="0912345678" className="pl-9 h-9 border-slate-200 focus:border-blue-500 focus:ring-0 rounded-[4px] text-sm transition-colors" {...field} />
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-450 dark:text-zinc-600" />
+                      <Input placeholder="0912345678" className="pl-9 h-9 border-slate-200 dark:border-white/[0.06] bg-slate-50/50 dark:bg-[#111113]/40 focus:border-blue-500 dark:focus:border-blue-600 focus:ring-0 rounded-[2px] text-sm text-slate-850 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-zinc-600 transition-colors" {...field} />
                     </div>
                   </FormControl>
-                  <FormMessage className="text-[11px]" />
+                  <FormMessage className="text-[11px] font-mono text-red-500" />
                 </FormItem>
               )}
             />
@@ -181,18 +178,18 @@ export const RegisterForm: React.FC = () => {
             name="gender"
             render={({ field }) => (
               <FormItem className="space-y-1">
-                <FormLabel className="text-xs font-semibold text-slate-700">Giới tính</FormLabel>
+                <FormLabel className="text-xs font-semibold text-slate-700 dark:text-slate-350">Giới tính</FormLabel>
                 <FormControl>
                   <select
-                    className="flex h-9 w-full rounded-[4px] border border-slate-200 bg-white px-3 py-1.5 text-sm ring-offset-background focus:outline-none focus:ring-0 focus:border-blue-500 transition-colors appearance-none cursor-pointer text-slate-700"
+                    className="flex h-9 w-full rounded-[2px] border border-slate-200 dark:border-white/[0.06] bg-slate-50/50 dark:bg-[#111113]/40 text-slate-850 dark:text-slate-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-0 focus:border-blue-500 dark:focus:border-blue-600 transition-colors appearance-none cursor-pointer"
                     {...field}
                   >
-                    <option value="male">Nam</option>
-                    <option value="female">Nữ</option>
-                    <option value="other">Khác</option>
+                    <option value="male" className="bg-white dark:bg-[#19191B]">Nam</option>
+                    <option value="female" className="bg-white dark:bg-[#19191B]">Nữ</option>
+                    <option value="other" className="bg-white dark:bg-[#19191B]">Khác</option>
                   </select>
                 </FormControl>
-                <FormMessage className="text-[11px]" />
+                <FormMessage className="text-[11px] font-mono text-red-500" />
               </FormItem>
             )}
           />
@@ -202,27 +199,27 @@ export const RegisterForm: React.FC = () => {
             name="password"
             render={({ field }) => (
               <FormItem className="space-y-1">
-                <FormLabel className="text-xs font-semibold text-slate-700">Mật khẩu</FormLabel>
+                <FormLabel className="text-xs font-semibold text-slate-700 dark:text-slate-350">Mật khẩu</FormLabel>
                 <FormControl>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-450 dark:text-zinc-600" />
                     <Input
                       type={showPassword ? 'text' : 'password'}
                       placeholder="••••••••"
-                      className="pl-9 pr-9 h-9 border-slate-200 focus:border-blue-500 focus:ring-0 rounded-[4px] text-sm transition-colors"
+                      className="pl-9 pr-9 h-9 border-slate-200 dark:border-white/[0.06] bg-slate-50/50 dark:bg-[#111113]/40 focus:border-blue-500 dark:focus:border-blue-600 focus:ring-0 rounded-[2px] text-sm text-slate-850 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-zinc-600 transition-colors"
                       {...field}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 focus:outline-none transition-colors cursor-pointer"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-450 dark:text-zinc-550 hover:text-slate-700 dark:hover:text-slate-300 focus:outline-none transition-colors cursor-pointer"
                     >
                       {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                     </button>
                   </div>
                 </FormControl>
                 <PasswordStrengthMeter password={passwordValue} />
-                <FormMessage className="text-[11px]" />
+                <FormMessage className="text-[11px] font-mono text-red-500" />
               </FormItem>
             )}
           />
@@ -232,14 +229,14 @@ export const RegisterForm: React.FC = () => {
             name="confirmPassword"
             render={({ field }) => (
               <FormItem className="space-y-1">
-                <FormLabel className="text-xs font-semibold text-slate-700">Xác nhận mật khẩu</FormLabel>
+                <FormLabel className="text-xs font-semibold text-slate-700 dark:text-slate-350">Xác nhận mật khẩu</FormLabel>
                 <FormControl>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                    <Input type="password" placeholder="••••••••" className="pl-9 h-9 border-slate-200 focus:border-blue-500 focus:ring-0 rounded-[4px] text-sm transition-colors" {...field} />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-450 dark:text-zinc-600" />
+                    <Input type="password" placeholder="••••••••" className="pl-9 h-9 border-slate-200 dark:border-white/[0.06] bg-slate-50/50 dark:bg-[#111113]/40 focus:border-blue-500 dark:focus:border-blue-600 focus:ring-0 rounded-[2px] text-sm text-slate-850 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-zinc-600 transition-colors" {...field} />
                   </div>
                 </FormControl>
-                <FormMessage className="text-[11px]" />
+                <FormMessage className="text-[11px] font-mono text-red-500" />
               </FormItem>
             )}
           />
@@ -253,19 +250,19 @@ export const RegisterForm: React.FC = () => {
                   <Checkbox
                     checked={field.value}
                     onCheckedChange={field.onChange}
-                    className="h-3.5 w-3.5 rounded-[2px] border-slate-300 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                    className="h-3.5 w-3.5 rounded-[2px] border-slate-300 dark:border-white/[0.12] data-[state=checked]:bg-blue-600 dark:data-[state=checked]:bg-blue-700 data-[state=checked]:border-blue-600 dark:data-[state=checked]:border-blue-700"
                   />
                 </FormControl>
-                <div className="leading-none">
-                  <FormLabel className="text-xs font-medium text-slate-500 cursor-pointer">
-                    Tôi đồng ý với các <a href="/terms" className="text-blue-600 font-semibold hover:underline">Điều khoản Dịch vụ</a> và <a href="/privacy" className="text-blue-600 font-semibold hover:underline">Chính sách Bảo mật</a>
+                <div className="leading-none text-left">
+                  <FormLabel className="text-xs font-medium text-slate-500 dark:text-zinc-500 cursor-pointer">
+                    Tôi đồng ý với các <a href="/terms" className="text-blue-600 dark:text-blue-400 font-semibold hover:underline">Điều khoản Dịch vụ</a> và <a href="/privacy" className="text-blue-600 dark:text-blue-400 font-semibold hover:underline">Chính sách Bảo mật</a>
                   </FormLabel>
                 </div>
               </FormItem>
             )}
           />
 
-          <Button type="submit" disabled={isSpinning} className="w-full bg-blue-600 hover:bg-blue-700 text-white h-9 text-sm font-semibold rounded-[4px] transition-colors duration-150 mt-1">
+          <Button type="submit" disabled={isSpinning} className="w-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white h-9 text-xs font-mono font-bold uppercase tracking-wider rounded-[2px] transition-colors duration-155 mt-2 shadow-none">
             {isSpinning ? (
               <>
                 <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />

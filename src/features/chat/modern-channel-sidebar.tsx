@@ -109,17 +109,17 @@ const CreateChannelModal: React.FC<CreateChannelModalProps> = ({ open, onClose, 
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) { setName(''); onClose(); } }}>
-      <DialogContent className="max-w-md rounded-[6px]">
-        <DialogHeader>
-          <DialogTitle className="text-sm font-bold">Tạo kênh mới</DialogTitle>
-          <DialogDescription className="text-xs text-muted-foreground">
+      <DialogContent className="max-w-md rounded-[2px] border border-slate-200/80 dark:border-white/[0.06] bg-white dark:bg-[#19191B]">
+        <DialogHeader className="font-mono">
+          <DialogTitle className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">Tạo kênh mới</DialogTitle>
+          <DialogDescription className="text-xs text-slate-500 dark:text-zinc-400">
             Kênh là nơi nhóm thảo luận xung quanh một chủ đề cụ thể.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Channel type selector */}
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Loại kênh</label>
+          <div className="space-y-1.5 font-mono">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Loại kênh</label>
             <div className="flex gap-1.5">
               {CHANNEL_TYPES.map((t) => (
                 <button
@@ -127,10 +127,10 @@ const CreateChannelModal: React.FC<CreateChannelModalProps> = ({ open, onClose, 
                   type="button"
                   onClick={() => setType(t.value)}
                   className={`
-                    flex-1 flex items-center justify-center gap-1.5 py-2 rounded-[4px] border text-xs font-semibold transition-all duration-150
+                    flex-1 flex items-center justify-center gap-1.5 py-2 rounded-[2px] border text-xs font-bold transition-all duration-150
                     ${type === t.value
-                      ? 'border-blue-600 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300'
-                      : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:border-slate-300'
+                      ? 'border-blue-600 bg-blue-50/50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-300 dark:border-blue-900/30'
+                      : 'border-slate-200 dark:border-white/[0.06] text-slate-500 dark:text-zinc-400 hover:border-slate-350 dark:hover:border-white/[0.1] bg-transparent'
                     }
                   `}
                 >
@@ -139,7 +139,7 @@ const CreateChannelModal: React.FC<CreateChannelModalProps> = ({ open, onClose, 
                 </button>
               ))}
             </div>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-[10px] text-slate-450 dark:text-zinc-550 leading-relaxed">
               {type === 'PUBLIC' && 'Mọi thành viên workspace có thể tìm thấy và tham gia.'}
               {type === 'PRIVATE' && 'Chỉ người được mời mới thấy và tham gia kênh này.'}
               {type === 'ANNOUNCEMENT' && 'Chỉ Owner mới đăng được. Dùng cho thông báo chính thức.'}
@@ -147,15 +147,15 @@ const CreateChannelModal: React.FC<CreateChannelModalProps> = ({ open, onClose, 
           </div>
 
           {/* Channel name */}
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Tên kênh</label>
+          <div className="space-y-1.5 font-mono">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Tên kênh</label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">#</span>
               <Input
                 placeholder="ví-dụ-tên-kênh"
                 value={name}
                 onChange={(e) => setName(e.target.value.toLowerCase().replace(/\s+/g, '-'))}
-                className="pl-7 h-8 text-sm rounded-[4px]"
+                className="pl-7 h-8 text-xs rounded-[2px] font-mono border-slate-200/80 dark:border-white/[0.06] bg-transparent text-slate-900 dark:text-slate-100"
                 autoFocus
                 required
               />
@@ -163,19 +163,19 @@ const CreateChannelModal: React.FC<CreateChannelModalProps> = ({ open, onClose, 
           </div>
 
           {/* Description */}
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Mô tả (tùy chọn)</label>
+          <div className="space-y-1.5 font-mono">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Mô tả (tùy chọn)</label>
             <Input
               placeholder="Kênh này dùng để..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="h-8 text-sm rounded-[4px]"
+              className="h-8 text-xs rounded-[2px] font-mono border-slate-200/80 dark:border-white/[0.06] bg-transparent text-slate-900 dark:text-slate-100"
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-1">
-            <Button type="button" variant="outline" size="sm" onClick={onClose} className="h-8 text-xs rounded-[4px]">Hủy</Button>
-            <Button type="submit" size="sm" disabled={isLoading || !name.trim()} className="h-8 text-xs gap-1.5 rounded-[4px]">
+          <div className="flex justify-end gap-2 pt-1 font-mono">
+            <Button type="button" variant="outline" size="sm" onClick={onClose} className="h-8 text-xs rounded-[2px] border-slate-250 dark:border-white/[0.06] hover:bg-slate-50 dark:hover:bg-white/[0.02]">Hủy</Button>
+            <Button type="submit" size="sm" disabled={isLoading || !name.trim()} className="h-8 text-xs gap-1.5 rounded-[2px] bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-slate-200 dark:text-slate-900 font-bold border border-transparent shadow-none">
               {isLoading ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
               Tạo kênh
             </Button>
@@ -214,55 +214,55 @@ const BrowseChannelsModal: React.FC<BrowseChannelsModalProps> = ({ open, onClose
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-lg rounded-[6px]">
-        <DialogHeader>
-          <DialogTitle className="text-sm font-bold">Khám phá kênh</DialogTitle>
-          <DialogDescription className="text-xs text-muted-foreground">
+      <DialogContent className="max-w-lg rounded-[2px] border border-slate-200/80 dark:border-white/[0.06] bg-white dark:bg-[#19191B]">
+        <DialogHeader className="font-mono">
+          <DialogTitle className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">Khám phá kênh</DialogTitle>
+          <DialogDescription className="text-xs text-slate-500 dark:text-zinc-400">
             Tìm và tham gia các kênh công khai trong workspace này.
           </DialogDescription>
         </DialogHeader>
         <div className="relative mb-3">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-zinc-500" />
           <Input
             placeholder="Tìm kênh..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-8 h-8 text-sm rounded-[4px]"
+            className="pl-8 h-8 text-xs rounded-[2px] font-mono border-slate-200/80 dark:border-white/[0.06] bg-transparent text-slate-900 dark:text-slate-100"
             autoFocus
           />
           {search && (
-            <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer">
+            <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:text-zinc-500 dark:hover:text-zinc-300 cursor-pointer">
               <X className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
 
-        <div className="overflow-y-auto max-h-72 space-y-0.5">
-          {isLoading && <p className="text-center text-xs text-muted-foreground py-6">Đang tải...</p>}
+        <div className="overflow-y-auto max-h-72 space-y-0.5 no-scrollbar">
+          {isLoading && <p className="text-center text-xs text-slate-400 py-6 font-mono">Đang tải...</p>}
           {!isLoading && (!data?.channels || data.channels.length === 0) && (
-            <p className="text-center text-xs text-muted-foreground py-6">Không tìm thấy kênh nào.</p>
+            <p className="text-center text-xs text-slate-400 py-6 font-mono">Không tìm thấy kênh nào.</p>
           )}
           {data?.channels?.map((ch: any) => {
             const isMember = ch.isJoined ?? myChannelIds.has(ch.id);
             return (
-              <div key={ch.id} className="flex items-center justify-between gap-3 p-2 rounded-[4px] hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors cursor-pointer">
+              <div key={ch.id} className="flex items-center justify-between gap-3 p-2 rounded-[2px] hover:bg-slate-50/50 dark:hover:bg-white/[0.01] transition-colors cursor-pointer border border-transparent hover:border-slate-100 dark:hover:border-white/[0.02]">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-7 h-7 rounded-[4px] bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
-                    <Hash className="w-3.5 h-3.5 text-slate-500" />
+                  <div className="w-7 h-7 rounded-[2px] bg-slate-100 dark:bg-zinc-800/40 border border-slate-200/50 dark:border-white/[0.04] flex items-center justify-center shrink-0">
+                    <Hash className="w-3.5 h-3.5 text-slate-550 dark:text-zinc-450" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs font-semibold truncate">#{ch.name}</p>
-                    {ch.description && <p className="text-[11px] text-muted-foreground truncate">{ch.description}</p>}
-                    <p className="text-[10px] text-muted-foreground">{ch.memberCount ?? ch._count?.members ?? 0} thành viên</p>
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">#{ch.name}</p>
+                    {ch.description && <p className="text-[10px] font-mono text-slate-450 dark:text-zinc-500 truncate">{ch.description}</p>}
+                    <p className="text-[9px] font-mono text-slate-400 dark:text-zinc-550">{ch.memberCount ?? ch._count?.members ?? 0} thành viên</p>
                   </div>
                 </div>
                 {isMember ? (
-                  <Badge variant="secondary" className="text-[10px] shrink-0 rounded-[4px]">Đã tham gia</Badge>
+                  <Badge variant="secondary" className="text-[9px] font-mono shrink-0 rounded-[2px] bg-slate-100 dark:bg-zinc-800 text-slate-650 dark:text-zinc-350 border border-slate-200/60 dark:border-white/[0.04]">Đã tham gia</Badge>
                 ) : (
                   <Button
                     size="sm"
                     variant="outline"
-                    className="shrink-0 h-6 text-[11px] rounded-[4px] px-2"
+                    className="shrink-0 h-6 text-[10px] font-mono rounded-[2px] px-2.5 border-slate-250 dark:border-white/[0.06] hover:bg-slate-50 dark:hover:bg-white/[0.02]"
                     onClick={() => handleJoin(ch.id, ch.name)}
                     disabled={joining}
                   >
@@ -273,7 +273,7 @@ const BrowseChannelsModal: React.FC<BrowseChannelsModalProps> = ({ open, onClose
             );
           })}
         </div>
-        <p className="text-[10px] text-center text-muted-foreground pt-1">
+        <p className="text-[9px] font-mono text-center text-slate-400 dark:text-zinc-500 pt-2 border-t border-slate-100 dark:border-white/[0.04] mt-2">
           Hiển thị {data?.channels?.length ?? 0} / {data?.total ?? 0} kênh
         </p>
       </DialogContent>
@@ -297,13 +297,13 @@ const ChannelRow: React.FC<ChannelRowProps> = ({ channel, active, unreadCount, o
   return (
     <div
       className={`
-        group flex items-center justify-between px-1.5 py-[5px] rounded-[4px] cursor-pointer
-        transition-colors duration-100 text-xs select-none
+        group flex items-center justify-between px-1.5 py-[5px] rounded-[2px] border border-transparent cursor-pointer
+        transition-all duration-100 text-xs select-none
         ${active
-          ? 'bg-blue-600/15 text-blue-700 dark:text-blue-300'
+          ? 'bg-blue-600/15 border-blue-200/10 text-blue-700 dark:text-blue-300'
           : hasUnread
-            ? 'text-slate-900 dark:text-slate-100 hover:bg-slate-200/60 dark:hover:bg-slate-700/50'
-            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200/60 dark:hover:bg-slate-700/50 hover:text-slate-900 dark:hover:text-slate-200'
+            ? 'text-slate-900 dark:text-slate-100 hover:bg-slate-200/50 dark:hover:bg-white/[0.02]'
+            : 'text-slate-650 dark:text-zinc-400 hover:bg-slate-200/50 dark:hover:bg-white/[0.02] hover:text-slate-900 dark:hover:text-slate-200'
         }
       `}
     >
@@ -311,13 +311,13 @@ const ChannelRow: React.FC<ChannelRowProps> = ({ channel, active, unreadCount, o
         <ChannelIcon
           size={14}
           strokeWidth={1.5}
-          className={`shrink-0 ${active ? 'text-blue-600 dark:text-blue-400' : hasUnread ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400'}`}
+          className={`shrink-0 ${active ? 'text-blue-600 dark:text-blue-400' : hasUnread ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400 dark:text-zinc-500'}`}
         />
-        <span className={`truncate ${active || hasUnread ? 'font-semibold' : 'font-normal'}`}>
+        <span className={`truncate ${active || hasUnread ? 'font-bold' : 'font-medium'}`}>
           {channel.name}
         </span>
         {hasUnread && (
-          <span className="ml-auto bg-blue-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-none shrink-0">
+          <span className="ml-auto bg-blue-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-[2px] leading-none shrink-0 font-mono">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
@@ -325,16 +325,16 @@ const ChannelRow: React.FC<ChannelRowProps> = ({ channel, active, unreadCount, o
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="opacity-0 group-hover:opacity-100 h-5 w-5 flex items-center justify-center rounded-[4px] hover:bg-slate-300/60 dark:hover:bg-slate-700 transition-all cursor-pointer ml-0.5 shrink-0">
-            <MoreHorizontal size={12} />
+          <button className="opacity-0 group-hover:opacity-100 h-5 w-5 flex items-center justify-center rounded-[2px] hover:bg-slate-300/50 dark:hover:bg-white/[0.03] transition-all cursor-pointer ml-0.5 shrink-0">
+            <MoreHorizontal size={12} className="text-slate-400 dark:text-zinc-500" />
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-40 text-xs rounded-[6px] shadow-xl p-1">
-          <DropdownMenuItem className="gap-2 cursor-pointer rounded-[4px] text-xs">
-            <BellOff size={13} /> Tắt thông báo
+        <DropdownMenuContent align="end" className="w-40 p-1.5 rounded-[2px] shadow-2xl bg-white dark:bg-[#19191B] border border-slate-200/80 dark:border-white/[0.06] font-mono text-[11px]">
+          <DropdownMenuItem className="gap-2 cursor-pointer rounded-[2px] py-1.5">
+            <BellOff size={13} className="text-slate-400 dark:text-zinc-550" /> Tắt thông báo
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={onLeave} className="gap-2 text-rose-600 focus:text-rose-600 cursor-pointer rounded-[4px] text-xs">
+          <DropdownMenuSeparator className="dark:bg-white/[0.06]" />
+          <DropdownMenuItem onClick={onLeave} className="gap-2 text-rose-600 focus:text-rose-750 cursor-pointer rounded-[2px] py-1.5">
             <LogOut size={13} /> Rời kênh
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -356,14 +356,14 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({ label, expanded, onToggle
   <div className="flex items-center gap-0.5 px-1 mb-0.5 h-6">
     <button
       onClick={onToggle}
-      className="flex items-center gap-1 flex-1 min-w-0 text-[11px] font-semibold uppercase tracking-[0.05em] text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer"
+      className="flex items-center gap-1 flex-1 min-w-0 text-[10px] font-bold font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer"
     >
       <span className="w-3 h-3 flex items-center justify-center shrink-0">
-        {expanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
+        {expanded ? <ChevronDown size={11} className="text-slate-400 dark:text-zinc-500" /> : <ChevronRight size={11} className="text-slate-400 dark:text-zinc-500" />}
       </span>
       <span className="truncate">{label}</span>
       {count !== undefined && (
-        <span className="text-[9px] font-mono text-slate-400 dark:text-slate-600 shrink-0">({count})</span>
+        <span className="text-[9px] font-mono text-slate-400 dark:text-zinc-650 shrink-0">({count})</span>
       )}
     </button>
     {actions}
@@ -383,16 +383,18 @@ const IconBtn: React.FC<IconBtnProps> = ({ icon, label, onClick, variant = 'defa
     onClick={onClick}
     title={label}
     className={`
-      h-5 w-5 flex items-center justify-center rounded-[4px] transition-colors duration-100 shrink-0 cursor-pointer
+      h-5 w-5 flex items-center justify-center rounded-[2px] transition-colors duration-100 shrink-0 cursor-pointer
       ${variant === 'primary'
-        ? 'text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-950'
-        : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/80 dark:hover:bg-slate-700'
+        ? 'text-blue-600 hover:bg-blue-100/50 dark:hover:bg-blue-950/20'
+        : 'text-slate-400 hover:text-slate-755 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/[0.02]'
       }
     `}
   >
     {icon}
   </button>
 );
+
+// ─── Main Sidebar ─────────────────────────────────────────────────────────────
 
 // ─── Main Sidebar ─────────────────────────────────────────────────────────────
 export const ModernChannelSidebar: React.FC = () => {
