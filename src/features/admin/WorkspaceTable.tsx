@@ -59,6 +59,15 @@ import {
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { getAvatarUrl } from '@/src/utils/image-utils';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+
+const formatDate = (dateValue: string | Date | undefined | null): string => {
+    if (!dateValue) return '--/--/----';
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return '--/--/----';
+    return format(date, 'dd/MM/yyyy');
+};
 
 export function WorkspaceTable() {
     const [searchQuery, setSearchQuery] = useState('');
@@ -211,7 +220,7 @@ export function WorkspaceTable() {
                                     <TableCell className="py-2 px-3">
                                         <div className="flex items-center gap-2.5">
                                             <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                                                <Building2 className="w-3.5 h-3.5 text-primary" />
+                                                <img className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0" src={getAvatarUrl(ws.icon)} alt={ws.name} />
                                             </div>
                                             <div className="flex flex-col min-w-0">
                                                 <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate max-w-[200px]">
@@ -241,7 +250,7 @@ export function WorkspaceTable() {
                                         </div>
                                     </TableCell>
                                     <TableCell className="py-2 px-3 text-xs text-muted-foreground">
-                                        {format(new Date(ws.updatedAt), 'dd/MM/yyyy')}
+                                        {formatDate(ws.updatedAt)}
                                     </TableCell>
                                     <TableCell className="py-2 px-3 text-right">
                                         <DropdownMenu>

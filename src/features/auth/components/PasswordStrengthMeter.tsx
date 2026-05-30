@@ -19,17 +19,17 @@ export const PasswordStrengthMeter: React.FC<PasswordStrengthMeterProps> = ({ pa
   
   const labels = ['Không có', 'Yếu', 'Trung bình', 'Mạnh'];
   const colors = [
-    'bg-[#e5e7eb]',
-    'bg-[#ef4444]',
-    'bg-[#f59e0b]',
-    'bg-primary'
+    'bg-slate-200 dark:bg-zinc-800',
+    'bg-red-500 dark:bg-red-600',
+    'bg-amber-500 dark:bg-amber-600',
+    'bg-blue-600 dark:bg-blue-700'
   ];
 
   const textColors = [
-    'text-[#94a3b8]',
-    'text-[#ef4444]',
-    'text-[#f59e0b]',
-    'text-primary'
+    'text-slate-400 dark:text-zinc-600',
+    'text-red-500 dark:text-red-400',
+    'text-amber-500 dark:text-amber-400',
+    'text-blue-600 dark:text-blue-450'
   ];
 
   return (
@@ -39,14 +39,14 @@ export const PasswordStrengthMeter: React.FC<PasswordStrengthMeterProps> = ({ pa
           <div
             key={step}
             className={cn(
-                "flex-1 rounded-full transition-all duration-300",
-                step <= strength ? colors[strength] : "bg-[#f1f5f9]"
+                "flex-1 rounded-[1px] transition-all duration-350",
+                step <= strength ? colors[strength] : "bg-slate-100 dark:bg-zinc-850"
             )}
           />
         ))}
       </div>
-      <div className="flex justify-between items-center text-[11px] font-bold uppercase tracking-wider">
-        <span className="text-[#94a3b8]">Độ mạnh mật khẩu</span>
+      <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider font-mono">
+        <span className="text-slate-400 dark:text-zinc-500">Độ mạnh mật khẩu</span>
         <span className={cn("transition-colors", textColors[strength])}>
           {labels[strength]}
         </span>
@@ -57,14 +57,6 @@ export const PasswordStrengthMeter: React.FC<PasswordStrengthMeterProps> = ({ pa
             met={password.length >= 6} 
             label="Tối thiểu 6 ký tự" 
         />
-        {/* <PasswordRequirement 
-            met={/[0-9]/.test(password)} 
-            label="Bao gồm ít nhất 1 chữ số" 
-        />
-        <PasswordRequirement 
-            met={/[^A-Za-z0-9]/.test(password)} 
-            label="Bao gồm ít nhất 1 ký tự đặc biệt" 
-        /> */}
       </div>
     </div>
   );
@@ -73,12 +65,12 @@ export const PasswordStrengthMeter: React.FC<PasswordStrengthMeterProps> = ({ pa
 const PasswordRequirement = ({ met, label }: { met: boolean; label: string }) => (
     <div className={cn(
         "flex items-center gap-2 text-xs transition-colors",
-        met ? "text-primary font-medium" : "text-[#94a3b8]"
+        met ? "text-blue-600 dark:text-blue-400 font-semibold" : "text-slate-400 dark:text-zinc-500"
     )}>
         <div className={cn(
-            "h-1 w-1 rounded-full",
-            met ? "bg-primary" : "bg-[#e5e7eb]"
+            "h-1.5 w-1.5 rounded-[1px] transition-colors",
+            met ? "bg-blue-600 dark:bg-blue-400" : "bg-slate-200 dark:bg-zinc-800"
         )} />
-        {label}
+        <span className="font-mono text-[11px]">{label}</span>
     </div>
 );

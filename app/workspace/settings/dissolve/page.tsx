@@ -52,14 +52,14 @@ export default function DissolveWorkspace() {
     }
   };
 
-  const ImpactItem = ({ icon: Icon, label, value, color }: any) => (
-    <div className="flex items-center gap-3 p-3 rounded-[4px] bg-slate-50 border border-slate-100">
-      <div className="p-1.5 rounded-[4px] bg-slate-200 text-slate-700">
-        <Icon size={16} />
+  const ImpactItem = ({ icon: Icon, label, value }: any) => (
+    <div className="flex items-center gap-3 p-3 rounded-[2px] bg-slate-50 dark:bg-zinc-900/30 border border-slate-100 dark:border-white/[0.04]">
+      <div className="p-1.5 rounded-[2px] bg-slate-100 dark:bg-zinc-800 text-slate-650 dark:text-zinc-350 border border-slate-200/50 dark:border-white/[0.04]">
+        <Icon size={15} />
       </div>
       <div>
-        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{label}</p>
-        <p className="text-base font-extrabold text-slate-900">{value}</p>
+        <p className="text-[9px] font-bold font-mono text-slate-400 dark:text-zinc-550 uppercase tracking-wider">{label}</p>
+        <p className="text-base font-black font-mono text-slate-900 dark:text-slate-100">{value}</p>
       </div>
     </div>
   );
@@ -70,24 +70,24 @@ export default function DissolveWorkspace() {
         <div className="flex items-center gap-3">
           <Link 
             href="/workspace/settings" 
-            className="h-7 w-7 rounded-[4px] bg-white flex items-center justify-center text-slate-500 hover:text-slate-900 border border-slate-200/80 transition-colors"
+            className="h-7 w-7 rounded-[2px] bg-white dark:bg-zinc-900 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 border border-slate-200/80 dark:border-white/[0.06] transition-colors"
           >
-            <ChevronLeft size={16} />
+            <ChevronLeft size={15} />
           </Link>
-          <h1 className="text-lg font-bold text-red-600">Giải tán Workspace</h1>
+          <h1 className="text-lg font-bold font-mono uppercase tracking-tight text-red-600 dark:text-red-500">Giải tán Workspace</h1>
         </div>
 
-        <Card className="border border-slate-200/80 bg-white shadow-sm overflow-hidden relative rounded-[4px]">
-          <div className="absolute top-0 left-0 w-full h-1 bg-red-600" />
+        <Card className="border border-slate-200/80 dark:border-white/[0.06] bg-white dark:bg-[#19191B] shadow-sm overflow-hidden relative rounded-[2px]">
+          <div className="absolute top-0 left-0 w-full h-1 bg-red-650 dark:bg-red-500" />
           <CardContent className="p-6 space-y-6">
             <div className="flex flex-col items-center text-center space-y-3">
-              <div className="p-3 rounded-[4px] bg-red-100 text-red-600">
-                <AlertTriangle size={32} />
+              <div className="p-3 rounded-[2px] bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-900/30">
+                <AlertTriangle size={30} />
               </div>
               <div className="space-y-1">
-                <h2 className="text-sm font-bold text-slate-900">Hành động này là vĩnh viễn!</h2>
-                <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
-                  Khi bạn giải tán Workspace <span className="font-bold text-red-600">"{workspaceName}"</span>, toàn bộ dữ liệu và quyền truy cập sẽ bị hủy bỏ.
+                <h2 className="text-sm font-bold font-mono uppercase tracking-wide text-slate-900 dark:text-slate-100">Hành động này là vĩnh viễn!</h2>
+                <p className="text-xs font-mono text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
+                  Khi bạn giải tán Workspace <span className="font-bold text-red-600 dark:text-red-400 font-mono">"{workspaceName}"</span>, toàn bộ dữ liệu và quyền truy cập sẽ bị hủy bỏ.
                 </p>
               </div>
             </div>
@@ -96,56 +96,52 @@ export default function DissolveWorkspace() {
               <ImpactItem 
                 icon={Users} 
                 label="Thành viên sẽ mất quyền" 
-                value={statsLoading ? "Đang tải..." : (stats?.memberCount ?? "0")} 
-                color="bg-blue-600" 
+                value={statsLoading ? "..." : (stats?.memberCount ?? "0")} 
               />
               <ImpactItem 
                 icon={MessageSquare} 
                 label="Nhóm chat sẽ bị xóa" 
-                value={statsLoading ? "Đang tải..." : (stats?.chatCount ?? "0")} 
-                color="bg-indigo-600" 
+                value={statsLoading ? "..." : (stats?.chatCount ?? "0")} 
               />
               <ImpactItem 
                 icon={FileText} 
                 label="Dung lượng giải phóng" 
-                value={statsLoading ? "Đang tải..." : (stats?.storageSize ?? "0 Bytes")} 
-                color="bg-emerald-600" 
+                value={statsLoading ? "..." : (stats?.storageSize ?? "0 Bytes")} 
               />
               <ImpactItem 
                 icon={History} 
                 label="Tin nhắn sẽ bị ẩn" 
-                value={statsLoading ? "Đang tải..." : `${(stats?.messageCount ?? 0).toLocaleString()} tin nhắn`} 
-                color="bg-amber-600" 
+                value={statsLoading ? "..." : `${(stats?.messageCount ?? 0).toLocaleString()} tin`} 
               />
             </div>
 
-            <div className="p-4 rounded-[4px] bg-red-50/60 border border-red-100/80 space-y-3">
+            <div className="p-4 rounded-[2px] bg-red-50/20 dark:bg-red-950/10 border border-red-200/40 dark:border-red-900/20 space-y-3">
               <div className="flex gap-2.5">
-                <ShieldAlert className="text-red-600 shrink-0 mt-0.5" size={16} />
-                <p className="text-[11px] text-red-800 font-semibold leading-normal">
+                <ShieldAlert className="text-red-600 dark:text-red-400 shrink-0 mt-0.5" size={16} />
+                <p className="text-[10px] font-mono text-red-800 dark:text-red-400 font-semibold leading-relaxed">
                   Để xác nhận giải tán, vui lòng nhập chính xác tên của Workspace này vào ô bên dưới. 
-                  Hãy đảm bảo bạn đã sao lưu tất cả dữ liệu quan trọng.
+                  Hãy đảm bảo bạn đã sao lưu tất cả dữ liệu quan trọng trước khi tiếp tục.
                 </p>
               </div>
               <Input 
                 value={confirmName}
                 onChange={(e) => setConfirmName(e.target.value)}
                 placeholder={workspaceName}
-                className="h-9 bg-white text-center font-bold text-sm border-red-200 focus:border-red-600 focus:ring-0 rounded-[4px]"
+                className="h-9 bg-white dark:bg-zinc-900 text-center font-bold font-mono text-sm border-red-200 dark:border-red-900/30 focus:border-red-600 dark:focus:border-red-500 focus:ring-0 rounded-[2px] text-red-600 dark:text-red-400 placeholder:text-red-200/60"
               />
             </div>
 
             <div className="flex gap-3">
               <Button 
                 variant="outline" 
-                className="flex-1 h-9 text-xs font-semibold text-slate-700 rounded-[4px] border-slate-200"
+                className="flex-1 h-9 text-xs font-semibold font-mono text-slate-700 dark:text-zinc-300 rounded-[2px] border-slate-200 dark:border-white/[0.08] shadow-none"
                 asChild
               >
-                <Link href="/workspace/settings">Hủy bỏ, quay lại</Link>
+                <Link href="/workspace/settings">HỦY BỎ</Link>
               </Button>
               <Button 
                 variant="destructive" 
-                className="flex-[2] h-9 text-xs font-semibold text-white rounded-[4px] bg-red-600 hover:bg-red-700 transition-colors"
+                className="flex-[2] h-9 text-xs font-semibold font-mono text-white rounded-[2px] bg-red-650 hover:bg-red-700 dark:bg-red-950/50 dark:hover:bg-red-900/50 dark:border dark:border-red-900/40 transition-colors shadow-none"
                 disabled={confirmName !== workspaceName || isLoading}
                 onClick={handleDissolve}
               >
@@ -157,7 +153,7 @@ export default function DissolveWorkspace() {
         </Card>
 
         <div className="text-center">
-          <p className="text-[10px] text-slate-400 font-medium">
+          <p className="text-[10px] font-mono text-slate-400 dark:text-zinc-550">
             Hành động này chỉ dành cho Chủ sở hữu Workspace (Owner).
           </p>
         </div>

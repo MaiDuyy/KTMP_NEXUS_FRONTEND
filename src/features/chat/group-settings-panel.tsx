@@ -163,6 +163,60 @@ export default function GroupSettingsPanel({
         if (chat?.name) setNewGroupName(chat.name);
     }, [chat]);
 
+    // Listen to real-time events (join requests, membership changes, etc.)
+    useEffect(() => {
+        const handleJoinRequestEvent = (e: any) => {
+            const data = e.detail;
+            if (data.chatId === chatId) {
+                console.log("[GroupSettingsPanel] 🔄 Join request event received, refetching chat details...");
+                refetch();
+            }
+        };
+
+        const handleMemberUpdatedEvent = (e: any) => {
+            const data = e.detail;
+            if (data.chatId === chatId) {
+                console.log("[GroupSettingsPanel] 👥 Member updated event received, refetching...");
+                refetch();
+                
+                // Show premium Toast notifications (Sonner)
+                if (data.action === "joined") {
+                    toast.success("Thành viên mới vừa gia nhập nhóm! 🎉", {
+                        description: "Danh sách và số lượng thành viên đã được cập nhật tự động.",
+                        duration: 4000,
+                    });
+                } else if (data.action === "removed") {
+                    toast.info("Một thành viên đã rời hoặc bị xóa khỏi nhóm. 🚪", {
+                        description: "Danh sách thành viên đã được cập nhật.",
+                        duration: 4000,
+                    });
+                }
+            }
+        };
+
+        const handleGeneralUpdateEvent = (e: any) => {
+            const data = e.detail;
+            if (data.chatId === chatId) {
+                console.log("[GroupSettingsPanel] 🔄 Chat updated/role updated event received, refetching...");
+                refetch();
+            }
+        };
+
+        window.addEventListener("chat:join_request:new", handleJoinRequestEvent);
+        window.addEventListener("chat:join_request:updated", handleJoinRequestEvent);
+        window.addEventListener("chat:member_updated", handleMemberUpdatedEvent);
+        window.addEventListener("chat:role_updated", handleGeneralUpdateEvent);
+        window.addEventListener("chat:updated", handleGeneralUpdateEvent);
+
+        return () => {
+            window.removeEventListener("chat:join_request:new", handleJoinRequestEvent);
+            window.removeEventListener("chat:join_request:updated", handleJoinRequestEvent);
+            window.removeEventListener("chat:member_updated", handleMemberUpdatedEvent);
+            window.removeEventListener("chat:role_updated", handleGeneralUpdateEvent);
+            window.removeEventListener("chat:updated", handleGeneralUpdateEvent);
+        };
+    }, [chatId, refetch]);
+
     // Handlers
     const handleUpdateName = async () => {
         if (!newGroupName.trim()) return toast.error("Tên nhóm không được để trống");

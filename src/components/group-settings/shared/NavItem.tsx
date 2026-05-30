@@ -33,9 +33,24 @@ export function NavItem({
             <Icon className="w-3.5 h-3.5 flex-shrink-0" />
             <span className="flex-1 truncate">{label}</span>
             {badge !== undefined && (
-                <span className="text-[10px] font-semibold bg-blue-600 text-white rounded-full px-1.5 py-0.5 leading-none">
-                    {badge}
-                </span>
+                <>
+                    <style>{`
+                        @keyframes pulseScale {
+                            0% { transform: scale(1); }
+                            50% { transform: scale(1.25); }
+                            100% { transform: scale(1); }
+                        }
+                    `}</style>
+                    <span 
+                        key={badge}
+                        className="text-[10px] font-semibold bg-blue-600 text-white rounded-full px-1.5 py-0.5 leading-none"
+                        style={{
+                            animation: 'pulseScale 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)'
+                        }}
+                    >
+                        {badge}
+                    </span>
+                </>
             )}
         </button>
     );

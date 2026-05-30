@@ -65,8 +65,27 @@ export function GroupSettingsSidebar({
     onLeaveGroup,
     onDeleteGroup,
 }: GroupSettingsSidebarProps) {
+    const [shouldAnimate, setShouldAnimate] = React.useState(false);
+    const prevCountRef = React.useRef(participantsCount);
+
+    React.useEffect(() => {
+        if (participantsCount !== prevCountRef.current) {
+            setShouldAnimate(true);
+            const t = setTimeout(() => setShouldAnimate(false), 600);
+            prevCountRef.current = participantsCount;
+            return () => clearTimeout(t);
+        }
+    }, [participantsCount]);
+
     return (
         <div className="w-52 flex-shrink-0 border-r border-slate-100 flex flex-col bg-slate-50/60">
+            <style>{`
+                @keyframes pulseScale {
+                    0% { transform: scale(1); }
+                    50% { transform: scale(1.25); }
+                    100% { transform: scale(1); }
+                }
+            `}</style>
             {/* Group identity */}
             <div className="p-4 border-b border-slate-100">
                 <div className="relative group w-fit mb-3">
@@ -138,7 +157,18 @@ export function GroupSettingsSidebar({
                         )}
                     </div>
                 )}
-                <p className="text-[11px] text-slate-400 mt-0.5">{participantsCount} thành viên</p>
+                <p 
+                    className={cn(
+                        "text-[11px] text-slate-400 mt-0.5 transition-all duration-300 origin-left",
+                        shouldAnimate && "text-blue-600 font-semibold"
+                    )}
+                    style={{ 
+                        animation: shouldAnimate ? 'pulseScale 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)' : 'none',
+                        display: 'inline-block'
+                    }}
+                >
+                    {participantsCount} thành viên
+                </p>
             </div>
 
             {/* Navigation */}

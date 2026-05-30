@@ -21,6 +21,7 @@ import {
   Heart,
   Building2,
   BookOpen,
+  ArrowLeft,
 } from "lucide-react"
 
 import { NavMain } from "./NavMain"
@@ -28,6 +29,9 @@ import { NavUser } from "./NavUser"
 import { useSidebar } from "@/components/ui/sidebar"
 import { cn } from "@/lib/utils"
 import { useSearchParams } from "next/navigation"
+import Link from "next/link"
+import { useGetAccountDetailsQuery } from "@/src/redux/feature/accountApi"
+import { getAvatarUrl } from "@/src/utils/image-utils"
 
 const data = {
   navMain: [
@@ -146,6 +150,10 @@ export function DashboardSidebar() {
   const searchParams = useSearchParams()
   const activeTab = (searchParams.get("tab") || "overview").toLowerCase()
 
+  // Fetch logged-in user dynamically to prevent static/overlapping details
+  const { data: accountData } = useGetAccountDetailsQuery()
+  const currentUser = accountData?.user
+
   const navMainItems = React.useMemo(() => {
     return data.navMain.map((item) => ({
       ...item,
@@ -160,60 +168,114 @@ export function DashboardSidebar() {
   return (
     <aside
       className={cn(
-        "flex flex-col border-r border-border/60 bg-background/95 dark:bg-zinc-950/95 backdrop-blur-sm transition-all duration-300 ease-in-out h-screen sticky top-0 z-30",
+        "flex flex-col border-r border-slate-100 bg-white dark:border-white/10 dark:bg-zinc-950 transition-all duration-300 ease-in-out h-screen sticky top-0 z-30",
         isCollapsed ? "w-[60px]" : "w-56"
       )}
     >
+      {/* Header Area */}
       <div
         className={cn(
-          "flex items-center h-11 px-3 border-b border-border/60",
+          "flex items-center h-12 px-4 border-b border-slate-100 dark:border-white/10",
           isCollapsed ? "justify-center" : "justify-between"
         )}
       >
         {!isCollapsed && (
-          <div className="flex items-center gap-2 font-bold text-xs text-foreground tracking-wider uppercase">
-            <LayoutDashboard className="w-3.5 h-3.5 text-primary" />
+          <div className="flex items-center gap-2 font-bold text-xs text-slate-800 dark:text-zinc-200 tracking-wider uppercase">
+            <div className="h-6 w-6 rounded bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center border border-blue-100 dark:border-blue-900/50">
+              <LayoutDashboard className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+            </div>
             <span>Admin Console</span>
           </div>
         )}
         <button
           onClick={toggleSidebar}
-          className="p-1 hover:bg-secondary dark:hover:bg-zinc-800 rounded transition-colors text-muted-foreground"
+          className="p-1.5 hover:bg-slate-50 dark:hover:bg-zinc-900 rounded-md transition-colors text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-zinc-300"
         >
           {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto no-scrollbar py-2">
+      {/* Body Area */}
+      <div className="flex-1 overflow-y-auto no-scrollbar py-3 px-2 space-y-4">
         <NavMain items={navMainItems} />
         
-        <div className="mt-2 pt-2 border-t border-border/40 px-2.5">
+        {/* User List Phân Vùng - Trực tuyến & Cân đối tuyệt đối
+        {!isCollapsed && (
+          <div className="pt-2 border-t border-slate-100 dark:border-white/5 px-1.5">
+            <div className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest mb-2 px-3">
+              Thành viên trực tuyến
+            </div>
+            <div className="flex flex-col gap-1.5">
+              {currentUser && (
+                <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-zinc-900/30 transition-all duration-200 ease-in-out">
+                  <div className="relative h-7 w-7 shrink-0 rounded-full bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/50 flex items-center justify-center text-[10px] font-bold text-blue-600 dark:text-blue-400">
+                    <img className="h-7 w-7 rounded-full object-cover shrink-0" src={getAvatarUrl(currentUser.avatar)} alt={currentUser.name} />
+                    <span className="absolute bottom-0 right-0 block h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-zinc-950 animate-pulse" />
+                  </div>
+                  <div className="flex flex-col min-w-0 leading-tight">
+                    <span className="text-xs font-semibold text-slate-800 dark:text-zinc-200 truncate">
+                      {currentUser.name}
+                    </span>
+                    <span className="text-[10px] text-slate-400 dark:text-zinc-500 truncate mt-0.5">
+                      {currentUser.email}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+         */}
+        <div className="pt-2 border-t border-slate-100 dark:border-white/5 px-1.5">
             {!isCollapsed && (
-                <div className="text-[10px] font-bold text-muted-foreground/80 uppercase tracking-widest mb-1.5 px-2">
+                <div className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest mb-1.5 px-3">
                     Cấu hình
                 </div>
             )}
             <div className="flex flex-col gap-0.5">
-                {data.navSecondary.map((item) => (
-                    <a
-                        key={item.title}
-                        href={item.url}
-                        className={cn(
-                            "flex items-center gap-2.5 px-2 py-1 text-xs font-medium rounded transition-colors",
-                            item.id === activeTab 
-                                ? "bg-primary text-primary-foreground font-semibold shadow-sm" 
-                                : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                        )}
-                    >
-                        <item.icon className="w-3.5 h-3.5 shrink-0" />
-                        {!isCollapsed && <span>{item.title}</span>}
-                    </a>
-                ))}
+                {data.navSecondary.map((item) => {
+                    const isActive = item.id === activeTab;
+                    return (
+                        <Link
+                            key={item.title}
+                            href={item.url}
+                            className={cn(
+                                "group flex items-center gap-2.5 px-3 py-2 text-xs font-medium rounded-lg transition-all duration-200 ease-in-out relative",
+                                isActive 
+                                    ? "bg-blue-50/50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 font-semibold" 
+                                    : "text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-slate-50 dark:hover:bg-zinc-900/40"
+                            )}
+                        >
+                            {isActive && (
+                                <span className="absolute left-0 top-2.5 bottom-2.5 w-[2px] bg-blue-600 dark:bg-blue-400 rounded-r" />
+                            )}
+                            <item.icon className={cn(
+                                "w-3.5 h-3.5 shrink-0 transition-colors duration-200",
+                                isActive 
+                                    ? "text-blue-600 dark:text-blue-400" 
+                                    : "text-slate-400 dark:text-zinc-500 group-hover:text-slate-600 dark:group-hover:text-zinc-300"
+                            )} />
+                            {!isCollapsed && <span className="truncate">{item.title}</span>}
+                        </Link>
+                    );
+                })}
             </div>
         </div>
       </div>
 
-      <div className="p-2 border-t border-border/60 bg-secondary/30 dark:bg-zinc-900/30">
+      {/* Footer Area */}
+      <div className="p-3 border-t border-slate-100 dark:border-white/10 bg-slate-50/30 dark:bg-zinc-900/10 flex flex-col gap-2">
+        <Link
+          href="/chat"
+          className={cn(
+            "flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800/80 text-slate-600 dark:text-zinc-400 transition-all duration-200 shadow-sm",
+            isCollapsed ? "justify-center" : ""
+          )}
+          title="Quay lại chat"
+        >
+          <ArrowLeft className="w-3.5 h-3.5 shrink-0" />
+          {!isCollapsed && <span>Quay lại chat</span>}
+        </Link>
         <NavUser />
       </div>
     </aside>

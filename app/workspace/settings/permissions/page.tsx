@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { Shield, Crown, ShieldCheck, User, UserX, Check, X, Info } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
@@ -10,10 +9,10 @@ import {
 
 // ─── Permission Matrix (reflects actual backend RBAC logic) ──────────────────
 const ROLES = [
-  { key: 'WORKSPACE_OWNER',  label: 'Owner',  icon: Crown,        color: 'text-yellow-700 bg-yellow-50 border-yellow-200' },
-  { key: 'WORKSPACE_ADMIN',  label: 'Admin',  icon: ShieldCheck,  color: 'text-blue-700 bg-blue-50 border-blue-200' },
-  { key: 'WORKSPACE_MEMBER', label: 'Member', icon: User,         color: 'text-slate-700 bg-slate-100 border-slate-200' },
-  { key: 'WORKSPACE_GUEST',  label: 'Guest',  icon: UserX,        color: 'text-slate-500 bg-slate-50 border-slate-200' },
+  { key: 'WORKSPACE_OWNER',  label: 'Owner',  icon: Crown,        color: 'text-yellow-700 dark:text-yellow-400 bg-yellow-50/50 dark:bg-yellow-950/20 border-yellow-200/50 dark:border-yellow-900/30' },
+  { key: 'WORKSPACE_ADMIN',  label: 'Admin',  icon: ShieldCheck,  color: 'text-blue-700 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-950/20 border-blue-200/50 dark:border-blue-900/30' },
+  { key: 'WORKSPACE_MEMBER', label: 'Member', icon: User,         color: 'text-slate-700 dark:text-zinc-300 bg-slate-100 dark:bg-zinc-800/40 border-slate-200/60 dark:border-zinc-700/40' },
+  { key: 'WORKSPACE_GUEST',  label: 'Guest',  icon: UserX,        color: 'text-slate-500 dark:text-zinc-400 bg-slate-50 dark:bg-zinc-900/30 border-slate-200/60 dark:border-zinc-800/40' },
 ];
 
 const PERMISSION_GROUPS = [
@@ -62,8 +61,8 @@ const PermCell = ({ allowed }: { allowed: boolean }) => (
   <td className="px-3 py-2 text-center">
     <div className="flex justify-center">
       {allowed
-        ? <Check size={14} className="text-emerald-600 font-bold" strokeWidth={3} />
-        : <X size={14} className="text-slate-200" strokeWidth={2.5} />}
+        ? <Check size={14} className="text-emerald-600 dark:text-emerald-500 font-bold" strokeWidth={3} />
+        : <X size={14} className="text-slate-200 dark:text-zinc-800" strokeWidth={2.5} />}
     </div>
   </td>
 );
@@ -74,19 +73,19 @@ export default function PermissionsReference() {
     <div className="p-6 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-lg font-bold text-slate-900">Phân quyền</h1>
-        <p className="text-xs text-slate-500 mt-0.5">Ma trận quyền hạn theo vai trò trong Workspace. Quyền được thực thi ở cấp độ Backend.</p>
+        <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100 font-mono uppercase tracking-wider">Phân quyền</h1>
+        <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5 font-mono">Ma trận quyền hạn theo vai trò trong Workspace. Quyền được thực thi ở cấp độ Backend.</p>
       </div>
 
       {/* Notice */}
-      <Card className="border border-blue-200 bg-blue-50/50 rounded-[4px] shadow-none">
+      <Card className="border border-slate-200/80 dark:border-white/[0.06] bg-slate-50/20 dark:bg-zinc-900/10 rounded-[2px] shadow-none">
         <CardContent className="p-3.5 flex items-start gap-2.5">
-          <Info size={16} className="text-blue-500 shrink-0 mt-0.5" />
-          <div>
-            <p className="text-xs font-semibold text-blue-900">Đây là tài liệu tham chiếu</p>
-            <p className="text-[11px] text-blue-800 mt-0.5 leading-normal">
-              Quyền hạn được <strong>tự động áp dụng</strong> bởi hệ thống dựa trên vai trò. 
-              Để thay đổi quyền của một thành viên, hãy điều chỉnh <strong>Vai trò (Role)</strong> của họ trong trang <a href="/workspace/settings/members" className="underline font-bold text-blue-600 hover:text-blue-700">Danh sách thành viên</a>.
+          <Info size={16} className="text-slate-600 dark:text-zinc-400 shrink-0 mt-0.5" />
+          <div className="font-mono">
+            <p className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">Đây là tài liệu tham chiếu</p>
+            <p className="text-[10px] text-slate-600 dark:text-zinc-400 mt-0.5 leading-normal">
+              Quyền hạn được <strong className="text-slate-800 dark:text-slate-200">tự động áp dụng</strong> bởi hệ thống dựa trên vai trò. 
+              Để thay đổi quyền của một thành viên, hãy điều chỉnh <strong className="text-slate-800 dark:text-slate-200">Vai trò (Role)</strong> của họ trong trang <a href="/workspace/settings/members" className="underline font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300">Danh sách thành viên</a>.
             </p>
           </div>
         </CardContent>
@@ -95,7 +94,7 @@ export default function PermissionsReference() {
       {/* Role legend */}
       <div className="flex flex-wrap gap-2.5">
         {ROLES.map(({ label, icon: Icon, color }) => (
-          <div key={label} className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[4px] border text-[10px] font-bold ${color}`}>
+          <div key={label} className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[2px] border text-[10px] font-bold font-mono ${color}`}>
             <Icon size={12} />
             {label}
           </div>
@@ -106,18 +105,18 @@ export default function PermissionsReference() {
       <div className="space-y-6">
         {PERMISSION_GROUPS.map((group) => (
           <div key={group.section} className="space-y-2">
-            <h3 className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-              <Shield size={14} className="text-slate-400" />
+            <h3 className="text-xs font-bold text-slate-700 dark:text-zinc-300 font-mono uppercase tracking-wider flex items-center gap-1.5">
+              <Shield size={14} className="text-slate-400 dark:text-zinc-500" />
               {group.section}
             </h3>
-            <div className="bg-white rounded-[4px] border border-slate-200/80 shadow-sm overflow-hidden">
+            <div className="bg-white dark:bg-[#19191B] rounded-[2px] border border-slate-200/80 dark:border-white/[0.06] shadow-sm overflow-hidden">
               <table className="w-full text-left">
                 <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200/80">
-                    <th className="px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500 w-1/2">Quyền hạn</th>
+                  <tr className="bg-slate-50/50 dark:bg-zinc-900/30 border-b border-slate-200/80 dark:border-white/[0.06]">
+                    <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 font-mono w-1/2">Quyền hạn</th>
                     {ROLES.map(({ key, label, icon: Icon, color }) => (
                       <th key={key} className="px-3 py-2 text-center">
-                        <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[4px] border text-[9px] font-bold ${color}`}>
+                        <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[2px] border text-[9px] font-bold font-mono ${color}`}>
                           <Icon size={9} />
                           {label}
                         </div>
@@ -125,19 +124,22 @@ export default function PermissionsReference() {
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-100 dark:divide-white/[0.04]">
                   {group.items.map((perm) => (
-                    <tr key={perm.label} className="hover:bg-slate-50/50 transition-colors duration-150">
+                    <tr key={perm.label} className="hover:bg-slate-50/30 dark:hover:bg-white/[0.01] transition-colors duration-150">
                       <td className="px-4 py-2">
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <span className="text-xs text-slate-700 cursor-help flex items-center gap-1">
+                              <span className="text-xs text-slate-700 dark:text-zinc-300 cursor-help flex items-center gap-1">
                                 {perm.label}
-                                <Info size={10} className="text-slate-300" />
+                                <Info size={10} className="text-slate-300 dark:text-zinc-600" />
                               </span>
                             </TooltipTrigger>
-                            <TooltipContent side="right" className="max-w-[200px] text-[10px] rounded-[4px]">
+                            <TooltipContent 
+                              side="right" 
+                              className="max-w-[200px] text-[10px] font-mono rounded-[2px] bg-slate-900 dark:bg-zinc-800 text-white dark:text-zinc-100 border border-slate-800 dark:border-zinc-700 shadow-md"
+                            >
                               {perm.tip}
                             </TooltipContent>
                           </Tooltip>

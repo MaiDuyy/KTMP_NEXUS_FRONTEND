@@ -18,3 +18,4 @@ export { InviteMemberModal } from "./InviteMemberModal";
 export { DirectorySearchModal } from "./DirectorySearchModal";
 export { CreateWorkspaceModal } from "./CreateWorkspaceModal";
 export { GroupCreationModal } from "./group-creating-model";
+export { default as ForwardMessageModal } from "./forward-message-modal";

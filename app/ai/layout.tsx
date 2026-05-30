@@ -9,6 +9,7 @@ export default function AILayout({
 }) {
     return (
         <RequirePermission permission={AI_PERMISSIONS.ASK}>
+     
             <div className="flex flex-col h-full">
                 {/* AI Module Header */}
                 <header className="h-11 border-b border-border bg-card flex items-center px-4 gap-3 shrink-0">
