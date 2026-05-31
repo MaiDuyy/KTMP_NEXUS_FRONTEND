@@ -104,6 +104,7 @@ export interface JoinRequest {
 
 export interface Chat {
   id: string;
+  workspaceId?: string | null;
   name?: string | null;
   avatar?: string | null;
   isGroup: boolean;
