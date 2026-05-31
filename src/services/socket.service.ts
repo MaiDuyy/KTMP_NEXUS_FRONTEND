@@ -163,6 +163,7 @@ export interface SocketCallbacks {
   onCallEnded?: (data: any) => void;
   onCallBusy?: (data: any) => void;
   onCallActiveSync?: (data: any) => void;
+  onCallSilentNotification?: (data: any) => void;
   onDepartmentMemberAdded?: (data: { departmentId: string; userId: string; role: string }) => void;
   onDepartmentMemberRemoved?: (data: { departmentId: string; userId: string }) => void;
 }
@@ -538,6 +539,11 @@ export const connectSocket = (token: string, callbacks?: SocketCallbacks): Socke
   socket.on("call:incoming", (data) => {
     console.log("[Socket] 📞 Incoming call:", data);
     callbacks?.onIncomingCall?.(data);
+  });
+
+  socket.on("call:silent_notification", (data) => {
+    console.log("[Socket] 🔕 Silent call notification:", data);
+    callbacks?.onCallSilentNotification?.(data);
   });
 
   socket.on("call:ringing", (data) => {

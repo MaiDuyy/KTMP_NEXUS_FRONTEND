@@ -162,6 +162,7 @@ export interface AiConfig {
 
 // Admin API using apiSlice.injectEndpoints
 export const adminApi = apiSlice.injectEndpoints({
+  overrideExisting: true,
   endpoints: (builder) => ({
     // ============= USER MANAGEMENT =============
 

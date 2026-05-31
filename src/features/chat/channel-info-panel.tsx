@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from 'react';
-import { X, Hash, Lock, Users, UserPlus, Settings, Pencil, Bell, BellOff, LogOut, Trash2, CheckCircle2, Loader2, Search, Pin, FileText, Image as ImageIcon, Video, Paperclip, MoreHorizontal } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { X, Hash, Lock, Users, UserPlus, Settings, Pencil, Bell, BellOff, LogOut, CheckCircle2, Loader2, Search, Pin, FileText, Image as ImageIcon, Video, Paperclip, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { toast } from 'sonner';
 import { useSelector } from 'react-redux';
 import {
@@ -20,7 +20,6 @@ import {
   useUpdateChannelMutation,
   useLeaveChannelMutation,
   useUpdateChannelPreferencesMutation,
-  Channel,
 } from '@/src/redux/feature/channelApi';
 import { useGetWorkspaceMembersQuery } from '@/src/redux/feature/workspaceApi';
 import { useGetPinnedMessagesQuery, useGetMediaMessagesQuery, useTogglePinMessageMutation } from '@/src/redux/feature/messageApi';
@@ -51,6 +50,8 @@ export const ChannelInfoPanel: React.FC<ChannelInfoPanelProps> = ({
   const [memberSearch, setMemberSearch] = useState('');
   const [addSearch, setAddSearch] = useState('');
   const [mediaFilter, setMediaFilter] = useState<'all' | 'image' | 'video' | 'file'>('all');
+  const [error, setError] = useState<string | null>(null);
+  const editNameRef = useRef<HTMLInputElement>(null);
 
   const { data: channel, isLoading: loadingChannel } = useGetChannelQuery(channelId, { skip: !channelId || !isOpen });
   const { data: membersData, isLoading: loadingMembers } = useGetChannelMembersQuery(channelId, { skip: !channelId || !isOpen });
@@ -65,69 +66,67 @@ export const ChannelInfoPanel: React.FC<ChannelInfoPanelProps> = ({
   const { data: mediaData, isLoading: loadingMedia } = useGetMediaMessagesQuery({ chatId: channelId, type: mediaFilter }, { skip: !channelId || !isOpen || activeTab !== 'files' });
   const [togglePin] = useTogglePinMessageMutation();
 
-
-
   const renderMediaItem = (message: any) => {
     if (message.type === "image") {
-        return (
-            <div
-                key={message.id}
-                className="relative aspect-square rounded-lg overflow-hidden group cursor-pointer"
+      return (
+        <div
+          key={message.id}
+          className="relative aspect-square rounded-[2px] border border-slate-200 dark:border-white/[0.06] overflow-hidden group cursor-pointer"
+        >
+          <img
+            src={getMediaUrl(message.content || "")}
+            alt="Media"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+            <Button
+              size="icon"
+              variant="secondary"
+              className="h-6 w-6 rounded-[2px]"
+              onClick={(e) => {
+                e.stopPropagation();
+                window.open(getMediaUrl(message.content || ""), "_blank");
+              }}
             >
-                <img
-                    src={getMediaUrl(message.content || "")}
-                    alt="Media"
-                    className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                    <Button
-                        size="icon"
-                        variant="secondary"
-                        className="h-7 w-7"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            window.open(getMediaUrl(message.content || ""), "_blank");
-                        }}
-                    >
-                        <MoreHorizontal className="h-3 w-3" />
-                    </Button>
-                </div>
-            </div>
-        );
+              <MoreHorizontal className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+      );
     }
 
     if (message.type === "video") {
-        return (
-            <div
-                key={message.id}
-                className="relative aspect-video rounded-lg overflow-hidden group cursor-pointer bg-slate-900"
-            >
-                <video
-                    src={getMediaUrl(message.content || "")}
-                    className="w-full h-full object-cover opacity-60"
-                />
-                <div className="absolute inset-0 flex items-center justify-center">
-                    <Video className="h-6 w-6 text-white opacity-80" />
-                </div>
-            </div>
-        );
+      return (
+        <div
+          key={message.id}
+          className="relative aspect-video rounded-[2px] border border-slate-200 dark:border-white/[0.06] overflow-hidden group cursor-pointer bg-slate-950"
+        >
+          <video
+            src={getMediaUrl(message.content || "")}
+            className="w-full h-full object-cover opacity-60"
+          />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Video className="h-5 w-5 text-white opacity-85" />
+          </div>
+        </div>
+      );
     }
 
     return (
-        <div
-            key={message.id}
-            className="flex items-center gap-3 p-2 bg-slate-50 dark:bg-slate-800/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors border border-transparent hover:border-slate-100"
-        >
-            <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded flex items-center justify-center flex-shrink-0">
-                <FileText className="h-4 w-4 text-blue-600" />
-            </div>
-            <div className="flex-1 min-w-0">
-                <p className="font-semibold text-[11px] truncate">{message.file?.name || "File"}</p>
-                <p className="text-[9px] text-slate-400 truncate">
-                   {message.sender?.name} • {message.time ? format(new Date(message.time), 'dd/MM') : '--/--'}
-                </p>
-            </div>
+      <div
+        key={message.id}
+        className="flex items-center gap-2.5 p-2 bg-slate-50/50 dark:bg-zinc-900/35 rounded-[2px] hover:bg-slate-100 dark:hover:bg-zinc-800 transition-all border border-slate-200/80 dark:border-white/[0.04] group"
+      >
+        <div className="w-7 h-7 bg-slate-150 dark:bg-zinc-800 rounded-[2px] flex items-center justify-center flex-shrink-0 border border-slate-200 dark:border-white/[0.04]">
+          <FileText className="h-3.5 w-3.5 text-slate-700 dark:text-zinc-300" />
         </div>
+        <div className="flex-1 min-w-0 font-mono">
+          <p className="text-[10px] font-bold text-slate-800 dark:text-zinc-200 truncate">{message.file?.name || "File"}</p>
+          <p className="text-[9px] text-slate-400 dark:text-zinc-550 truncate mt-0.5">
+            {message.sender?.name} • {message.time ? format(new Date(message.time), 'dd/MM') : '--/--'}
+          </p>
+        </div>
+      </div>
     );
   };
 
@@ -154,17 +153,29 @@ export const ChannelInfoPanel: React.FC<ChannelInfoPanelProps> = ({
   ) || [];
 
   const handleSaveSettings = async () => {
+    setError(null);
+    if (!editName.trim()) {
+      setError('Tên nhóm không được để trống!');
+      editNameRef.current?.focus();
+      return;
+    }
     try {
       await updateChannel({
         channelId,
-        name: editName || undefined,
+        name: editName.trim(),
         description: editDescription || undefined,
         topic: editTopic || undefined,
       }).unwrap();
       toast.success('Đã cập nhật kênh!');
       setEditMode(false);
     } catch (e: any) {
-      toast.error(e?.data?.message || 'Cập nhật thất bại');
+      if (e?.data?.errorCode === 'DUPLICATE_GROUP_NAME') {
+        setError(e.data.message || 'Tên nhóm đã tồn tại.');
+        editNameRef.current?.focus();
+        toast.error('Cập nhật nhóm thất bại, vui lòng kiểm tra lại thông tin');
+      } else {
+        toast.error(e?.data?.message || 'Cập nhật thất bại');
+      }
     }
   };
 
@@ -210,41 +221,38 @@ export const ChannelInfoPanel: React.FC<ChannelInfoPanelProps> = ({
 
   return (
     <Sheet open={isOpen} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <SheetContent style={{ width: '320px', maxWidth: '320px' }} className="!w-80 !max-w-80 p-0 flex flex-col border-l border-slate-100 bg-white shadow-xl z-50">
-        <ScrollArea className="flex-1 h-full">
+      <SheetContent 
+        style={{ width: '320px', maxWidth: '320px' }} 
+        className="!w-80 !max-w-80 p-0 flex flex-col border-l border-slate-200/80 dark:border-white/[0.06] bg-white dark:bg-[#19191B] shadow-2xl z-50 font-mono no-scrollbar"
+      >
+        <ScrollArea className="flex-1 h-full custom-scrollbar no-scrollbar">
           <div className="flex flex-col min-h-full">
-            {/* Banner/Header Section */}
-            <div className="h-24 bg-gradient-to-r from-blue-600 to-indigo-700 w-full shrink-0 relative">
-               <div className="absolute -bottom-6 left-6">
-                  <div className="h-12 w-12 rounded-2xl bg-white p-1 shadow-lg">
-                     <div className="h-full w-full rounded-xl bg-blue-50 flex items-center justify-center">
-                        <Icon size={24} className="text-blue-600" />
-                     </div>
-                  </div>
-               </div>
+            {/* Minimalist Tech Header Section */}
+            <div className="h-16 bg-slate-50 dark:bg-zinc-900 border-b border-slate-200/80 dark:border-white/[0.06] w-full shrink-0 relative flex items-center px-4">
+              <div className="h-8 w-8 rounded-[2px] bg-white dark:bg-[#19191B] border border-slate-200/80 dark:border-white/[0.08] flex items-center justify-center mr-3 shadow-none shrink-0">
+                <div className="h-6 w-6 rounded-[2px] bg-slate-50 dark:bg-zinc-900/50 flex items-center justify-center">
+                  <Icon size={14} className="text-slate-800 dark:text-zinc-200" />
+                </div>
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate uppercase tracking-wider">#{channel?.name || '...'}</h2>
+                <p className="text-[9px] text-slate-400 dark:text-zinc-550 leading-none mt-0.5">INFO_SIDEBAR_PANEL</p>
+              </div>
             </div>
 
-            <div className="pt-8 px-6 pb-4 shrink-0">
-               <h2 className="text-xl font-bold text-slate-900 truncate">{channel?.name || '...'}</h2>
-               <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
-                  <Users size={12} />
-                  {channel?._count?.members ?? 0} thành viên
-               </p>
-            </div>
-
-            {/* Sticky Tabs Navigation */}
-            <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-slate-100 flex px-2 shrink-0">
+            {/* Sticky Tabs Navigation (Sleek Geometric Lines) */}
+            <div className="sticky top-0 z-10 bg-white/95 dark:bg-[#19191B]/95 backdrop-blur-md border-b border-slate-200/80 dark:border-white/[0.06] flex px-2 shrink-0">
               {(['about', 'members', 'files', 'settings'] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`flex-1 py-3 text-[11px] font-bold uppercase tracking-wider transition-all border-b-2 ${
+                  className={`flex-1 py-3 text-[9px] font-bold uppercase tracking-wider transition-all border-b-2 font-mono ${
                     activeTab === tab
-                      ? 'text-blue-600 border-blue-600'
-                      : 'text-slate-400 border-transparent hover:text-slate-600'
+                      ? 'text-slate-900 dark:text-slate-100 border-slate-900 dark:border-slate-100'
+                      : 'text-slate-400 border-transparent hover:text-slate-700 dark:hover:text-zinc-200'
                   }`}
                 >
-                  {tab === 'about' ? 'Giới thiệu' : tab === 'members' ? 'Thành viên' : tab === 'files' ? 'Media' : 'Cài đặt'}
+                  {tab === 'about' ? 'Về kênh' : tab === 'members' ? 'Thành viên' : tab === 'files' ? 'Media' : 'Cài đặt'}
                 </button>
               ))}
             </div>
@@ -253,188 +261,196 @@ export const ChannelInfoPanel: React.FC<ChannelInfoPanelProps> = ({
             <div className="flex-1">
               {loadingChannel ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 className="w-6 h-6 animate-spin text-slate-300" />
+                  <Loader2 className="w-5 h-5 animate-spin text-slate-400 dark:text-zinc-550" />
                 </div>
               ) : (
                 <>
                   {/* ── ABOUT TAB ── */}
                   {activeTab === 'about' && (
                     <div className="p-4 space-y-4">
-                      {/* Stats row */}
+                      {/* Stats grid */}
                       <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-slate-50 rounded-xl p-3 text-center">
-                          <p className="text-xl font-bold text-slate-900">{channel?._count?.members ?? 0}</p>
-                          <p className="text-[11px] text-slate-400 font-medium">Thành viên</p>
+                        <div className="bg-slate-50/50 dark:bg-zinc-900/35 border border-slate-200/80 dark:border-white/[0.04] rounded-[2px] p-2.5 text-center font-mono">
+                          <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{channel?._count?.members ?? 0}</p>
+                          <p className="text-[8px] uppercase tracking-widest text-slate-400 dark:text-zinc-550 font-bold mt-0.5">Thành viên</p>
                         </div>
-                        <div className="bg-slate-50 rounded-xl p-3 text-center">
-                          <p className="text-xl font-bold text-slate-900">{channel?._count?.messages ?? 0}</p>
-                          <p className="text-[11px] text-slate-400 font-medium">Tin nhắn</p>
+                        <div className="bg-slate-50/50 dark:bg-zinc-900/35 border border-slate-200/80 dark:border-white/[0.04] rounded-[2px] p-2.5 text-center font-mono">
+                          <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{channel?._count?.messages ?? 0}</p>
+                          <p className="text-[8px] uppercase tracking-widest text-slate-400 dark:text-zinc-550 font-bold mt-0.5">Tin nhắn</p>
                         </div>
                       </div>
 
-                      {/* Type badge */}
-                      <div className="flex items-center gap-2">
+                      {/* Type badge status tags */}
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         <Badge
                           variant="secondary"
-                          className={channel?.type === 'PUBLIC' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}
+                          className={`rounded-[2px] shadow-none border font-mono text-[9px] uppercase tracking-wider font-bold ${
+                            channel?.type === 'PUBLIC' 
+                              ? 'bg-emerald-50/50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-500 border-emerald-250/20' 
+                              : 'bg-amber-50/50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-500 border-amber-250/20'
+                          }`}
                         >
                           {channel?.type === 'PUBLIC' ? 'Công khai' : channel?.type === 'PRIVATE' ? 'Riêng tư' : 'Khách'}
                         </Badge>
                         {channel?.isDefault && (
-                          <Badge variant="secondary" className="bg-blue-50 text-blue-700">Mặc định</Badge>
+                          <Badge variant="secondary" className="rounded-[2px] shadow-none border border-blue-200/40 bg-blue-50/50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-500 dark:border-blue-900/20 font-mono text-[9px] uppercase tracking-wider font-bold">Mặc định</Badge>
                         )}
                         {channel?.isReadOnly && (
-                          <Badge variant="secondary" className="bg-indigo-50 text-indigo-700">Chỉ đọc</Badge>
+                          <Badge variant="secondary" className="rounded-[2px] shadow-none border border-indigo-200/40 bg-indigo-50/50 text-indigo-700 dark:bg-indigo-950/20 dark:text-indigo-500 dark:border-indigo-900/20 font-mono text-[9px] uppercase tracking-wider font-bold">Chỉ đọc</Badge>
                         )}
                       </div>
 
                       {/* Description */}
-                      <div>
-                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Mô tả</p>
-                        <p className="text-sm text-slate-600">{channel?.description || 'Chưa có mô tả.'}</p>
+                      <div className="font-mono">
+                        <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550 mb-1">Mô tả</p>
+                        <p className="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed bg-slate-50/20 dark:bg-zinc-900/20 border border-slate-200/50 dark:border-white/[0.04] p-2 rounded-[2px] min-h-[48px]">
+                          {channel?.description || 'Chưa có mô tả.'}
+                        </p>
                       </div>
 
                       {/* Topic */}
                       {channel?.topic && (
-                        <div>
-                          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Chủ đề</p>
-                          <p className="text-sm text-slate-600">{channel.topic}</p>
+                        <div className="font-mono">
+                          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550 mb-1">Chủ đề</p>
+                          <p className="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed bg-slate-50/20 dark:bg-zinc-900/20 border border-slate-200/50 dark:border-white/[0.04] p-2 rounded-[2px]">{channel.topic}</p>
                         </div>
                       )}
 
                       {/* Created */}
-                      <div>
-                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Ngày tạo</p>
-                        <p className="text-sm text-slate-600">
-                          {channel?.createdAt ? format(new Date(channel.createdAt), 'dd MMMM, yyyy', { locale: vi }) : '—'}
+                      <div className="font-mono">
+                        <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550 mb-0.5">Ngày khởi tạo</p>
+                        <p className="text-xs text-slate-600 dark:text-zinc-400 font-semibold">
+                          {channel?.createdAt ? format(new Date(channel.createdAt), 'dd/MM/yyyy') : '—'}
                         </p>
                       </div>
 
-                      <Separator />
+                      <Separator className="bg-slate-200/60 dark:bg-white/[0.06]" />
 
                       {/* Members Preview */}
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between px-1">
-                          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Thành viên</p>
+                      <div className="space-y-3 font-mono">
+                        <div className="flex items-center justify-between">
+                          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Thành viên xem trước</p>
                           <button 
                             onClick={() => setActiveTab('members')}
-                            className="text-[10px] text-blue-600 font-semibold hover:underline"
+                            className="text-[9px] text-slate-900 dark:text-slate-100 font-bold hover:underline"
                           >
-                            Xem tất cả
+                            [ XEM TẤT CẢ ]
                           </button>
                         </div>
-                        <div className="flex items-center gap-1.5 overflow-hidden">
-                           {membersData?.members?.slice(0, 8).map((m) => (
-                             <Avatar key={m.userId} className="h-8 w-8 border-2 border-white dark:border-gray-800 shadow-sm shrink-0">
-                               <AvatarImage src={getAvatarUrl(m.user?.avatar, m.user?.name || '')} />
-                               <AvatarFallback className="text-[10px] font-bold bg-slate-100">{m.user?.name?.[0]}</AvatarFallback>
+                        <div className="flex items-center gap-1 flex-wrap">
+                           {membersData?.members?.slice(0, 7).map((m) => (
+                             <Avatar key={m.userId} className="h-7 w-7 border border-slate-200 dark:border-white/[0.08] shadow-none shrink-0 rounded-[2px]">
+                               <AvatarImage src={getAvatarUrl(m.user?.avatar, m.user?.name || '')} className="rounded-[2px]" />
+                               <AvatarFallback className="text-[9px] font-bold bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 rounded-[2px]">
+                                 {m.user?.name?.[0].toUpperCase()}
+                               </AvatarFallback>
                              </Avatar>
                            ))}
-                           {(membersData?.total || 0) > 8 && (
-                             <div className="h-8 w-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] text-slate-500 font-bold border-2 border-white dark:border-gray-800">
-                               +{(membersData?.total || 0) - 8}
+                           {(membersData?.total || 0) > 7 && (
+                             <div className="h-7 w-7 rounded-[2px] bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-white/[0.08] flex items-center justify-center text-[9px] text-slate-500 dark:text-zinc-450 font-bold">
+                               +{((membersData?.total || 0) - 7)}
                              </div>
                            )}
                         </div>
                       </div>
 
-                      <Separator className="bg-slate-100 dark:bg-slate-800" />
+                      <Separator className="bg-slate-200/60 dark:bg-white/[0.06]" />
 
                       {/* Media Preview Section */}
-                      <div className="space-y-3">
-                          <div className="flex items-center justify-between px-1">
-                              <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Media mới nhất</h3>
-                              <button onClick={() => setActiveTab('files')} className="text-[10px] text-blue-600 font-semibold hover:underline">Xem tất cả</button>
-                          </div>
-                          {loadingMedia ? (
-                              <Loader2 className="h-5 w-5 animate-spin text-slate-200 mx-auto" />
-                          ) : (mediaData?.media || []).length > 0 ? (
-                              <div className="grid grid-cols-4 gap-2">
-                                  {(mediaData?.media || []).filter((m: any) => m.type === 'image').slice(0, 4).map((msg: any) => (
-                                      <div key={msg.id} className="aspect-square rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity border border-slate-100 dark:border-slate-800">
-                                          <img src={getMediaUrl(msg.content || "")} alt="" className="w-full h-full object-cover" />
-                                      </div>
-                                  ))}
-                                  {(mediaData?.media || []).filter((m: any) => m.type === 'image').length === 0 && (
-                                      <div className="col-span-4 text-center py-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
-                                          <p className="text-[10px] text-slate-400 italic">Không có hình ảnh nào</p>
-                                      </div>
-                                  )}
+                      <div className="space-y-3 font-mono">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Thư viện ảnh gần đây</h3>
+                          <button onClick={() => setActiveTab('files')} className="text-[9px] text-slate-900 dark:text-slate-100 font-bold hover:underline">[ XEM TẤT CẢ ]</button>
+                        </div>
+                        {loadingMedia ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-slate-400 mx-auto" />
+                        ) : (mediaData?.media || []).length > 0 ? (
+                          <div className="grid grid-cols-4 gap-1.5">
+                            {(mediaData?.media || []).filter((m: any) => m.type === 'image').slice(0, 4).map((msg: any) => (
+                              <div key={msg.id} className="aspect-square rounded-[2px] overflow-hidden cursor-pointer hover:opacity-85 transition-opacity border border-slate-200 dark:border-white/[0.06]">
+                                <img src={getMediaUrl(msg.content || "")} alt="" className="w-full h-full object-cover" />
                               </div>
-                          ) : (
-                              <p className="text-center py-4 text-[10px] text-slate-400 italic bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed">Chưa có tệp tin</p>
-                          )}
+                            ))}
+                            {(mediaData?.media || []).filter((m: any) => m.type === 'image').length === 0 && (
+                              <div className="col-span-4 text-center py-3 bg-slate-50/50 dark:bg-zinc-900/35 border border-dashed border-slate-200/80 dark:border-white/[0.04] rounded-[2px]">
+                                <p className="text-[9px] text-slate-400 dark:text-zinc-550 italic">Không có hình ảnh nào</p>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-center py-4 text-[9px] text-slate-400 dark:text-zinc-550 italic bg-slate-50/50 dark:bg-zinc-900/35 border border-dashed border-slate-200/80 dark:border-white/[0.04] rounded-[2px]">Chưa có tệp tin nào được tải lên</p>
+                        )}
                       </div>
 
-                      <Separator />
+                      <Separator className="bg-slate-200/60 dark:bg-white/[0.06]" />
 
                       {/* Pinned Messages Preview */}
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Tin nhắn đã ghim</p>
-                          <Badge variant="secondary" className="h-4 px-1.5 text-[10px]">{pinnedData?.pinnedMessages?.length || 0}</Badge>
+                      <div className="space-y-3 font-mono">
+                        <div className="flex items-center justify-between">
+                          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Tin nhắn đã ghim</p>
+                          <Badge variant="secondary" className="h-4 px-1.5 text-[9px] bg-slate-100 border border-slate-200 dark:bg-zinc-800 dark:border-white/[0.06] rounded-[2px] font-mono shadow-none">{pinnedData?.pinnedMessages?.length || 0}</Badge>
                         </div>
                         {loadingPinned ? (
-                          <Loader2 className="w-4 h-4 animate-spin text-slate-200 mx-auto" />
+                          <Loader2 className="w-4 h-4 animate-spin text-slate-400 mx-auto" />
                         ) : pinnedData?.pinnedMessages?.length ? (
                           <div className="space-y-2">
                             {pinnedData.pinnedMessages.slice(0, 3).map((msg) => (
-                              <div key={msg.id} className="p-2 rounded-lg bg-slate-50 border border-slate-100 relative group">
-                                <div className="flex items-center gap-2 mb-1">
-                                   <Avatar className="h-4 w-4">
-                                      <AvatarImage src={getAvatarUrl(msg.sender?.avatar, msg.sender?.name || '')} />
-                                      <AvatarFallback className="text-[8px]">{msg.sender?.name?.[0]}</AvatarFallback>
+                              <div key={msg.id} className="p-2 rounded-[2px] bg-slate-50/50 border border-slate-200/80 dark:bg-zinc-900/35 dark:border-white/[0.04] relative group">
+                                <div className="flex items-center gap-1.5 mb-1 font-mono">
+                                   <Avatar className="h-4 w-4 rounded-[2px]">
+                                      <AvatarImage src={getAvatarUrl(msg.sender?.avatar, msg.sender?.name || '')} className="rounded-[2px]" />
+                                      <AvatarFallback className="text-[7px] rounded-[2px]">{msg.sender?.name?.[0]}</AvatarFallback>
                                    </Avatar>
-                                   <span className="text-[10px] font-bold truncate">{msg.sender?.name}</span>
-                                   <span className="text-[9px] text-slate-400 ml-auto">{msg.time ? format(new Date(msg.time), 'HH:mm') : '--:--'}</span>
+                                   <span className="text-[9px] font-bold text-slate-900 dark:text-slate-100 truncate">{msg.sender?.name}</span>
+                                   <span className="text-[8px] text-slate-400 dark:text-zinc-550 ml-auto">{msg.time ? format(new Date(msg.time), 'HH:mm') : '--:--'}</span>
                                 </div>
-                                <div className="text-[11px] text-slate-600 line-clamp-2 leading-relaxed">
+                                <div className="text-[10px] text-slate-600 dark:text-zinc-400 line-clamp-2 leading-relaxed">
                                   <MessageSnippet 
                                     type={msg.type} 
                                     content={msg.content} 
                                     file={(msg as any).file} 
-                                    className="text-[11px] text-slate-600 line-clamp-2 leading-relaxed"
+                                    className="text-[10px] text-slate-650 dark:text-zinc-400 line-clamp-2 leading-relaxed"
                                     iconClassName="h-3 w-3 inline-block align-middle shrink-0 mr-1 text-slate-500"
                                   />
                                 </div>
                                 <button 
                                   onClick={() => togglePin({ messageId: msg.id, chatId: channelId })}
-                                  className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-slate-200 rounded"
+                                  className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-slate-200 dark:hover:bg-zinc-800 rounded-[2px]"
                                 >
                                   <X size={10} className="text-slate-400" />
                                 </button>
                               </div>
                             ))}
                             {pinnedData.pinnedMessages.length > 3 && (
-                              <p className="text-[10px] text-blue-600 font-medium cursor-pointer hover:underline text-center">
-                                Xem thêm {pinnedData.pinnedMessages.length - 3} tin nhắn...
+                              <p className="text-[9px] text-slate-900 dark:text-slate-100 font-bold cursor-pointer hover:underline text-center">
+                                [ XEM THÊM {pinnedData.pinnedMessages.length - 3} TIN NHẮN ĐÃ GHIM ]
                               </p>
                             )}
                           </div>
                         ) : (
-                          <div className="text-center py-4 rounded-lg border border-dashed border-slate-200">
-                            <Pin size={16} className="mx-auto mb-1 text-slate-300" />
-                            <p className="text-[10px] text-slate-400">Chưa có tin nhắn nào được ghim</p>
+                          <div className="text-center py-4 rounded-[2px] border border-dashed border-slate-200 dark:border-white/[0.06]">
+                            <Pin size={12} className="mx-auto mb-1 text-slate-350 dark:text-zinc-650" />
+                            <p className="text-[9px] text-slate-400 dark:text-zinc-550">Chưa có tin nhắn được ghim</p>
                           </div>
                         )}
                       </div>
 
-                      <Separator />
+                      <Separator className="bg-slate-200/60 dark:bg-white/[0.06]" />
 
                       {/* Quick Actions */}
-                      <div className="space-y-1">
+                      <div className="space-y-1.5 font-mono">
                         <button
                           onClick={handleToggleMute}
-                          className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-slate-50 transition-colors text-sm text-slate-600"
+                          className="w-full flex items-center gap-2.5 p-2 rounded-[2px] border border-slate-200 dark:border-white/[0.04] bg-slate-50/20 hover:bg-slate-50 dark:bg-zinc-900/10 dark:hover:bg-zinc-800 transition-colors text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-300"
                         >
-                          {isMuted ? <BellOff size={16} className="text-slate-400" /> : <Bell size={16} className="text-slate-400" />}
+                          {isMuted ? <BellOff size={13} className="text-slate-500" /> : <Bell size={13} className="text-slate-500" />}
                           {isMuted ? 'Bật thông báo' : 'Tắt thông báo'}
                         </button>
                         <button
                           onClick={handleLeave}
-                          className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-red-50 transition-colors text-sm text-rose-600"
+                          className="w-full flex items-center gap-2.5 p-2 rounded-[2px] border border-rose-200 dark:border-red-950/20 bg-rose-50/10 hover:bg-rose-50 dark:bg-red-950/5 dark:hover:bg-red-950/20 transition-colors text-[10px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-500"
                         >
-                          <LogOut size={16} />
+                          <LogOut size={13} />
                           Rời kênh
                         </button>
                       </div>
@@ -443,43 +459,45 @@ export const ChannelInfoPanel: React.FC<ChannelInfoPanelProps> = ({
 
                   {/* ── MEMBERS TAB ── */}
                   {activeTab === 'members' && (
-                    <div className="p-3 space-y-3">
+                    <div className="p-3 space-y-3 font-mono">
                       {/* Search existing members */}
                       <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-zinc-550" />
                         <Input
                           placeholder="Tìm thành viên..."
                           value={memberSearch}
                           onChange={(e) => setMemberSearch(e.target.value)}
-                          className="pl-8 h-8 text-xs"
+                          className="pl-8 h-8 rounded-[2px] border-slate-200 dark:border-white/[0.08] bg-slate-50/20 dark:bg-zinc-900/50 focus-visible:ring-0 focus-visible:border-slate-800 dark:focus-visible:border-slate-200 text-xs font-mono"
                         />
                       </div>
 
                       {/* Member list */}
                       {loadingMembers ? (
-                        <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-slate-300" /></div>
+                        <div className="flex justify-center py-6"><Loader2 className="w-4 h-4 animate-spin text-slate-400" /></div>
                       ) : (
-                        <div className="space-y-0.5">
+                        <div className="space-y-1">
                           {filteredMembers.map((member) => (
-                            <div key={member.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 group">
-                              <div className="flex items-center gap-2.5 min-w-0">
-                                <Avatar className="h-7 w-7 shrink-0">
-                                  <AvatarImage src={getAvatarUrl(member.user?.avatar, member.user?.name || member.userId)} />
-                                  <AvatarFallback className="text-[10px]">{(member.user?.name || 'U')[0]}</AvatarFallback>
+                            <div key={member.id} className="flex items-center justify-between p-1.5 rounded-[2px] hover:bg-slate-50 dark:hover:bg-zinc-800 border border-transparent hover:border-slate-200/60 dark:hover:border-white/[0.04] group transition-colors">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <Avatar className="h-6.5 w-6.5 shrink-0 rounded-[2px]">
+                                  <AvatarImage src={getAvatarUrl(member.user?.avatar, member.user?.name || member.userId)} className="rounded-[2px]" />
+                                  <AvatarFallback className="text-[9px] bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 rounded-[2px]">
+                                    {(member.user?.name || 'U')[0].toUpperCase()}
+                                  </AvatarFallback>
                                 </Avatar>
                                 <div className="min-w-0">
-                                  <p className="text-xs font-semibold truncate">{member.user?.name || member.userId}</p>
-                                  <p className="text-[10px] text-slate-400">
-                                    {member.role  === 'CHANNEL_OWNER' ? '👑 Owner' : member.role === 'CHANNEL_MODERATOR' ? '🛡 Mod' : 'Thành viên'}
+                                  <p className="text-[11px] font-bold text-slate-900 dark:text-slate-150 truncate leading-none">{member.user?.name || member.userId}</p>
+                                  <p className="text-[8px] text-slate-400 mt-0.5 leading-none uppercase tracking-wide">
+                                    {member.role === 'CHANNEL_OWNER' ? '👑 Chủ sở hữu' : member.role === 'CHANNEL_MODERATOR' ? '🛡 Quản trị' : 'Thành viên'}
                                   </p>
                                 </div>
                               </div>
                               {isOwnerOrModerator && member.userId !== currentUser?.id && (
                                 <button
                                   onClick={() => handleRemoveMember(member.userId, member.user?.name || member.userId)}
-                                  className="opacity-0 group-hover:opacity-100 h-6 w-6 flex items-center justify-center rounded text-rose-400 hover:bg-rose-50 transition-all"
+                                  className="opacity-0 group-hover:opacity-100 h-5 w-5 flex items-center justify-center rounded-[2px] text-rose-500 hover:bg-rose-50 dark:hover:bg-red-950/30 transition-all border border-transparent hover:border-rose-200/40"
                                 >
-                                  <X size={12} />
+                                  <X size={11} />
                                 </button>
                               )}
                             </div>
@@ -490,40 +508,40 @@ export const ChannelInfoPanel: React.FC<ChannelInfoPanelProps> = ({
                       {/* Add member section (owner/mod only) */}
                       {isOwnerOrModerator && (
                         <>
-                          <Separator />
-                          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Thêm thành viên</p>
+                          <Separator className="bg-slate-200/60 dark:bg-white/[0.06]" />
+                          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Thêm nhân sự mới</p>
                           <div className="relative">
-                            <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                            <UserPlus className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-zinc-550" />
                             <Input
-                              placeholder="Tìm người dùng trong workspace..."
+                              placeholder="Tìm người trong Workspace..."
                               value={addSearch}
                               onChange={(e) => setAddSearch(e.target.value)}
-                              className="pl-8 h-8 text-xs"
+                              className="pl-8 h-8 rounded-[2px] border-slate-200 dark:border-white/[0.08] bg-slate-50/20 dark:bg-zinc-900/50 focus-visible:ring-0 focus-visible:border-slate-800 dark:focus-visible:border-slate-200 text-xs font-mono"
                             />
                           </div>
-                          <div className="space-y-0.5">
+                          <div className="space-y-1">
                             {availableToInvite.map((m: any) => (
-                              <div key={m.userId} className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50">
-                                <div className="flex items-center gap-2.5 min-w-0">
-                                  <Avatar className="h-6 w-6 shrink-0">
-                                    <AvatarImage src={getAvatarUrl(m.user?.avatar, m.user?.name || m.userId)} />
-                                    <AvatarFallback className="text-[10px]">{(m.user?.name || 'U')[0]}</AvatarFallback>
+                              <div key={m.userId} className="flex items-center justify-between p-1.5 rounded-[2px] hover:bg-slate-50 dark:hover:bg-zinc-800 border border-transparent hover:border-slate-200/60 dark:hover:border-white/[0.04]">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <Avatar className="h-6.5 w-6.5 shrink-0 rounded-[2px]">
+                                    <AvatarImage src={getAvatarUrl(m.user?.avatar, m.user?.name || m.userId)} className="rounded-[2px]" />
+                                    <AvatarFallback className="text-[9px] bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-350 rounded-[2px]">{(m.user?.name || 'U')[0].toUpperCase()}</AvatarFallback>
                                   </Avatar>
-                                  <p className="text-xs font-medium truncate">{m.user?.name || m.userId}</p>
+                                  <p className="text-[11px] font-bold text-slate-900 dark:text-slate-150 truncate leading-none">{m.user?.name || m.userId}</p>
                                 </div>
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  className="h-6 text-xs text-blue-600 hover:bg-blue-50 px-2"
+                                  className="h-5 text-[10px] font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-white/[0.08] hover:bg-slate-50 dark:hover:bg-zinc-800 rounded-[2px] px-2 shadow-none"
                                   onClick={() => handleAddMember(m.userId, m.user?.name || m.userId)}
                                   disabled={addingMember}
                                 >
-                                  Thêm
+                                  Mời
                                 </Button>
                               </div>
                             ))}
                             {addSearch && availableToInvite.length === 0 && (
-                              <p className="text-xs text-center text-slate-400 py-3">Không tìm thấy</p>
+                              <p className="text-[10px] text-center text-slate-400 py-3 italic">Không tìm thấy nhân sự phù hợp</p>
                             )}
                           </div>
                         </>
@@ -533,20 +551,20 @@ export const ChannelInfoPanel: React.FC<ChannelInfoPanelProps> = ({
 
                   {/* ── MEDIA TAB ── */}
                   {activeTab === 'files' && (
-                    <div className="p-4 space-y-4">
-                      <div className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-hide">
+                    <div className="p-4 space-y-4 font-mono">
+                      <div className="flex gap-1.5 overflow-x-auto pb-1.5 scrollbar-hide no-scrollbar">
                           {[
-                              { value: "all", label: "Tất cả", icon: null },
-                              { value: "image", label: "Ảnh", icon: ImageIcon },
-                              { value: "video", label: "Video", icon: Video },
-                              { value: "file", label: "File", icon: FileText },
+                              { value: "all", label: "TẤT CẢ", icon: null },
+                              { value: "image", label: "ẢNH", icon: ImageIcon },
+                              { value: "video", label: "VIDEO", icon: Video },
+                              { value: "file", label: "TÀI LIỆU", icon: FileText },
                           ].map(({ value, label, icon: IconComponent }) => (
                               <Button
                                   key={value}
                                   size="sm"
                                   variant={mediaFilter === value ? "default" : "outline"}
                                   onClick={() => setMediaFilter(value as any)}
-                                  className="h-7 px-2.5 text-[10px] flex items-center gap-1 shrink-0 rounded-full"
+                                  className="h-6 px-2 text-[9px] font-bold font-mono tracking-wider flex items-center gap-1 shrink-0 rounded-[2px] shadow-none"
                               >
                                   {IconComponent && <IconComponent className="h-3 w-3" />}
                                   {label}
@@ -555,23 +573,23 @@ export const ChannelInfoPanel: React.FC<ChannelInfoPanelProps> = ({
                       </div>
 
                       {loadingMedia ? (
-                        <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-slate-200" /></div>
+                        <div className="flex justify-center py-20"><Loader2 className="w-5 h-5 animate-spin text-slate-400" /></div>
                       ) : mediaData?.media?.length ? (
                         <div className={`
                             ${mediaFilter === "file" || (mediaFilter === "all" && mediaData.media.every((m: any) => m.type === "file"))
                                 ? "space-y-2"
-                                : "grid grid-cols-3 gap-2"
+                                : "grid grid-cols-3 gap-1.5"
                             }
                         `}>
                           {mediaData.media.map((msg: any) => renderMediaItem(msg))}
                         </div>
                       ) : (
-                        <div className="text-center py-24 px-6 bg-slate-50/50 dark:bg-slate-800/20 rounded-2xl border border-dashed border-slate-100 dark:border-slate-800">
-                          <div className="h-16 w-16 bg-white dark:bg-slate-800 rounded-2xl shadow-sm flex items-center justify-center mx-auto mb-4">
-                              <Paperclip size={32} className="text-slate-200" />
+                        <div className="text-center py-12 px-4 bg-slate-50/50 dark:bg-zinc-900/35 rounded-[2px] border border-dashed border-slate-200 dark:border-white/[0.06]">
+                          <div className="h-10 w-10 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-white/[0.08] rounded-[2px] flex items-center justify-center mx-auto mb-3 shadow-none">
+                              <Paperclip size={18} className="text-slate-350 dark:text-zinc-550" />
                           </div>
-                          <h4 className="text-sm font-bold text-slate-900 dark:text-white">Không có tệp tin</h4>
-                          <p className="text-[11px] text-slate-400 mt-1">Các tệp tin, ảnh và video trong kênh này sẽ xuất hiện tại đây.</p>
+                          <h4 className="text-[11px] font-bold text-slate-900 dark:text-white uppercase tracking-wider">Thư viện trống</h4>
+                          <p className="text-[9px] text-slate-400 dark:text-zinc-550 mt-1 leading-normal">Ảnh, tệp tin và các tài liệu trao đổi trong kênh này sẽ được tự động đồng bộ tại đây.</p>
                         </div>
                       )}
                     </div>
@@ -579,15 +597,15 @@ export const ChannelInfoPanel: React.FC<ChannelInfoPanelProps> = ({
 
                   {/* ── SETTINGS TAB ── */}
                   {activeTab === 'settings' && (
-                    <div className="p-4 space-y-4">
+                    <div className="p-4 space-y-4 font-mono">
                       {isOwnerOrModerator ? (
                         <>
-                          <div className="flex items-center justify-between">
-                            <p className="text-sm font-bold text-slate-800">Thông tin kênh</p>
+                          <div className="flex items-center justify-between border-b border-slate-200/60 dark:border-white/[0.06] pb-2">
+                            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">Cấu hình kênh</p>
                             <Button
                               size="sm"
                               variant="outline"
-                              className="h-7 text-xs gap-1.5"
+                              className="h-6.5 text-[9px] font-bold font-mono uppercase tracking-wider gap-1.5 rounded-[2px] shadow-none"
                               onClick={() => {
                                 if (!editMode) {
                                   setEditName(channel?.name || '');
@@ -595,58 +613,81 @@ export const ChannelInfoPanel: React.FC<ChannelInfoPanelProps> = ({
                                   setEditTopic(channel?.topic || '');
                                 }
                                 setEditMode(!editMode);
+                                setError(null);
                               }}
                             >
-                              <Pencil size={12} />
+                              <Pencil size={11} />
                               {editMode ? 'Hủy' : 'Sửa'}
                             </Button>
                           </div>
 
                           {editMode ? (
                             <div className="space-y-3">
-                              <div>
-                                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1 block">Tên kênh</label>
-                                <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="h-9 text-sm" placeholder="tên-kênh" />
+                              <div className="space-y-1">
+                                <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550 block">Tên kênh</label>
+                                <Input
+                                  ref={editNameRef}
+                                  value={editName}
+                                  onChange={(e) => {
+                                    setEditName(e.target.value);
+                                    if (error) setError(null);
+                                  }}
+                                  className={`h-8 text-xs rounded-[2px] border font-mono transition-colors ${
+                                    error 
+                                      ? 'border-red-500 focus-visible:border-red-500 dark:border-red-550 dark:focus-visible:border-red-550 focus-visible:ring-0 focus-visible:ring-offset-0' 
+                                      : 'border-slate-200 dark:border-white/[0.08]'
+                                  }`}
+                                  placeholder="tên-kênh"
+                                />
+                                {error && (
+                                  <span className="text-[10px] font-mono font-medium text-red-500 dark:text-red-400 mt-1 block">
+                                    {error}
+                                  </span>
+                                )}
                               </div>
-                              <div>
-                                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1 block">Mô tả</label>
-                                <Textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} className="text-sm resize-none" rows={3} placeholder="Kênh này dùng để..." />
+                              <div className="space-y-1">
+                                <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550 block">Mô tả</label>
+                                <Textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} className="text-xs resize-none rounded-[2px] border-slate-200 dark:border-white/[0.08]" rows={3} placeholder="Kênh này dùng để..." />
                               </div>
-                              <div>
-                                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1 block">Chủ đề hiện tại</label>
-                                <Input value={editTopic} onChange={(e) => setEditTopic(e.target.value)} className="h-9 text-sm" placeholder="Chủ đề đang thảo luận..." />
+                              <div className="space-y-1">
+                                <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550 block">Chủ đề thảo luận</label>
+                                <Input value={editTopic} onChange={(e) => setEditTopic(e.target.value)} className="h-8 text-xs rounded-[2px] border-slate-200 dark:border-white/[0.08]" placeholder="Chủ đề đang thảo luận..." />
                               </div>
-                              <Button onClick={handleSaveSettings} disabled={updating} className="w-full h-9 text-sm gap-2">
-                                {updating ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                                Lưu thay đổi
+                              <Button onClick={handleSaveSettings} disabled={updating} className="w-full h-8 text-[10px] font-bold uppercase tracking-wider rounded-[2px] gap-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 dark:text-slate-900 shadow-none border border-transparent active:scale-[0.98] transition-all">
+                                {updating ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
+                                Lưu thiết lập
                               </Button>
                             </div>
                           ) : (
-                            <div className="space-y-3 text-sm">
-                              <div>
-                                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Tên</p>
-                                <p className="text-slate-700">#{channel?.name}</p>
+                            <div className="space-y-3.5 text-xs">
+                              <div className="space-y-0.5">
+                                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Tên định danh</p>
+                                <p className="text-slate-850 dark:text-slate-200 font-bold font-mono">#{channel?.name}</p>
                               </div>
-                              <div>
-                                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Mô tả</p>
-                                <p className="text-slate-500 italic">{channel?.description || 'Chưa có mô tả'}</p>
+                              <div className="space-y-0.5">
+                                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Mô tả chi tiết</p>
+                                <p className="text-slate-600 dark:text-zinc-400 leading-normal">{channel?.description || 'Chưa cấu hình mô tả.'}</p>
                               </div>
                               {channel?.topic && (
-                                <div>
-                                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Chủ đề</p>
-                                  <p className="text-slate-500 italic">{channel.topic}</p>
+                                <div className="space-y-0.5">
+                                  <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550">Chủ đề hiện tại</p>
+                                  <p className="text-slate-600 dark:text-zinc-400 leading-normal">{channel.topic}</p>
                                 </div>
                               )}
-                              <Separator />
-                              <div className="flex items-center justify-between py-2">
+                              <Separator className="bg-slate-200/60 dark:bg-white/[0.06]" />
+                              <div className="flex items-center justify-between py-1 bg-slate-50/30 dark:bg-zinc-900/10 border border-slate-200/80 dark:border-white/[0.04] p-2.5 rounded-[2px]">
                                 <div>
-                                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">Chế độ Chỉ đọc</p>
-                                  <p className="text-[11px] text-slate-500">Chỉ Admin mới có thể nhắn tin</p>
+                                  <p className="text-[9px] font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">Chế độ Chỉ đọc</p>
+                                  <p className="text-[8px] text-slate-400 dark:text-zinc-550 mt-0.5 leading-none">Chỉ Admin mới có quyền phát ngôn</p>
                                 </div>
                                 <Button
                                   size="sm"
                                   variant={channel?.isReadOnly ? "default" : "outline"}
-                                  className={`h-7 text-[10px] ${channel?.isReadOnly ? 'bg-indigo-600 hover:bg-indigo-700' : ''}`}
+                                  className={`h-6 text-[8px] font-bold uppercase tracking-wider rounded-[2px] shadow-none ${
+                                    channel?.isReadOnly 
+                                      ? 'bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 dark:text-slate-900 border-transparent' 
+                                      : 'border-slate-200 dark:border-white/[0.08] hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300'
+                                  }`}
                                   onClick={async () => {
                                     try {
                                       await updateChannel({ channelId, isReadOnly: !channel?.isReadOnly }).unwrap();
@@ -663,9 +704,9 @@ export const ChannelInfoPanel: React.FC<ChannelInfoPanelProps> = ({
                           )}
                         </>
                       ) : (
-                        <div className="text-center py-8 text-slate-400">
-                          <Settings size={32} className="mx-auto mb-3 opacity-30" />
-                          <p className="text-sm">Chỉ Owner/Moderator mới có thể thay đổi cài đặt kênh.</p>
+                        <div className="text-center py-8 bg-slate-50/50 dark:bg-zinc-900/35 border border-dashed border-slate-200 dark:border-white/[0.06] rounded-[2px]">
+                          <Settings size={20} className="mx-auto mb-2 text-slate-350 dark:text-zinc-650 animate-spin" style={{ animationDuration: '6s' }} />
+                          <p className="text-[10px] text-slate-400 dark:text-zinc-500 px-4 leading-normal">Chỉ Chủ sở hữu kênh hoặc Quản trị viên mới được cấu hình cài đặt kỹ thuật.</p>
                         </div>
                       )}
                     </div>

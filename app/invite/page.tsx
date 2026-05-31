@@ -18,12 +18,19 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, UserPlus, CheckCircle2, AlertCircle, ArrowRight, ShieldCheck, Mail, User, Building2 } from "lucide-react";
+import { Loader2, UserPlus, CheckCircle2, AlertCircle, ArrowRight, ShieldCheck, Mail, User, Building2, Terminal } from "lucide-react";
 import { toast } from "sonner";
 
 export default function InvitePage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>}>
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#0F0F11] flex items-center justify-center font-mono">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-6 h-6 animate-spin text-slate-100" />
+          <p className="text-[10px] text-slate-500 uppercase tracking-widest">Initialising setup...</p>
+        </div>
+      </div>
+    }>
       <InvitePageContent />
     </Suspense>
   );
@@ -69,7 +76,7 @@ function InvitePageContent() {
 
       try {
         await joinInvite({ token }).unwrap();
-        toast.success("Bạn đã tham gia không gian làm việc!");
+        toast.success("Gia nhập không gian làm việc thành công!");
 
         // Redirect to workspace
         const workspaceId = (inviteData as any).invitation.workspaceId;
@@ -81,7 +88,7 @@ function InvitePageContent() {
     } else {
       // Scenario B: New User (Registration)
       if (!name || !password) {
-        toast.error("Vui lòng nhập đầy đủ tên và mật khẩu!");
+        toast.error("Vui lòng điền họ tên và đặt mật khẩu bảo mật!");
         return;
       }
 
@@ -100,10 +107,9 @@ function InvitePageContent() {
             accessToken: result.accessToken,
             refreshToken: result.refreshToken,
             roles: result.roles,
-            // roleLevel is handled by slice if added, but setCredentials takes specific keys
           }));
 
-          toast.success("Đăng ký và tham gia thành công!");
+          toast.success("Đăng ký tài khoản và gia nhập thành công!");
 
           // Redirect to workspace
           const workspaceId = (inviteData as any).invitation.workspaceId;
@@ -111,7 +117,7 @@ function InvitePageContent() {
           router.push("/chat");
         }
       } catch (err: any) {
-        toast.error(err?.data?.message || "Đăng ký không thành công");
+        toast.error(err?.data?.message || "Đăng ký tài khoản không thành công");
       }
     }
   };
@@ -128,60 +134,79 @@ function InvitePageContent() {
     }
   };
 
-  if (!token) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-        <Card className="w-full max-w-md shadow-xl border-none">
-          <CardHeader className="text-center">
-            <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
-              <AlertCircle className="w-8 h-8 text-red-600" />
-            </div>
-            <CardTitle>Link không hợp lệ</CardTitle>
-            <CardDescription>
-              Đường dẫn lời mời của bạn thiếu thông tin xác thực.
-            </CardDescription>
-          </CardHeader>
-          <CardFooter>
-            <Button className="w-full" variant="outline" onClick={() => router.push("/")}>
-              Về trang chủ
-            </Button>
-          </CardFooter>
-        </Card>
+  // State Card styling generator for unified theme
+  const renderWrapper = (children: React.ReactNode) => (
+    <div className="min-h-screen w-full bg-[#0F0F11] flex items-center justify-center p-4 relative overflow-hidden font-mono selection:bg-white selection:text-[#0F0F11]">
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px] pointer-events-none z-0" />
+      <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none z-0" />
+      <div className="relative z-10 w-full flex items-center justify-center">
+        {children}
       </div>
+    </div>
+  );
+
+  if (!token) {
+    return renderWrapper(
+      <Card className="w-full max-w-md shadow-2xl border border-red-500/30 dark:border-red-950/40 bg-white dark:bg-[#19191B] rounded-[2px] overflow-hidden animate-in fade-in duration-300">
+        <div className="h-1 bg-red-600 w-full" />
+        <CardHeader className="text-center pb-2">
+          <div className="mx-auto w-12 h-12 bg-red-100/50 dark:bg-red-950/30 border border-red-200/40 dark:border-red-900/25 flex items-center justify-center mb-3 rounded-[2px]">
+            <AlertCircle className="w-6 h-6 text-red-600 dark:text-red-500" />
+          </div>
+          <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">Liên kết không hợp lệ</CardTitle>
+          <CardDescription className="text-[10px] font-mono text-slate-500 dark:text-zinc-500 leading-normal pt-1.5">
+            Đường dẫn lời mời này bị thiếu khóa xác thực hệ thống.
+          </CardDescription>
+        </CardHeader>
+        <CardFooter className="pt-4 pb-6">
+          <Button 
+            className="w-full border border-slate-200 dark:border-white/[0.08] hover:bg-slate-50 dark:hover:bg-zinc-800 rounded-[2px] h-9 text-xs font-mono font-bold text-slate-700 dark:text-zinc-300 shadow-none bg-transparent"
+            variant="outline" 
+            onClick={() => router.push("/")}
+          >
+            Quay lại trang chủ
+          </Button>
+        </CardFooter>
+      </Card>
     );
   }
 
   if (isValidating || isCheckingAuth) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="text-center space-y-4">
-          <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto" />
-          <p className="text-slate-600 font-medium">Đang kiểm tra lời mời...</p>
+    return renderWrapper(
+      <div className="text-center space-y-4">
+        <div className="relative w-14 h-14 mx-auto flex items-center justify-center border border-slate-800/80 dark:border-white/[0.06] rounded-[2px] bg-slate-950/20">
+          <Loader2 className="w-6 h-6 animate-spin text-slate-100" />
+        </div>
+        <div className="space-y-1">
+          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">SECURE_GATEWAY_VALIDATION</p>
+          <p className="text-[9px] text-slate-500 font-mono">Đang kiểm tra tính toàn vẹn của mã thông báo...</p>
         </div>
       </div>
     );
   }
 
   if (validationError || !inviteData?.success) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-        <Card className="w-full max-w-md shadow-xl border-none">
-          <CardHeader className="text-center">
-            <div className="mx-auto w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-4">
-              <AlertCircle className="w-8 h-8 text-amber-600" />
-            </div>
-            <CardTitle>Lời mời không còn hiệu lực</CardTitle>
-            <CardDescription>
-              {(validationError as any)?.data?.message || "Lời mời này đã hết hạn hoặc đã được sử dụng."}
-            </CardDescription>
-          </CardHeader>
-          <CardFooter>
-            <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={() => router.push("/")}>
-              Quay lại
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
+    return renderWrapper(
+      <Card className="w-full max-w-md shadow-2xl border border-amber-500/30 dark:border-amber-950/40 bg-white dark:bg-[#19191B] rounded-[2px] overflow-hidden animate-in fade-in duration-300">
+        <div className="h-1 bg-amber-500 w-full" />
+        <CardHeader className="text-center pb-2">
+          <div className="mx-auto w-12 h-12 bg-amber-100/50 dark:bg-amber-950/30 border border-amber-200/40 dark:border-amber-900/25 flex items-center justify-center mb-3 rounded-[2px]">
+            <AlertCircle className="w-6 h-6 text-amber-600 dark:text-amber-500" />
+          </div>
+          <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">Lời mời hết hiệu lực</CardTitle>
+          <CardDescription className="text-[10px] font-mono text-slate-500 dark:text-zinc-500 leading-normal pt-1.5">
+            {(validationError as any)?.data?.message || "Đường dẫn lời mời này đã hết hạn hoặc đã được sử dụng trước đó."}
+          </CardDescription>
+        </CardHeader>
+        <CardFooter className="pt-4 pb-6">
+          <Button 
+            className="w-full bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-slate-200 dark:text-slate-900 rounded-[2px] h-9 text-xs font-mono font-bold shadow-none" 
+            onClick={() => router.push("/")}
+          >
+            Quay lại trang chủ
+          </Button>
+        </CardFooter>
+      </Card>
     );
   }
 
@@ -189,185 +214,187 @@ function InvitePageContent() {
   const userProfileEmail = (profile as any)?.user?.email || (profile as any)?.email;
   const emailMismatch = profile && userProfileEmail?.toLowerCase() !== invitation.email.toLowerCase();
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600 via-indigo-700 to-violet-800 p-4 relative overflow-hidden">
-      {/* Decorative blobs */}
-      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-blue-400/20 blur-[150px] rounded-full" />
-      <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-purple-400/20 blur-[150px] rounded-full" />
+  return renderWrapper(
+    <Card className="w-full max-w-[500px] shadow-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#19191B] overflow-hidden rounded-[2px] animate-in fade-in duration-500">
+      <div className="h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-teal-500 w-full" />
 
-      <Card className="w-full max-w-[550px] shadow-2xl border-white/20 bg-white/95 backdrop-blur-md overflow-hidden animate-in fade-in zoom-in duration-700">
-        <div className="h-2 bg-gradient-to-r from-blue-500 to-indigo-600 w-full" />
-
-        <CardHeader className="text-center pb-2">
-          <div className="mx-auto w-24 h-24 relative mb-6">
-            <div className="absolute inset-0 bg-blue-100 rounded-3xl rotate-6 animate-pulse" />
-            <div className="absolute inset-0 bg-white rounded-3xl border border-blue-200 flex items-center justify-center shadow-md">
-              {invitation.workspace?.icon ? (
-                <Avatar className="h-20 w-20 rounded-2xl">
-                  <AvatarImage src={invitation.workspace.icon} />
-                  <AvatarFallback className="rounded-2xl text-3xl font-bold bg-blue-600 text-white">
-                    {invitation.workspace.name[0]}
-                  </AvatarFallback>
-                </Avatar>
-              ) : (
-                <div className="w-20 h-20 bg-blue-50 rounded-2xl flex items-center justify-center">
-                  <UserPlus className="w-12 h-12 text-blue-600" />
-                </div>
-              )}
-            </div>
-          </div>
-
-          <CardTitle className="text-3xl font-extrabold text-slate-900 tracking-tight">
-            Gia nhập NEXUS
-          </CardTitle>
-          <CardDescription className="text-lg mt-2 font-medium">
-            Bạn được mời gia nhập <span className="text-blue-600">&quot;{invitation.workspace?.name || 'NEXUS'}&quot;</span>
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent className="space-y-6 pt-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center gap-3">
-              <Mail className="w-5 h-5 text-blue-500" />
-              <div>
-                <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Email</p>
-                <p className="text-sm font-semibold text-slate-700 truncate max-w-[150px]">{invitation.email}</p>
-              </div>
-            </div>
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center gap-3">
-              <ShieldCheck className="w-5 h-5 text-indigo-500" />
-              <div>
-                <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Vai trò</p>
-                <p className="text-sm font-semibold text-slate-700">{invitation.role}</p>
-              </div>
-            </div>
-            {invitation.department && (
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center gap-3 col-span-2">
-                <Building2 className="w-5 h-5 text-amber-500" />
-                <div>
-                  <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Phòng ban liên kết</p>
-                  <p className="text-sm font-semibold text-slate-700">{invitation.department.name}</p>
-                  <p className="text-xs text-amber-700 font-medium">Vai trò: {invitation.departmentRole}</p>
-                </div>
+      <CardHeader className="text-center pb-4 pt-6">
+        <div className="mx-auto w-16 h-16 relative mb-4">
+          <div className="absolute inset-0 border border-slate-200 dark:border-white/[0.08] rounded-[2px] bg-slate-50 dark:bg-zinc-900 flex items-center justify-center shadow-sm">
+            {invitation.workspace?.icon ? (
+              <Avatar className="h-14 w-14 rounded-[2px]">
+                <AvatarImage src={invitation.workspace.icon} className="rounded-[2px]" />
+                <AvatarFallback className="rounded-[2px] text-lg font-bold bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 font-mono">
+                  {invitation.workspace.name[0].toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+            ) : (
+              <div className="w-14 h-14 bg-slate-100 dark:bg-zinc-800 rounded-[2px] flex items-center justify-center">
+                <UserPlus className="w-6 h-6 text-slate-700 dark:text-zinc-300" />
               </div>
             )}
           </div>
+        </div>
 
-          {profile ? (
-            emailMismatch ? (
-              <div className="p-4 rounded-2xl bg-red-50 border border-red-100 flex gap-3 animate-in slide-in-from-top-2 duration-300">
-                <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
-                <div className="space-y-2">
-                  <p className="text-sm text-red-800 font-medium">
-                    Tài khoản không khớp!
+        <CardTitle className="text-lg font-bold uppercase tracking-tight text-slate-900 dark:text-slate-100 font-mono">
+          Yêu cầu gia nhập
+        </CardTitle>
+        <CardDescription className="text-[10px] font-mono text-slate-500 dark:text-zinc-500 leading-normal mt-1">
+          Lời mời chính thức tham gia tổ chức <span className="text-slate-800 dark:text-slate-200 font-bold">&quot;{invitation.workspace?.name}&quot;</span>
+        </CardDescription>
+      </CardHeader>
+
+      <CardContent className="space-y-4 pt-2">
+        {/* Core Metadata Info Grid */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="p-3 rounded-[2px] bg-slate-50/50 dark:bg-zinc-900/40 border border-slate-200/80 dark:border-white/[0.04] flex items-center gap-2.5">
+            <Mail className="w-4 h-4 text-blue-500 shrink-0" />
+            <div className="min-w-0">
+              <p className="text-[8px] uppercase font-bold text-slate-400 dark:text-zinc-500 tracking-widest font-mono">Gửi đến</p>
+              <p className="text-[10px] font-bold text-slate-700 dark:text-zinc-300 truncate">{invitation.email}</p>
+            </div>
+          </div>
+          <div className="p-3 rounded-[2px] bg-slate-50/50 dark:bg-zinc-900/40 border border-slate-200/80 dark:border-white/[0.04] flex items-center gap-2.5">
+            <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
+            <div className="min-w-0">
+              <p className="text-[8px] uppercase font-bold text-slate-400 dark:text-zinc-500 tracking-widest font-mono">Vai trò</p>
+              <p className="text-[10px] font-bold text-slate-700 dark:text-zinc-300 truncate uppercase">{invitation.role}</p>
+            </div>
+          </div>
+          {invitation.department && (
+            <div className="p-3 rounded-[2px] bg-slate-50/50 dark:bg-zinc-900/40 border border-slate-200/80 dark:border-white/[0.04] flex items-center gap-2.5 col-span-2">
+              <Building2 className="w-4 h-4 text-amber-500 shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-[8px] uppercase font-bold text-slate-400 dark:text-zinc-500 tracking-widest font-mono">Phòng ban liên kết</p>
+                <div className="flex justify-between items-center mt-0.5">
+                  <p className="text-[10px] font-bold text-slate-700 dark:text-zinc-300">{invitation.department.name}</p>
+                  <p className="text-[8px] font-mono text-amber-600 dark:text-amber-500 font-bold uppercase tracking-wide">
+                    Vai trò: {invitation.departmentRole}
                   </p>
-                  <p className="text-xs text-red-600">
-                    Bạn đang đăng nhập bằng <b>{userProfileEmail}</b>. Lời mời này dành cho <b>{invitation.email}</b>.
-                  </p>
-                  <Button
-                    variant="link"
-                    className="p-0 h-auto text-red-700 font-bold hover:text-red-800"
-                    onClick={() => router.push(`/login?callback=/invite?token=${token}`)}
-                  >
-                    Đổi tài khoản khác
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="p-4 rounded-2xl bg-green-50 border border-green-100 flex items-center gap-3">
-                <CheckCircle2 className="w-6 h-6 text-green-600" />
-                <div>
-                  <p className="text-sm text-green-800 font-medium text-center">
-                    Bạn đã sẵn sàng để gia nhập!
-                  </p>
-                </div>
-              </div>
-            )
-          ) : (
-            <div className="space-y-4 animate-in slide-in-from-bottom-4 duration-500">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="h-px bg-slate-200 flex-1" />
-                <span className="text-[10px] uppercase font-bold text-slate-400">Đăng ký để tham gia</span>
-                <div className="h-px bg-slate-200 flex-1" />
-              </div>
-
-              <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="name" className="text-slate-600 ml-1">Họ và tên</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
-                    <Input
-                      id="name"
-                      placeholder="Nguyễn Văn A"
-                      className="pl-10 h-11 rounded-xl border-slate-200"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="password" title="Mật khẩu" className="text-slate-600 ml-1">Mật khẩu</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    className="h-11 rounded-xl border-slate-200"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-slate-600 ml-1">Giới tính</Label>
-                  <RadioGroup defaultValue="male" className="flex gap-4" onValueChange={setGender}>
-                    <div className="flex items-center space-x-2 bg-slate-50 border border-slate-100 px-4 py-2 rounded-xl flex-1 cursor-pointer hover:bg-slate-100">
-                      <RadioGroupItem value="male" id="male" />
-                      <Label htmlFor="male" className="cursor-pointer">Nam</Label>
-                    </div>
-                    <div className="flex items-center space-x-2 bg-slate-50 border border-slate-100 px-4 py-2 rounded-xl flex-1 cursor-pointer hover:bg-slate-100">
-                      <RadioGroupItem value="female" id="female" />
-                      <Label htmlFor="female" className="cursor-pointer">Nữ</Label>
-                    </div>
-                  </RadioGroup>
                 </div>
               </div>
             </div>
           )}
-        </CardContent>
+        </div>
 
-        <CardFooter className="flex flex-col gap-4 pt-4 pb-8">
-          <div className="grid grid-cols-2 gap-4 w-full">
-            <Button
-              variant="ghost"
-              className="h-12 rounded-xl text-slate-500 hover:bg-slate-100 font-bold"
-              onClick={handleReject}
-              disabled={isRejecting || isAccepting || isJoining}
-            >
-              {isRejecting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Từ chối"}
-            </Button>
+        {profile ? (
+          emailMismatch ? (
+            <div className="p-3 rounded-[2px] bg-red-50/10 dark:bg-red-950/10 border border-red-200/40 dark:border-red-950/20 flex gap-2.5 animate-in slide-in-from-top-1 duration-300">
+              <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="text-[10px] text-red-900 dark:text-red-400 font-bold uppercase tracking-wider font-mono">
+                  Lỗi đồng bộ tài khoản
+                </p>
+                <p className="text-[9px] text-red-650 dark:text-red-400/80 leading-normal">
+                  Bạn đang đăng nhập bằng <b>{userProfileEmail}</b> nhưng lời mời dành cho <b>{invitation.email}</b>.
+                </p>
+                <Button
+                  variant="link"
+                  className="p-0 h-auto text-[9px] font-mono text-red-500 hover:text-red-450 dark:text-red-400 dark:hover:text-red-300 font-bold underline"
+                  onClick={() => router.push(`/login?callback=/invite?token=${token}`)}
+                >
+                  [ ĐĂNG NHẬP TÀI KHOẢN KHÁC ]
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="p-3 rounded-[2px] bg-emerald-50/10 dark:bg-emerald-950/10 border border-emerald-250/20 dark:border-emerald-900/20 flex items-center gap-2.5">
+              <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
+              <div>
+                <p className="text-[10px] text-emerald-900 dark:text-emerald-450 font-bold uppercase tracking-wider font-mono">
+                  Sẵn sàng gia nhập
+                </p>
+                <p className="text-[9px] text-slate-500 dark:text-zinc-500">Hệ thống đã nhận diện được tài khoản của bạn.</p>
+              </div>
+            </div>
+          )
+        ) : (
+          <div className="space-y-3.5 pt-2 animate-in slide-in-from-bottom-2 duration-500">
+            <div className="flex items-center gap-2">
+              <div className="h-[1px] bg-slate-200 dark:bg-white/[0.08] flex-1" />
+              <span className="text-[8px] uppercase font-bold text-slate-400 dark:text-zinc-550 tracking-widest font-mono">Đăng ký tài khoản mới</span>
+              <div className="h-[1px] bg-slate-200 dark:bg-white/[0.08] flex-1" />
+            </div>
 
-            <Button
-              className="h-12 rounded-xl bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-200 text-white font-bold transition-all active:scale-95 disabled:opacity-70"
-              onClick={handleAction}
-              disabled={isAccepting || isJoining || isRejecting || !!emailMismatch}
-            >
-              {isAccepting || isJoining ? (
-                <Loader2 className="w-5 h-5 animate-spin mr-2" />
-              ) : (
-                <>
-                  {profile ? "Chấp nhận" : "Gia nhập ngay"}
-                  <ArrowRight className="w-5 h-5 ml-2" />
-                </>
-              )}
-            </Button>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label htmlFor="name" className="text-[10px] font-bold font-mono uppercase tracking-wider text-slate-800 dark:text-slate-200">Họ và tên</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400 dark:text-zinc-550" />
+                  <Input
+                    id="name"
+                    placeholder="NGUYEN VAN A"
+                    className="pl-9 h-9 rounded-[2px] border-slate-200 dark:border-white/[0.08] bg-slate-50/20 dark:bg-zinc-900/50 focus-visible:ring-0 focus-visible:border-slate-800 dark:focus-visible:border-slate-200 text-xs font-mono uppercase"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="password" className="text-[10px] font-bold font-mono uppercase tracking-wider text-slate-800 dark:text-slate-200">Mật khẩu bảo mật</Label>
+                <div className="relative">
+                  <Terminal className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400 dark:text-zinc-550" />
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    className="pl-9 h-9 rounded-[2px] border-slate-200 dark:border-white/[0.08] bg-slate-50/20 dark:bg-zinc-900/50 focus-visible:ring-0 focus-visible:border-slate-800 dark:focus-visible:border-slate-200 text-xs font-mono"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-[10px] font-bold font-mono uppercase tracking-wider text-slate-800 dark:text-slate-200">Giới tính</Label>
+                <RadioGroup defaultValue="male" className="flex gap-3" onValueChange={setGender}>
+                  <div className="flex items-center space-x-2 bg-slate-50/50 dark:bg-zinc-900/30 border border-slate-200/80 dark:border-white/[0.04] px-4 py-2 rounded-[2px] flex-1 cursor-pointer hover:bg-slate-100 dark:hover:bg-zinc-800/60 transition-colors">
+                    <RadioGroupItem value="male" id="male" />
+                    <Label htmlFor="male" className="cursor-pointer text-xs font-mono">Nam</Label>
+                  </div>
+                  <div className="flex items-center space-x-2 bg-slate-50/50 dark:bg-zinc-900/30 border border-slate-200/80 dark:border-white/[0.04] px-4 py-2 rounded-[2px] flex-1 cursor-pointer hover:bg-slate-100 dark:hover:bg-zinc-800/60 transition-colors">
+                    <RadioGroupItem value="female" id="female" />
+                    <Label htmlFor="female" className="cursor-pointer text-xs font-mono">Nữ</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+            </div>
           </div>
+        )}
+      </CardContent>
 
-          <p className="text-[10px] text-center text-slate-400 font-medium px-8 leading-relaxed">
-            Bằng cách tham gia, bạn đồng ý với các điều khoản dịch vụ và chính sách bảo mật của chúng tôi.
-          </p>
-        </CardFooter>
-      </Card>
-    </div>
+      <CardFooter className="flex flex-col gap-4 pt-4 pb-6 border-t border-slate-100 dark:border-white/[0.04]">
+        <div className="grid grid-cols-2 gap-3 w-full">
+          <Button
+            variant="outline"
+            className="h-10 rounded-[2px] border border-slate-200 dark:border-white/[0.08] hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300 font-bold font-mono text-xs shadow-none transition-all active:scale-[0.98] bg-transparent"
+            onClick={handleReject}
+            disabled={isRejecting || isAccepting || isJoining}
+          >
+            {isRejecting ? <Loader2 className="w-4 h-4 animate-spin" /> : "TỪ CHỐI"}
+          </Button>
+
+          <Button
+            className="h-10 rounded-[2px] bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-slate-200 dark:text-slate-900 shadow-none font-bold font-mono text-xs transition-all active:scale-[0.98] border border-transparent disabled:opacity-50"
+            onClick={handleAction}
+            disabled={isAccepting || isJoining || isRejecting || !!emailMismatch}
+          >
+            {isAccepting || isJoining ? (
+              <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
+            ) : (
+              <>
+                {profile ? "CHẤP NHẬN" : "GIA NHẬP"}
+                <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+              </>
+            )}
+          </Button>
+        </div>
+
+        <p className="text-[8px] text-center text-slate-400 dark:text-zinc-550 font-mono tracking-wide leading-relaxed px-4">
+          Bằng cách gia nhập, bạn đồng ý tuân thủ các quy tắc tổ chức, điều khoản dịch vụ và chính sách bảo mật dữ liệu của Nexus.
+        </p>
+      </CardFooter>
+    </Card>
   );
 }

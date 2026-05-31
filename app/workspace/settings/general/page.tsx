@@ -96,8 +96,8 @@ export default function GeneralSettings() {
   const currentUser = useSelector((state: RootState) => state.auth?.user);
 
   // Source of Truth queries
-  const { data: workspaceData } = useGetWorkspaceQuery(currentWorkspaceId || "", { skip: !currentWorkspaceId });
-  const { data: membersData, isLoading: isLoadingMembers, error: membersError } = useGetWorkspaceMembersQuery(
+  const { data: workspaceData, refetch: refetchWorkspace } = useGetWorkspaceQuery(currentWorkspaceId || "", { skip: !currentWorkspaceId });
+  const { data: membersData, isLoading: isLoadingMembers, error: membersError, refetch: refetchMembers } = useGetWorkspaceMembersQuery(
     { workspaceId: currentWorkspaceId || '' },
     { skip: !currentWorkspaceId }
   );
@@ -105,7 +105,7 @@ export default function GeneralSettings() {
   const [updateWorkspace, { isLoading: isUpdating }] = useUpdateWorkspaceMutation();
   const [leaveWorkspace, { isLoading: isLeaving }] = useLeaveWorkspaceMutation();
   const [dissolveWorkspace, { isLoading: isDissolving }] = useDissolveWorkspaceMutation();
-  const [updateWorkspaceMemberRole] = useUpdateWorkspaceMemberRoleMutation();
+  const [updateWorkspaceMemberRole, { isLoading: isTransferring }] = useUpdateWorkspaceMemberRoleMutation();
   const [uploadWorkspaceIcon, { isLoading: isUploadingIcon }] = useUploadWorkspaceIconMutation();
 
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
@@ -124,7 +124,7 @@ export default function GeneralSettings() {
   const [deleteChat] = useDeleteChatMutation();
   const [deleteChannel] = useDeleteChannelMutation();
 
-  const currentWorkspace = workspaceData;
+  const currentWorkspace = workspaceData as any;
   const myMemberRecord = (membersData as any)?.items?.find((m: any) => m.userId === currentUser?.id);
   const currentUserRoles = useSelector((state: RootState) => state.auth?.roles) || [];
   
@@ -329,12 +329,16 @@ export default function GeneralSettings() {
         role: 'OWNER'
       }).unwrap();
 
-      toast.success(`Đã chuyển quyền sở hữu cho ${selectedSuccessor.name} thành công`);
-
       if (shouldLeave) {
+        toast.success(`Đã chuyển quyền sở hữu cho ${selectedSuccessor.name} thành công`);
         await leaveWorkspace(currentWorkspaceId).unwrap();
         dispatch(setWorkspace(null));
         router.push("/chat");
+      } else {
+        toast.success(`Chuyển giao quyền sở hữu thành công. Vai trò hiện tại của bạn là Quản trị viên (Admin).`);
+        // Refetch queries to update local state immediately
+        refetchWorkspace();
+        refetchMembers();
       }
       setIsTransferModalOpen(false);
     } catch (err: any) {
@@ -533,6 +537,7 @@ export default function GeneralSettings() {
                   variant="outline"
                   className="border-amber-250/50 dark:border-amber-900/40 text-amber-700 dark:text-amber-450 hover:bg-amber-600 dark:hover:bg-amber-950/40 hover:text-white font-semibold font-mono rounded-[2px] h-8 text-xs px-4 whitespace-nowrap shadow-none bg-transparent"
                   onClick={() => setIsSelectingSuccessor(true)}
+                  disabled={isTransferring}
                 >
                   <Crown size={12} className="mr-1" />
                   Chuyển quyền
@@ -578,7 +583,7 @@ export default function GeneralSettings() {
         channelCount={totalChannelCount}
       />
 
-      <Dialog open={isSelectingSuccessor} onOpenChange={setIsSelectingSuccessor}>
+      <Dialog open={isSelectingSuccessor} onOpenChange={(open) => { if (!isTransferring) setIsSelectingSuccessor(open); }}>
         <DialogContent className="sm:max-w-md rounded-[2px] p-4 border border-slate-200 dark:border-white/[0.06] bg-white dark:bg-[#19191B] shadow-lg font-mono">
           <DialogHeader className="mb-2">
             <DialogTitle className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100">Chọn người kế nhiệm</DialogTitle>

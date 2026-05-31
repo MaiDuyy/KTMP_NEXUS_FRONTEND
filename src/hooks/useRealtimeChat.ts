@@ -1165,6 +1165,9 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
       onCallActiveSync: (data) => {
         window.dispatchEvent(new CustomEvent("call:active_sync", { detail: data }));
       },
+      onCallSilentNotification: (data) => {
+        window.dispatchEvent(new CustomEvent("call:silent_notification", { detail: data }));
+      },
       onDepartmentMemberAdded: (data) => {
         console.log("[RealtimeChat] 🏢 Department member added:", data);
         dispatch(apiSlice.util.invalidateTags(["Departments"] as any));
