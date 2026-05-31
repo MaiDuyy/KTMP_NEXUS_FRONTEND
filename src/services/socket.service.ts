@@ -644,7 +644,7 @@ export const pinMessage = (messageId: string, chatId: string) => {
   socket?.emit("message:pin", { messageId, chatId });
 };
 
-// Join chat room
+// Join chat room (for sidebar real-time subscriptions)
 export const joinChat = (chatId: string) => {
   socket?.emit("chat:join", { chatId });
 };
@@ -652,6 +652,17 @@ export const joinChat = (chatId: string) => {
 // Leave chat room
 export const leaveChat = (chatId: string) => {
   socket?.emit("chat:leave", { chatId });
+};
+
+// Admin Observer: explicitly start observing a single channel
+// Should only be called from the active chat area, NOT from the sidebar bulk-join
+export const observeJoin = (channelId: string) => {
+  socket?.emit("observe:join", { channelId });
+};
+
+// Admin Observer: stop observing the current channel (call on cleanup/route change)
+export const observeLeave = (channelId: string) => {
+  socket?.emit("observe:leave", { channelId });
 };
 
 // Check active call status for a specific chat

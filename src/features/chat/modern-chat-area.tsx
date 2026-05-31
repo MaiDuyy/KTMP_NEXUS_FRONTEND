@@ -10,7 +10,8 @@ import { Button } from '@/components/ui/button';
 import { useGetChatByIdQuery, useMarkChatAsReadMutation, useGetChatReadReceiptsQuery } from '@/src/redux/feature/chatApi';
 import { useGetMessagesQuery, useLazyGetMessagesQuery, useSendMessageMutation } from '@/src/redux/feature/messageApi';
 import { useGetChannelQuery } from '@/src/redux/feature/channelApi';
-import { socketService } from '@/src/services/socket.service';
+import { useGetUserWorkspacesQuery } from '@/src/redux/feature/workspaceApi';
+import { socketService, observeJoin, observeLeave } from '@/src/services/socket.service';
 import {
   useRealtimeChat, useChatRoom, useTypingUsers, useIsUserOnline,
 } from '@/src/hooks/useRealtimeChat';
@@ -39,6 +40,12 @@ import { SearchMessagesPanel } from './search-messages-panel';
 import { useTogglePinMessageMutation } from '@/src/redux/feature/messageApi';
 import { apiSlice } from '@/src/redux/api/baseApi';
 import ForwardMessageModal from './forward-message-modal';
+
+import { ChannelHeaderStatus } from './ChannelHeaderStatus';
+import { PublicChannelNotice } from './PublicChannelNotice';
+import { ObserverIndicator } from './ObserverIndicator';
+import { addObserver, removeObserver, clearObservers } from '@/src/redux/feature/observerSlice';
+import { RootState } from '@/src/redux/store';
 
 export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
   const [inputText, setInputText] = useState('');
@@ -93,7 +100,9 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
   const dispatch = useDispatch();
   const router = useRouter();
   const userPermissions = useSelector((state: any) => state.auth?.permissions || []);
-  const isAdmin = userPermissions.includes('CHAT.READ.ALL');
+  const globalRoles = useSelector((state: any) => state.auth?.roles || []);
+  const { data: workspaces } = useGetUserWorkspacesQuery(undefined, { skip: !user });
+  const observers = useSelector((state: RootState) => state.observer.channelObservers[chatId!] || []);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
@@ -116,12 +125,21 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
   // API
   const { data: chatData, isLoading: chatLoading, error: chatError } = useGetChatByIdQuery(chatId!, { skip: !chatId });
   const chat = chatData?.chat;
+  
+  const { data: channelData } = useGetChannelQuery(chatId!, { skip: !chatId });
+  const isChannel = !!channelData;
 
-  const isMember = useMemo(() => {
-    if (!chat) return true;
-    if (!chat.isGroup) return true;
-    return chat.participants?.some((p: any) => p.accountId === user?.id) || false;
-  }, [chat, user?.id]);
+  const currentWorkspace = useMemo(() => {
+    return workspaces?.find((w: any) => w.id === chat?.workspaceId);
+  }, [workspaces, chat?.workspaceId]);
+  
+  const workspaceRole = currentWorkspace?.myRole;
+
+  const isAdmin = useMemo(() => {
+    const isGlobalAdmin = globalRoles.includes('SUPER_ADMIN') || globalRoles.includes('WORKSPACE_MANAGER') || globalRoles.includes('ADMIN') || userPermissions.includes('CHAT.READ.ALL');
+    const isWorkspaceAdmin = workspaceRole === 'WORKSPACE_OWNER' || workspaceRole === 'WORKSPACE_ADMIN';
+    return isGlobalAdmin || isWorkspaceAdmin;
+  }, [globalRoles, workspaceRole, userPermissions]);
 
   const isForbidden = useMemo(() => {
     if (chatError) {
@@ -132,10 +150,35 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
     }
     if (chat && chat.isGroup) {
       const isPart = chat.participants?.some((p: any) => p.accountId === user?.id);
-      if (!isPart) return true;
+      if (!isPart) {
+        const isPublicChannel = channelData && channelData.type === 'PUBLIC';
+        const isPublicGroup = chat.joinPolicy === 'PUBLIC';
+        if (isAdmin && (isPublicChannel || isPublicGroup)) return false;
+        return true;
+      }
     }
     return false;
-  }, [chatError, chat, user?.id]);
+  }, [chatError, chat, user?.id, isAdmin, channelData]);
+
+  const isMember = useMemo(() => {
+    if (!chat) return true;
+    if (!chat.isGroup) return true;
+    const isPart = chat.participants?.some((p: any) => p.accountId === user?.id) || false;
+    if (!isPart) {
+      const isPublicChannel = channelData && channelData.type === 'PUBLIC';
+      const isPublicGroup = chat.joinPolicy === 'PUBLIC';
+      if (isAdmin && (isPublicChannel || isPublicGroup)) return true;
+    }
+    return isPart;
+  }, [chat, user?.id, isAdmin, channelData]);
+
+  // Separate from isMember: checks ONLY literal participants list (no admin RBAC bypass).
+  // Used exclusively for the observer badge — admins who bypass RBAC are NOT actual members.
+  const isActualParticipant = useMemo(() => {
+    if (!chat) return false;
+    if (!chat.isGroup) return true; // DM: both parties are always participants
+    return chat.participants?.some((p: any) => p.accountId === user?.id) || false;
+  }, [chat, user?.id]);
 
   // Permissions & Read-only Check
   const canPost = useMemo(() => {
@@ -154,9 +197,6 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
   }, [chat, user?.id, isAdmin]);
 
   const isBlocked = useMemo(() => chat?.isBlocked || false, [chat]);
-
-  const { data: channelData } = useGetChannelQuery(chatId!, { skip: !chatId });
-  const isChannel = !!channelData;
 
   const canUseBroadcastMentions = useMemo(() => {
     if (!chat) return true;
@@ -293,6 +333,49 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
 
     loadInitialMessages();
   }, [chatId, triggerGetMessages]);
+
+  // Listen for real-time observer events from the server
+  useEffect(() => {
+    if (!chatId) return;
+    dispatch(clearObservers(chatId));
+
+    const socket = socketService.getSocket();
+    if (!socket) return;
+
+    const handleObserverJoined = (data: any) => {
+      if (data.channelId === chatId) {
+        dispatch(addObserver({ channelId: chatId, admin: data.admin }));
+      }
+    };
+
+    const handleObserverLeft = (data: any) => {
+      if (data.channelId === chatId) {
+        dispatch(removeObserver({ channelId: chatId, adminId: data.adminId }));
+      }
+    };
+
+    socket.on('observer:joined', handleObserverJoined);
+    socket.on('observer:left', handleObserverLeft);
+
+    return () => {
+      socket.off('observer:joined', handleObserverJoined);
+      socket.off('observer:left', handleObserverLeft);
+    };
+  }, [chatId, dispatch]);
+
+  // Emit observe:join when admin is actively viewing a channel they are NOT a real member of
+  useEffect(() => {
+    // Wait until chat data is loaded and status is resolved
+    if (!chatId || !isAdmin || isActualParticipant || !isConnected) return;
+    // Don't send until chat data is ready
+    if (!chat) return;
+
+    observeJoin(chatId);
+
+    return () => {
+      observeLeave(chatId);
+    };
+  }, [chatId, isAdmin, isActualParticipant, isConnected, chat]);
 
   const loadMoreMessages = async () => {
     if (!chatId || !hasMore || isFetching || isFetchingMore.current) return;
@@ -931,6 +1014,9 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
                 </div>
               </div>
             )}
+            {!isDirectMessage && (
+              <ChannelHeaderStatus type={channelData?.type || chat?.joinPolicy} />
+            )}
           </div>
 
           <div className="flex items-center gap-1">
@@ -1020,11 +1106,16 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
                 )}
 
                 {!hasMore && allMessages.length > 0 && (
-                  <div className="text-center py-8 text-slate-300 dark:text-zinc-600 text-[10px] font-mono font-medium uppercase tracking-widest flex items-center justify-center gap-4">
-                    <div className="h-[1px] flex-1 bg-slate-50 dark:bg-white/[0.02]" />
-                    Bắt đầu cuộc hội thoại
-                    <div className="h-[1px] flex-1 bg-slate-50 dark:bg-white/[0.02]" />
-                  </div>
+                  <>
+                    <div className="text-center py-8 text-slate-300 dark:text-zinc-600 text-[10px] font-mono font-medium uppercase tracking-widest flex items-center justify-center gap-4">
+                      <div className="h-[1px] flex-1 bg-slate-50 dark:bg-white/[0.02]" />
+                      Bắt đầu cuộc hội thoại
+                      <div className="h-[1px] flex-1 bg-slate-50 dark:bg-white/[0.02]" />
+                    </div>
+                    {!isDirectMessage && (channelData?.type === 'PUBLIC' || chat?.joinPolicy === 'PUBLIC') && (
+                      <PublicChannelNotice />
+                    )}
+                  </>
                 )}
 
                 {groupedMessages.length === 0 ? (
@@ -1198,6 +1289,8 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
             </div>
           </div>
         )}
+
+        <ObserverIndicator observers={observers} />
 
         {/* Rich Text Composer */}
         <div className="px-6 py-4 border-t border-slate-200/80 dark:border-white/[0.06] bg-white dark:bg-[#111113]">

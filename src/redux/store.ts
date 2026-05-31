@@ -2,6 +2,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import { apiSlice } from "./api/baseApi";
 import authReducer from "./feature/authSlice";
 import workspaceReducer from "./feature/workspaceSlice";
+import observerReducer from "./feature/observerSlice";
 import "./feature/aiApi";
 import "./feature/channelApi";
 import "./feature/threadApi";
@@ -24,6 +25,7 @@ export const store = configureStore({
     [apiSlice.reducerPath]: apiSlice.reducer,
     auth: authReducer,
     workspace: workspaceReducer,
+    observer: observerReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(apiSlice.middleware),

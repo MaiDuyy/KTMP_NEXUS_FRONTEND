@@ -192,9 +192,11 @@ interface BrowseChannelsModalProps {
   onClose: () => void;
   workspaceId: string;
   myChannelIds: Set<string>;
+  isAdmin?: boolean;
 }
 
-const BrowseChannelsModal: React.FC<BrowseChannelsModalProps> = ({ open, onClose, workspaceId, myChannelIds }) => {
+const BrowseChannelsModal: React.FC<BrowseChannelsModalProps> = ({ open, onClose, workspaceId, myChannelIds, isAdmin }) => {
+  const router = useRouter();
   const [search, setSearch] = useState('');
   const { data, isLoading } = useBrowseChannelsQuery(
     { workspaceId, search: search || undefined },
@@ -252,30 +254,42 @@ const BrowseChannelsModal: React.FC<BrowseChannelsModalProps> = ({ open, onClose
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">#{ch.name}</p>
-                    {ch.description && <p className="text-[10px] font-mono text-slate-450 dark:text-zinc-500 truncate">{ch.description}</p>}
-                    <p className="text-[9px] font-mono text-slate-400 dark:text-zinc-550">{ch.memberCount ?? ch._count?.members ?? 0} thành viên</p>
+                    {ch.description && <p className="text-[10px] font-mono text-slate-450 dark:text-zinc-550 truncate">{ch.description}</p>}
+                    <p className="text-[9px] font-mono text-slate-400 dark:text-zinc-555">{ch.memberCount ?? ch._count?.members ?? 0} thành viên</p>
                   </div>
                 </div>
                 {isMember ? (
                   <Badge variant="secondary" className="text-[9px] font-mono shrink-0 rounded-[2px] bg-slate-100 dark:bg-zinc-800 text-slate-650 dark:text-zinc-350 border border-slate-200/60 dark:border-white/[0.04]">Đã tham gia</Badge>
                 ) : (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="shrink-0 h-6 text-[10px] font-mono rounded-[2px] px-2.5 border-slate-250 dark:border-white/[0.06] hover:bg-slate-50 dark:hover:bg-white/[0.02]"
-                    onClick={() => handleJoin(ch.id, ch.name)}
-                    disabled={joining}
-                  >
-                    Tham gia
-                  </Button>
+                  <div className="flex gap-1.5 shrink-0">
+                    {isAdmin && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="h-6 text-[10px] font-mono rounded-[2px] px-2.5 border-slate-250 dark:border-white/[0.06] hover:bg-slate-50 dark:hover:bg-white/[0.02]"
+                        onClick={() => {
+                          router.push(`/chat/${ch.id}`);
+                          onClose();
+                        }}
+                      >
+                        Xem
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-6 text-[10px] font-mono rounded-[2px] px-2.5 border-slate-250 dark:border-white/[0.06] hover:bg-slate-50 dark:hover:bg-white/[0.02]"
+                      onClick={() => handleJoin(ch.id, ch.name)}
+                      disabled={joining}
+                    >
+                      Tham gia
+                    </Button>
+                  </div>
                 )}
               </div>
             );
           })}
         </div>
-        <p className="text-[9px] font-mono text-center text-slate-400 dark:text-zinc-500 pt-2 border-t border-slate-100 dark:border-white/[0.04] mt-2">
-          Hiển thị {data?.channels?.length ?? 0} / {data?.total ?? 0} kênh
-        </p>
       </DialogContent>
     </Dialog>
   );
@@ -288,9 +302,10 @@ interface ChannelRowProps {
   unreadCount?: number;
   onNavigate: () => void;
   onLeave: () => void;
+  onJoin?: () => void;
 }
 
-const ChannelRow: React.FC<ChannelRowProps> = ({ channel, active, unreadCount, onNavigate, onLeave }) => {
+const ChannelRow: React.FC<ChannelRowProps> = ({ channel, active, unreadCount, onNavigate, onLeave, onJoin }) => {
   const hasUnread = unreadCount && unreadCount > 0;
   const ChannelIcon = channel.type === 'PRIVATE' ? Lock : channel.type === 'ANNOUNCEMENT' ? Megaphone : Hash;
 
@@ -315,6 +330,9 @@ const ChannelRow: React.FC<ChannelRowProps> = ({ channel, active, unreadCount, o
         />
         <span className={`truncate ${active || hasUnread ? 'font-bold' : 'font-medium'}`}>
           {channel.name}
+          {channel.isMember === false && (
+            <span className="ml-1.5 text-[8px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-550 border border-slate-200/60 dark:border-white/[0.04] bg-slate-100 dark:bg-zinc-800 px-1 rounded-[2px]">Xem</span>
+          )}
         </span>
         {hasUnread && (
           <span className="ml-auto bg-blue-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-[2px] leading-none shrink-0 font-mono">
@@ -334,9 +352,15 @@ const ChannelRow: React.FC<ChannelRowProps> = ({ channel, active, unreadCount, o
             <BellOff size={13} className="text-slate-400 dark:text-zinc-550" /> Tắt thông báo
           </DropdownMenuItem>
           <DropdownMenuSeparator className="dark:bg-white/[0.06]" />
-          <DropdownMenuItem onClick={onLeave} className="gap-2 text-rose-600 focus:text-rose-750 cursor-pointer rounded-[2px] py-1.5">
-            <LogOut size={13} /> Rời kênh
-          </DropdownMenuItem>
+          {channel.isMember !== false ? (
+            <DropdownMenuItem onClick={onLeave} className="gap-2 text-rose-600 focus:text-rose-750 cursor-pointer rounded-[2px] py-1.5">
+              <LogOut size={13} /> Rời kênh
+            </DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem onClick={onJoin} className="gap-2 text-blue-600 focus:text-blue-750 cursor-pointer rounded-[2px] py-1.5">
+              <Check size={13} /> Tham gia kênh
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
@@ -456,19 +480,32 @@ export const ModernChannelSidebar: React.FC = () => {
     { skip: !workspaceId }
   );
   const [leaveChannel] = useLeaveChannelMutation();
+  const [joinChannel] = useJoinChannelMutation();
   const { data: unreadCounts } = useGetWorkspaceUnreadCountsQuery();
 
   const { data: groupChatsData } = useGetChatsQuery({ type: 'group', workspaceId });
   const { data: privatesData } = useGetChatsQuery({ type: 'private', workspaceId });
   const { data: notificationsData } = useGetUnreadCountQuery();
 
+  const globalRoles = useSelector((state: any) => state.auth?.roles || []);
+  const workspaceRole = currentWorkspace?.myRole;
+
+  const isAdmin = useMemo(() => {
+    const isGlobalAdmin = globalRoles.includes('SUPER_ADMIN') || globalRoles.includes('WORKSPACE_MANAGER') || globalRoles.includes('ADMIN');
+    const isWorkspaceAdmin = workspaceRole === 'WORKSPACE_OWNER' || workspaceRole === 'WORKSPACE_ADMIN';
+    return isGlobalAdmin || isWorkspaceAdmin;
+  }, [globalRoles, workspaceRole]);
+
   // ── Derived Lists ──
   const myChannelIds = useMemo(() => new Set(channelsData.map((c: any) => c.id)), [channelsData]);
 
-  const myChannels = useMemo(() =>
-    channelsData.filter((ch: any) => ch.isMember !== false),
-    [channelsData]
-  );
+  const myChannels = useMemo(() => {
+    return channelsData.filter((ch: any) => {
+      if (ch.isMember !== false) return true;
+      if (isAdmin && (ch.type === 'PUBLIC' || ch.type === 'ANNOUNCEMENT')) return true;
+      return false;
+    });
+  }, [channelsData, isAdmin]);
 
   const joinedChannelIds = useMemo(() => new Set(myChannels.map((c: any) => c.id)), [myChannels]);
 
@@ -502,6 +539,15 @@ export const ModernChannelSidebar: React.FC = () => {
   const getPartnerStatus = (chat: Chat): 'online' | 'offline' => {
     const partner = chat.participants?.find((p) => p.accountId !== currentUser?.id);
     return partner && onlineUsers.has(partner.accountId) ? 'online' : 'offline';
+  };
+
+  const handleJoinChannel = async (channelId: string, name: string) => {
+    try {
+      await joinChannel(channelId).unwrap();
+      toast.success(`Đã tham gia kênh #${name}`);
+    } catch (e: any) {
+      toast.error(e?.data?.message || 'Không thể tham gia kênh');
+    }
   };
 
   const handleLeaveChannel = async (channelId: string, name: string) => {
@@ -727,6 +773,7 @@ export const ModernChannelSidebar: React.FC = () => {
                               unreadCount={chatObj?.unreadCount || 0}
                               onNavigate={() => router.push(`/chat/${channel.id}`)}
                               onLeave={() => handleLeaveChannel(channel.id, channel.name)}
+                              onJoin={() => handleJoinChannel(channel.id, channel.name)}
                             />
                           );
                         })
@@ -866,6 +913,7 @@ export const ModernChannelSidebar: React.FC = () => {
         onClose={() => setShowBrowseModal(false)}
         workspaceId={workspaceId || ''}
         myChannelIds={joinedChannelIds}
+        isAdmin={isAdmin}
       />
       <GroupCreationModal
         open={showGroupModal}
