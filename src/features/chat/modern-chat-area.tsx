@@ -114,8 +114,28 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
   useChatRoom(chatId);
 
   // API
-  const { data: chatData, isLoading: chatLoading } = useGetChatByIdQuery(chatId!, { skip: !chatId });
+  const { data: chatData, isLoading: chatLoading, error: chatError } = useGetChatByIdQuery(chatId!, { skip: !chatId });
   const chat = chatData?.chat;
+
+  const isMember = useMemo(() => {
+    if (!chat) return true;
+    if (!chat.isGroup) return true;
+    return chat.participants?.some((p: any) => p.accountId === user?.id) || false;
+  }, [chat, user?.id]);
+
+  const isForbidden = useMemo(() => {
+    if (chatError) {
+      const err = chatError as any;
+      if (err.status === 403 || err.data?.message?.includes('không còn là thành viên')) {
+        return true;
+      }
+    }
+    if (chat && chat.isGroup) {
+      const isPart = chat.participants?.some((p: any) => p.accountId === user?.id);
+      if (!isPart) return true;
+    }
+    return false;
+  }, [chatError, chat, user?.id]);
 
   // Permissions & Read-only Check
   const canPost = useMemo(() => {
@@ -785,6 +805,20 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
     inputRef.current?.focus();
   };
 
+  if (isForbidden) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-white dark:bg-[#111113] p-6 animate-in fade-in duration-300">
+        <div className="text-center text-slate-450 dark:text-zinc-600 font-mono max-w-md">
+          <Ban className="w-12 h-12 mx-auto mb-4 text-red-500 animate-pulse" />
+          <p className="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">Truy cập bị từ chối</p>
+          <p className="text-xs mt-3 text-slate-500 dark:text-zinc-400 leading-relaxed bg-red-50/50 dark:bg-red-955/10 border border-red-200/50 dark:border-red-900/20 px-4 py-3 rounded-[2px]">
+            Bạn không còn là thành viên của nhóm này nên không thể xem nội dung.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (!chatId) {
     return (
       <div className="flex-1 flex items-center justify-center bg-white dark:bg-[#111113]">
@@ -911,8 +945,12 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
                 <Phone size={13} fill="currentColor" /> Tham gia
               </Button>
             )}
-            <Button variant="ghost" size="icon" onClick={() => startCall(false)} className="h-8 w-8 rounded-[2px] text-slate-500 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-450 hover:bg-slate-100 dark:hover:bg-white/[0.02] transition-colors" title="Bắt đầu cuộc gọi thoại"><Phone size={15} /></Button>
-            <Button variant="ghost" size="icon" onClick={() => startCall(true)} className="h-8 w-8 rounded-[2px] text-slate-500 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-450 hover:bg-slate-100 dark:hover:bg-white/[0.02] transition-colors" title="Bắt đầu cuộc gọi video"><Video size={15} /></Button>
+            {isMember && (
+              <>
+                <Button variant="ghost" size="icon" onClick={() => startCall(false)} className="h-8 w-8 rounded-[2px] text-slate-500 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-450 hover:bg-slate-100 dark:hover:bg-white/[0.02] transition-colors" title="Bắt đầu cuộc gọi thoại"><Phone size={15} /></Button>
+                <Button variant="ghost" size="icon" onClick={() => startCall(true)} className="h-8 w-8 rounded-[2px] text-slate-500 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-450 hover:bg-slate-100 dark:hover:bg-white/[0.02] transition-colors" title="Bắt đầu cuộc gọi video"><Video size={15} /></Button>
+              </>
+            )}
             <Button 
               variant="ghost" 
               size="icon" 
@@ -1171,6 +1209,16 @@ export const ModernChatArea: React.FC<{ chatId?: string }> = ({ chatId }) => {
                   ? "Bạn đã chặn người dùng này. Bỏ chặn để gửi tin nhắn."
                   : "Bạn không thể gửi tin nhắn cho người này vì trạng thái chặn."}
               </p>
+            </div>
+          ) : !isMember ? (
+            <div className="bg-slate-50 dark:bg-[#19191B]/50 border border-slate-200/80 dark:border-white/[0.06] rounded-[2px] p-4 flex flex-col items-center justify-center gap-1.5 text-center animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="h-8 w-8 rounded-[2px] bg-slate-100 dark:bg-zinc-800 border border-slate-200/60 dark:border-white/[0.04] flex items-center justify-center text-slate-500 dark:text-zinc-400">
+                <Ban size={15} className="text-red-500" />
+              </div>
+              <div>
+                <p className="text-xs font-mono font-bold text-slate-800 dark:text-slate-200">Bạn không còn là thành viên của nhóm này</p>
+                <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">Không thể gửi tin nhắn hoặc tương tác trong cuộc trò chuyện này.</p>
+              </div>
             </div>
           ) : !canPost ? (
             <div className="bg-slate-50 dark:bg-[#19191B]/50 border border-slate-200/80 dark:border-white/[0.06] rounded-[2px] p-4 flex flex-col items-center justify-center gap-1.5 text-center animate-in fade-in slide-in-from-bottom-2 duration-300">

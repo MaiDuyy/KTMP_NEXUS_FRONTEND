@@ -46,6 +46,12 @@ export function GlobalCallSystem() {
   const [endReason, setEndReason] = useState<string>("");
   const [isMinimized, setIsMinimized] = useState<boolean>(false);
   const callStateRef = useRef<CallState>("idle");
+  const callDataRef = useRef<CallData | null>(null);
+
+  // Sync callDataRef
+  useEffect(() => {
+    callDataRef.current = callData;
+  }, [callData]);
 
   // Reset minimized state when call ends or goes idle
   useEffect(() => {
@@ -318,6 +324,17 @@ export function GlobalCallSystem() {
       setCallState("ringing_in");
     };
 
+    const onSilentNotification = (e: Event) => {
+      const data = (e as CustomEvent).detail;
+      console.log("[Call] 🔕 Silent incoming call received:", data);
+
+      toast.info(`Có cuộc gọi đến từ ${data.callerName || "người dùng khác"} (Máy bận)`, {
+        description: data.callType === "group" ? "Cuộc gọi nhóm đang diễn ra." : "Bạn đang trong cuộc gọi khác.",
+        duration: 5000,
+        icon: data.isVideo ? <Video className="h-4 w-4 text-blue-450 animate-pulse" /> : <Phone className="h-4 w-4 text-emerald-450 animate-pulse" />,
+      });
+    };
+
     const onStartInfo = (e: Event) => {
       const data = (e as CustomEvent).detail;
       console.log("[Call] Received call:start_info, connecting to LiveKit...");
@@ -337,6 +354,9 @@ export function GlobalCallSystem() {
 
     const onDeclined = (e: Event) => {
       const data = (e as CustomEvent).detail;
+      if (callDataRef.current && data.roomName && data.roomName !== callDataRef.current.roomName) {
+        return;
+      }
       
       if (data.callType === "group") {
         toast.info(`${data.declinedByName} đã từ chối tham gia cuộc gọi.`);
@@ -356,6 +376,13 @@ export function GlobalCallSystem() {
 
     const onEnded = (e: Event) => {
       const data = (e as CustomEvent).detail;
+      
+      // Scope the ended signal so it only ends the relevant call room
+      if (callDataRef.current && data.roomName && data.roomName !== callDataRef.current.roomName) {
+        console.log(`[Call] Ignoring call:ended for different room: ${data.roomName}. Current: ${callDataRef.current.roomName}`);
+        return;
+      }
+
       const reason = data.reason || "ended";
       const currentState = callStateRef.current;
 
@@ -395,6 +422,9 @@ export function GlobalCallSystem() {
 
     const onParticipantLeft = (e: Event) => {
       const data = (e as CustomEvent).detail;
+      if (callDataRef.current && data.roomName && data.roomName !== callDataRef.current.roomName) {
+        return;
+      }
       if (data.participantId === user.id) return;
       toast.info(`${data.participantName} đã rời cuộc gọi.`);
 
@@ -416,6 +446,9 @@ export function GlobalCallSystem() {
 
     const onParticipantJoined = (e: Event) => {
       const data = (e as CustomEvent).detail;
+      if (callDataRef.current && data.roomName && data.roomName !== callDataRef.current.roomName) {
+        return;
+      }
       toast.info(`${data.participantName} đã tham gia cuộc gọi.`);
     };
 
@@ -484,6 +517,7 @@ export function GlobalCallSystem() {
 
     window.addEventListener("call:ringing", onRinging);
     window.addEventListener("call:incoming", onIncomingCall);
+    window.addEventListener("call:silent_notification", onSilentNotification);
     window.addEventListener("call:active_sync", onActiveSync);
     window.addEventListener("call:start_info", onStartInfo);
     window.addEventListener("call:declined", onDeclined);
@@ -497,6 +531,7 @@ export function GlobalCallSystem() {
       console.log("[Call] Cleaning up global event listeners...");
       window.removeEventListener("call:ringing", onRinging);
       window.removeEventListener("call:incoming", onIncomingCall);
+      window.removeEventListener("call:silent_notification", onSilentNotification);
       window.removeEventListener("call:active_sync", onActiveSync);
       window.removeEventListener("call:start_info", onStartInfo);
       window.removeEventListener("call:declined", onDeclined);

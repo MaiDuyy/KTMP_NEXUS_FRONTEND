@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchDirectoryQuery } from "@/src/redux/feature/userApi";
 import {
     useGetOrCreatePrivateChatMutation,
@@ -23,7 +23,6 @@ import { toast } from "sonner";
 import { getAvatarUrl } from "@/src/utils/image-utils";
 import { useSelector } from "react-redux";
 import { RootState } from "@/src/redux/store";
-import { useEffect } from "react";
 
 interface NewChatModalProps {
     open: boolean;
@@ -42,6 +41,8 @@ export default function NewChatModal({
     const [searchQuery, setSearchQuery] = useState("");
     const [groupName, setGroupName] = useState("");
     const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+    const [error, setError] = useState<string | null>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
     const currentWorkspaceId = useSelector((state: RootState) => state.workspace.currentWorkspaceId);
     const [debouncedSearch, setDebouncedSearch] = useState("");
 
@@ -78,8 +79,10 @@ export default function NewChatModal({
 
     // Handle create group chat
     const handleCreateGroupChat = async () => {
+        setError(null);
         if (!groupName.trim()) {
-            toast.error("Vui lòng nhập tên nhóm!");
+            setError("Vui lòng nhập tên nhóm!");
+            inputRef.current?.focus();
             return;
         }
         if (selectedMembers.length === 0) {
@@ -95,8 +98,14 @@ export default function NewChatModal({
             toast.success("Tạo nhóm thành công!");
             onChatCreated(result.chat.id);
             handleClose();
-        } catch (error: any) {
-            toast.error(error?.data?.message || "Lỗi tạo nhóm!");
+        } catch (err: any) {
+            if (err?.data?.errorCode === 'DUPLICATE_GROUP_NAME') {
+                setError(err.data.message || 'Tên nhóm đã tồn tại.');
+                inputRef.current?.focus();
+                toast.error('Tạo nhóm thất bại, vui lòng kiểm tra lại thông tin');
+            } else {
+                toast.error(err?.data?.message || "Lỗi tạo nhóm!");
+            }
         }
     };
 
@@ -115,6 +124,7 @@ export default function NewChatModal({
         setGroupName("");
         setSelectedMembers([]);
         setActiveTab("private");
+        setError(null);
         onClose();
     };
 
@@ -161,12 +171,25 @@ export default function NewChatModal({
                             Tên nhóm
                         </Label>
                         <Input
+                            ref={inputRef}
                             id="groupName"
                             placeholder="Nhập tên nhóm..."
                             value={groupName}
-                            onChange={(e) => setGroupName(e.target.value)}
-                            className="bg-slate-50 dark:bg-zinc-800/40 border border-slate-200 dark:border-white/[0.06] rounded-[2px] text-xs h-9 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-blue-500 font-mono transition-colors text-slate-850 dark:text-slate-150"
+                            onChange={(e) => {
+                                setGroupName(e.target.value);
+                                if (error) setError(null);
+                            }}
+                            className={`bg-slate-50 dark:bg-zinc-800/40 border rounded-[2px] text-xs h-9 focus-visible:ring-0 focus-visible:ring-offset-0 font-mono transition-colors text-slate-850 dark:text-slate-150 ${
+                                error 
+                                    ? 'border-red-500 focus-visible:border-red-500 dark:border-red-500/80 dark:focus-visible:border-red-500/80' 
+                                    : 'border-slate-200 dark:border-white/[0.06] focus-visible:border-blue-500'
+                            }`}
                         />
+                        {error && (
+                            <span className="text-[10px] font-mono font-medium text-red-500 dark:text-red-400 mt-1 block">
+                                {error}
+                            </span>
+                        )}
                     </div>
                 )}
 

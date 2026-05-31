@@ -43,7 +43,7 @@ export function TransferOwnershipModal({
   const isMemberOnly = targetMember.role === 'MEMBER';
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!isLoading && !open) onClose(); }}>
       <DialogContent className="sm:max-w-[480px] rounded-3xl p-0 overflow-hidden border-none shadow-2xl">
         <div className="bg-amber-50 p-6 flex items-center gap-4 border-b border-amber-100">
           <div className="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-600 shadow-sm">
@@ -105,11 +105,12 @@ export function TransferOwnershipModal({
                   checked={shouldLeave}
                   onCheckedChange={(checked) => setShouldLeave(!!checked)}
                   className="mt-1 border-slate-300 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                  disabled={isLoading}
                 />
                 <div className="grid gap-1.5 leading-none">
                   <label
                     htmlFor="leave-after-transfer"
-                    className="text-sm font-bold text-slate-800 leading-none cursor-pointer"
+                    className={`text-sm font-bold text-slate-800 leading-none ${isLoading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
                   >
                     Rời khỏi Workspace sau khi chuyển quyền
                   </label>
