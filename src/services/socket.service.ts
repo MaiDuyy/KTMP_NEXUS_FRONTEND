@@ -144,6 +144,7 @@ export interface SocketCallbacks {
   onChatCallStatus?: (data: { chatId: string; roomName: string | null; isActive: boolean; [key: string]: any }) => void;
   onPollUpdated?: (data: { chatId: string; pollId: string; options: any[]; totalVotes: number; endsAt?: string | null; isExpired?: boolean }) => void;
   onCallActiveStatus?: (data: { chatId: string; isActive: boolean; roomName?: string; [key: string]: any }) => void;
+  onWorkspaceCreated?: (data: { workspace: any }) => void;
   onWorkspaceInvite?: (data: { workspaceName: string; role: string; token: string; inviterId: string; timestamp: string }) => void;
   onWorkspaceDissolved?: (data: { workspaceId: string; dissolvedBy: string }) => void;
   onWorkspaceRestored?: (data: { workspaceId: string; restoredBy: string }) => void;
@@ -473,6 +474,11 @@ export const connectSocket = (token: string, callbacks?: SocketCallbacks): Socke
   socket.on("call:active_status", (data) => {
     console.log("[Socket] 📞 Call active status received:", data);
     callbacks?.onCallActiveStatus?.(data);
+  });
+
+  socket.on("workspace:created", (data) => {
+    console.log("[Socket] 🏢 Workspace created:", data);
+    callbacks?.onWorkspaceCreated?.(data);
   });
 
   socket.on("workspace:invite:new", (data) => {

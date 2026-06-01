@@ -914,6 +914,11 @@ export function RealtimeChatProvider({ children }: { children: ReactNode }) {
         window.dispatchEvent(new CustomEvent("call:active_status", { detail: data }));
       },
       
+      onWorkspaceCreated: (data) => {
+        console.log("[RealtimeChat] 🏢 Workspace created:", data);
+        dispatch(apiSlice.util.invalidateTags(["Workspaces"] as any));
+      },
+
       onWorkspaceInvite: (data) => {
         console.log("[RealtimeChat] 🏢 New workspace invite:", data);
         toast.success(`Bạn nhận được lời mời tham gia Workspace: ${data.workspaceName}`, {
