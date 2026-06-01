@@ -210,12 +210,18 @@ export interface Message {
     id: string;
     name: string;
     avatar?: string | null;
+    role?: string;
   };
   replyTo?: {
     id: string;
     content?: string | null;
     type: string;
-    sender: { id: string; name: string };
+    sender: {
+      id: string;
+      name: string;
+      avatar?: string | null;
+      role?: string;
+    };
   } | null;
   file?: {
     name: string;
