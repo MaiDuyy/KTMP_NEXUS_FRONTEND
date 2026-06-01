@@ -164,7 +164,7 @@ export function DeptMembersDialog({
 
   const currentUserDeptRole = useMemo(() => {
     if (!currentUserId || !department?.members) return null;
-    const member = department.members.find((m: { userId: string; role: string }) => m.userId === currentUserId);
+    const member = department.members.find((m) => m.userId === currentUserId);
     return member ? member.role : null;
   }, [currentUserId, department]);
 
@@ -655,7 +655,7 @@ export function DeptMembersDialog({
                     const isEditable = (
                       isSuperAdmin || 
                       currentUserDeptRole === 'HEAD' || 
-                      (currentUserDeptRole === 'MANAGER' && ['MEMBER', 'GUEST'].includes(m.role))
+                      (currentUserDeptRole === 'MANAGER' && ['MEMBER', 'GUEST'].includes(m.role || ''))
                     ) && m.userId !== currentUserId;
 
                     const isDeletable = isEditable;

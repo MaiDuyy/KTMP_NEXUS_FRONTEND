@@ -123,7 +123,7 @@ export const departmentApi = apiSlice.injectEndpoints({
         method: 'POST',
         body: { userId, role },
       }),
-      invalidatesTags: ['Departments'],
+      invalidatesTags: ['Departments', 'Users'],
     }),
 
     updateDepartmentMember: builder.mutation<void, { departmentId: string; userId: string; role: string }>({
@@ -132,7 +132,7 @@ export const departmentApi = apiSlice.injectEndpoints({
         method: 'PATCH',
         body: { role },
       }),
-      invalidatesTags: ['Departments'],
+      invalidatesTags: ['Departments', 'Users'],
     }),
 
     removeDepartmentMember: builder.mutation<void, { departmentId: string; userId: string }>({
@@ -140,7 +140,7 @@ export const departmentApi = apiSlice.injectEndpoints({
         url: `/departments/${departmentId}/members/${userId}`,
         method: 'DELETE',
       }),
-      invalidatesTags: ['Departments'],
+      invalidatesTags: ['Departments', 'Users'],
     }),
 
     provisionDepartmentMember: builder.mutation<unknown, { email: string; name: string; role: string; departmentId: string; departmentRole: string }>({
@@ -149,7 +149,7 @@ export const departmentApi = apiSlice.injectEndpoints({
         method: 'POST',
         body: { email, name, role, departmentId, departmentRole },
       }),
-      invalidatesTags: ['Departments'],
+      invalidatesTags: ['Departments', 'Users'],
     }),
 
     inviteDepartmentMember: builder.mutation<unknown, { departmentId: string; email: string; role: string }>({
@@ -177,7 +177,7 @@ export const departmentApi = apiSlice.injectEndpoints({
         method: 'POST',
         body,
       }),
-      invalidatesTags: ['Departments'],
+      invalidatesTags: ['Departments', 'Users'],
     }),
 
     rejectDepartmentInvite: builder.mutation<unknown, string>({

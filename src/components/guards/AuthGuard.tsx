@@ -30,7 +30,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
   // Skip check if on public route or not logged in yet
   const { error: authError, isLoading: isVerifying } = useCheckAuthQuery(undefined, {
     skip: isPublicRoute || !isAuthenticated || !token,
-    pollingInterval: 60000, // Re-verify every 60s to catch real-time suspensions
+    pollingInterval: 350000, // Re-verify every 60s to catch real-time suspensions
   });
 
   useEffect(() => {

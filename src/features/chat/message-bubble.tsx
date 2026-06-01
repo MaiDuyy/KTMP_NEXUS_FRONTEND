@@ -82,6 +82,45 @@ interface MessageBubbleProps {
     onJumpToMessage?: (messageId: string) => void;
 }
 
+const RoleBadge = ({ role }: { role?: string }) => {
+    if (!role) return null;
+    
+    switch (role) {
+        case "SUPER_ADMIN":
+            return (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-[2px] text-[9px] font-bold font-mono tracking-wider uppercase bg-gradient-to-r from-neutral-900 via-neutral-950 to-black text-amber-400 shadow-md border border-amber-500/40 active:scale-95 transition-transform select-none">
+                    ⭐ Super Admin
+                </span>
+            );
+        case "SYSTEM_ADMIN":
+            return (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-[2px] text-[9px] font-bold font-mono tracking-wide uppercase bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-sm border border-orange-400/20 active:scale-95 transition-transform select-none">
+                    System Admin
+                </span>
+            );
+        case "WORKSPACE_MANAGER":
+            return (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-[2px] text-[9px] font-bold font-mono tracking-wide uppercase bg-gradient-to-r from-teal-500 to-emerald-600 text-white shadow-sm border border-teal-400/20 active:scale-95 transition-transform select-none">
+                    Workspace Manager
+                </span>
+            );
+        case "WORKSPACE_ADMIN":
+            return (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-[2px] text-[9px] font-bold font-mono tracking-wide uppercase bg-gradient-to-r from-red-500 to-rose-600 text-white shadow-sm border border-red-400/10 active:scale-95 transition-transform select-none">
+                    Admin
+                </span>
+            );
+        case "DEPARTMENT_HEAD":
+            return (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-[2px] text-[9px] font-bold font-mono tracking-wide uppercase bg-gradient-to-r from-blue-500 to-sky-500 text-white shadow-sm border border-blue-400/10 active:scale-95 transition-transform select-none">
+                    Trưởng phòng
+                </span>
+            );
+        default:
+            return null;
+    }
+};
+
 export default function MessageBubble({
     message,
     chatId,
@@ -736,8 +775,9 @@ export default function MessageBubble({
                                             : "border-l-2 border-blue-500/80 dark:border-blue-400/80 ml-3"
                                     )}
                                 >
-                                    <p className={`text-xs font-bold text-left ${isMe ? "text-blue-200" : "text-blue-600 dark:text-blue-400"}`}>
-                                        {message.replyTo.sender?.name || "Người dùng"}
+                                    <p className={`text-xs font-bold text-left flex items-center gap-1.5 ${isMe ? "text-blue-200" : "text-blue-600 dark:text-blue-400"}`}>
+                                        <span>{message.replyTo.sender?.name || "Người dùng"}</span>
+                                        <RoleBadge role={message.replyTo.sender?.role} />
                                     </p>
                                     <div className={`text-xs truncate text-left ${isMe ? "text-blue-100" : "text-gray-500 dark:text-zinc-400"}`}>
                                         <MessageSnippet 
@@ -756,9 +796,10 @@ export default function MessageBubble({
 
                             {/* Sender name — visible only on first/single message of cluster */}
                             {!isMe && message.sender?.name && (isFirst || isSingle) && (
-                                <p className={`px-3 pt-2 text-xs font-bold flex items-center gap-1 text-left ${isAI ? "text-indigo-650 dark:text-indigo-400" : "text-blue-600 dark:text-blue-400"}`}>
+                                <p className={`px-3 pt-2 text-xs font-bold flex items-center gap-1.5 text-left ${isAI ? "text-indigo-650 dark:text-indigo-400" : "text-blue-600 dark:text-blue-400"}`}>
                                     {isAI && <Sparkles size={12} className="text-indigo-500" />}
-                                    {message.sender.name}
+                                    <span>{message.sender.name}</span>
+                                    <RoleBadge role={message.sender.role} />
                                 </p>
                             )}
 

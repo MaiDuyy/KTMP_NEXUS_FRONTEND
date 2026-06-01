@@ -456,7 +456,7 @@ export function UserTable({ onInviteUser, onEditUser }: UserTableProps) {
                                         onEditUser?.(u);
                                     }}
                                     onRole={(u : any) => { setSelectedUser(u); setShowRoleDialog(true); }}
-                                    onQuota={(u : any) => { setSelectedUser(u); setQuotaValue(10); setShowQuotaDialog(true); }}
+                                    onQuota={(u : any) => { setSelectedUser(u); setQuotaValue(u.maxWorkspaces ?? 10); setShowQuotaDialog(true); }}
                                     onSuspend={(u : any) => { setSelectedUser(u); setShowSuspendDialog(true); }}
                                     onUnsuspend={(u :any) => { setSelectedUser(u); setShowUnsuspendDialog(true); }}
                                     onDelete={(u: any) => { setSelectedUser(u); setShowDeleteDialog(true); }}
