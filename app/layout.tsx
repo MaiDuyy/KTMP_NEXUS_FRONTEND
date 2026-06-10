@@ -1,11 +1,15 @@
 import type { Metadata } from "next";
+<<<<<<< HEAD
+import { Plus_Jakarta_Sans, Geist_Mono } from "next/font/google";
+=======
 import { Geist, Geist_Mono, Inter } from "next/font/google";
+>>>>>>> main
 import "./globals.css";
 
 const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const plusJakarta = Plus_Jakarta_Sans({
+  variable: "--font-plus-jakarta",
   subsets: ["latin"],
 });
 
@@ -25,11 +29,23 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
+<<<<<<< HEAD
+    <html lang="en" suppressHydrationWarning={true}>
+      <body suppressHydrationWarning={true} className={`${plusJakarta.variable} ${geistMono.variable} antialiased font-sans`} >
+        <RootProvider>
+
+          <ClientLayoutWrapper>
+            {children}
+          </ClientLayoutWrapper>
+        </RootProvider>
+        <Toaster position="top-right" richColors />
+=======
     <html lang="en" className={inter.variable}>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
+>>>>>>> main
       </body>
     </html>
   );

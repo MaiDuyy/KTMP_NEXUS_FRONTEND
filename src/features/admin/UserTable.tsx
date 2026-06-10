@@ -1,0 +1,774 @@
+import { useState, useEffect } from 'react';
+import { WikiPagination } from '@/app/wiki/components/WikiPagination';
+import {
+    useListUsersQuery,
+    useDeleteUserMutation,
+    useUpdateUserMutation,
+    useSuspendUserMutation,
+    useUnsuspendUserMutation,
+    User,
+    UserFilters,
+    useUpdateUserQuotaMutation,
+    useUpdateUserRoleMutation
+} from '@/src/redux/feature/adminApi';
+import { useGetRolesQuery } from '@/src/redux/feature/rbacApi';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow
+} from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+    Search,
+    MoreHorizontal,
+    UserPlus,
+    Trash2,
+    Edit,
+    Shield,
+    Loader2,
+    ChevronLeft,
+    ChevronRight,
+    Ban,
+    UserCheck,
+    Filter,
+    Users,
+    Building2,
+    AlertTriangle,
+    Info,
+} from 'lucide-react';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+import { InviteDialog } from './InviteDialog';
+import { UserEditDialog } from './UserEditDialog';
+import { useRealtimeChat, useIsUserOnline } from '@/src/hooks/useRealtimeChat';
+import { useAppSelector } from '@/src/redux/hooks';
+import { getAvatarUrl } from '@/src/utils/image-utils';
+
+const ROLE_LABELS: Record<string, string> = {
+    SUPER_ADMIN: 'Quản trị viên cấp cao',
+    ADMIN: 'Quản trị viên',
+    WORKSPACE_MANAGER: 'Quản lý Workspace',
+    EMPLOYEE: 'Nhân viên',
+};
+
+const ROLE_COLORS: Record<string, string> = {
+    SUPER_ADMIN: 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-950/30 dark:text-purple-400 dark:border-purple-900/30',
+    ADMIN: 'bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-950/30 dark:text-indigo-400 dark:border-indigo-900/30',
+    WORKSPACE_MANAGER: 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-950/30 dark:text-orange-400 dark:border-orange-900/30',
+    WORKSPACE_OWNER: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900/30',
+    WORKSPACE_ADMIN: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-900/30',
+    WORKSPACE_MEMBER: 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800/40 dark:text-slate-300 dark:border-slate-700/50',
+    WORKSPACE_GUEST: 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800/30 dark:text-gray-400 dark:border-gray-700/50',
+    EMPLOYEE: 'bg-green-100 text-green-700 border-green-200 dark:bg-green-950/30 dark:text-green-400 dark:border-green-900/30',
+};
+
+function UserRow({ user, isOnline, currentUser, onEdit, onRole, onQuota, onSuspend, onUnsuspend, onDelete }: any) {
+    
+    const getInitials = (name: string) => {
+        return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    };
+
+    return (
+        <TableRow className="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors border-b border-border">
+            <TableCell className="py-2.5">
+                <div className="flex items-center gap-2">
+                    <div className="relative">
+                        <Avatar className="h-8 w-8 border border-border shadow-sm">
+                            <AvatarImage src={getAvatarUrl(user.avatar, user.name)} alt={user.name} />
+                            <AvatarFallback className="text-xs">{getInitials(user.name)}</AvatarFallback>
+                        </Avatar>
+                        {isOnline && (
+                            <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-green-500 border border-white dark:border-slate-950" />
+                        )}
+                    </div>
+                    <div className="flex flex-col">
+                        <p className="font-semibold text-xs text-foreground leading-tight">{user.name}</p>
+                        <p className="text-[10px] text-muted-foreground leading-none mt-0.5">{user.email}</p>
+                    </div>
+                </div>
+            </TableCell>
+            <TableCell className="py-2.5">
+                {user.role ? (
+                    <Badge
+                        variant="outline"
+                        className={cn("font-medium text-[10px] py-0 px-1.5 rounded-md", ROLE_COLORS[user.role] || "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400")}
+                    >
+                        {ROLE_LABELS[user.role] || user.role}
+                    </Badge>
+                ) : (
+                    <span className="text-xs text-slate-400">-</span>
+                )}
+            </TableCell>
+            <TableCell className="py-2.5">
+                <Badge
+                    variant="outline"
+                    className={cn(
+                        "font-semibold text-[10px] px-1.5 py-0 rounded-md",
+                        user.isActive && !user.isSuspended
+                            ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/30 dark:text-green-400 dark:border-green-900/30"
+                            : "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-400 dark:border-red-900/30"
+                    )}
+                >
+                    {user.isSuspended ? 'Đã đình chỉ' : user.isActive ? 'Đang hoạt động' : 'Ngưng hoạt động'}
+                </Badge>
+            </TableCell>
+            <TableCell className="py-2.5">
+                <div className="flex flex-col">
+                    <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                        {isOnline ? 'Đang trực tuyến' : user.lastSeen
+                            ? `Lần cuối ${format(new Date(user.lastSeen), 'HH:mm dd/MM')}`
+                            : 'Chưa truy cập'
+                        }
+                    </span>
+                </div>
+            </TableCell>
+            <TableCell className="py-2.5">
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                    {format(new Date(user.createdAt), 'dd/MM/yyyy')}
+                </span>
+            </TableCell>
+            <TableCell className="py-2.5">
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
+                            <MoreHorizontal className="h-3.5 w-3.5" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48 bg-card border border-border">
+                        <DropdownMenuLabel className="text-xs">Thao tác</DropdownMenuLabel>
+                        <DropdownMenuSeparator className="bg-border" />
+                        <DropdownMenuItem onClick={() => onEdit(user)} className="text-xs py-1.5 cursor-pointer">
+                            <Edit className="w-3.5 h-3.5 mr-2" />
+                            Chỉnh sửa hồ sơ
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onRole(user)} className="text-xs py-1.5 cursor-pointer">
+                            <Shield className="w-3.5 h-3.5 mr-2" />
+                            Quản lý vai trò
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onQuota(user)} className="text-xs py-1.5 cursor-pointer">
+                            <Building2 className="w-3.5 h-3.5 mr-2" />
+                            Quản lý định mức
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator className="bg-border" />
+                        {user.isSuspended ? (
+                            <DropdownMenuItem onClick={() => onUnsuspend(user)} className="text-xs py-1.5 text-green-600 dark:text-green-400 cursor-pointer">
+                                <UserCheck className="w-3.5 h-3.5 mr-2" />
+                                Kích hoạt lại
+                            </DropdownMenuItem>
+                        ) : (
+                            <DropdownMenuItem onClick={() => onSuspend(user)} className="text-xs py-1.5 text-amber-600 dark:text-amber-400 cursor-pointer">
+                                <Ban className="w-3.5 h-3.5 mr-2" />
+                                Tạm đình chỉ
+                            </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem
+                            className="text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400 text-xs py-1.5 cursor-pointer"
+                            onClick={() => onDelete(user)}
+                        >
+                            <Trash2 className="w-3.5 h-3.5 mr-2" />
+                            Xóa người dùng
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </TableCell>
+        </TableRow>
+    );
+}
+
+interface UserTableProps {
+    onInviteUser?: () => void;
+    onEditUser?: (user: User) => void;
+}
+
+export function UserTable({ onInviteUser, onEditUser }: UserTableProps) {
+    const { onlineUsers } = useRealtimeChat();
+    const currentUser = useAppSelector((state) => state.auth.user);
+    const [filters, setFilters] = useState<UserFilters>({ limit: 10 });
+    const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+    const [page, setPage] = useState(0);
+    const [size, setSize] = useState(10);
+    const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+    const [showRoleDialog, setShowRoleDialog] = useState(false);
+    const [showSuspendDialog, setShowSuspendDialog] = useState(false);
+    const [suspendReason, setSuspendReason] = useState('');
+    const [suspendCategory, setSuspendCategory] = useState('POLICY_VIOLATION');
+    const [showUnsuspendDialog, setShowUnsuspendDialog] = useState(false);
+    const [unsuspendReason, setUnsuspendReason] = useState('');
+    const [selectedRole, setSelectedRole] = useState('');
+    const [showInviteDialog, setShowInviteDialog] = useState(false);
+    const [showEditDialog, setShowEditDialog] = useState(false);
+    const [showQuotaDialog, setShowQuotaDialog] = useState(false);
+    const [quotaValue, setQuotaValue] = useState(10);
+
+    const [deleteMode, setDeleteMode] = useState<'anonymize' | 'hard'>('anonymize');
+    const [deleteConfirmEmail, setDeleteConfirmEmail] = useState('');
+
+    // useEffect to debounce search query
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearchQuery(searchQuery);
+            setPage(0); // Reset to page 0 when query changes
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
+    const { data: usersData, isLoading, isFetching } = useListUsersQuery({
+        role: filters.role,
+        limit: size,
+        page: page + 1, // Backend page index is 1-based
+        search: debouncedSearchQuery || undefined,
+    });
+    const { data: rolesData } = useGetRolesQuery();
+    const [deleteUser, { isLoading: isDeleting }] = useDeleteUserMutation();
+    const [updateUserRole, { isLoading: isAssigning }] = useUpdateUserRoleMutation();
+    const [suspendUser, { isLoading: isSuspending }] = useSuspendUserMutation();
+    const [unsuspendUser, { isLoading: isUpdating }] = useUnsuspendUserMutation();
+    const [updateQuota, { isLoading: isUpdatingQuota }] = useUpdateUserQuotaMutation();
+
+    const users = usersData?.items || [];
+    const roles = Array.isArray(rolesData) ? rolesData : (rolesData as any)?.roles || [];
+
+    // Edge Case 1: Auto-decrement page if the current page is empty after user deletion/suspension
+    useEffect(() => {
+        if (users.length === 0 && page > 0 && !isLoading) {
+            setPage(prev => Math.max(0, prev - 1));
+        }
+    }, [users.length, page, isLoading]);
+
+    const handleSearch = (value: string) => {
+        setSearchQuery(value);
+    };
+
+    const handleDeleteUser = async () => {
+        if (!selectedUser) return;
+        if (deleteConfirmEmail !== selectedUser.email) {
+            toast.error('Email xác nhận không chính xác');
+            return;
+        }
+
+        try {
+            await deleteUser({ 
+                id: selectedUser.id, 
+                anonymize: deleteMode === 'anonymize' 
+            }).unwrap();
+            toast.success(deleteMode === 'anonymize' ? 'Vô danh hóa người dùng thành công' : 'Xóa người dùng vĩnh viễn thành công');
+            setShowDeleteDialog(false);
+            setSelectedUser(null);
+            setDeleteConfirmEmail('');
+        } catch (error) {
+            toast.error('Thao tác xóa thất bại');
+        }
+    };
+
+    const handleAssignRole = async () => {
+        if (!selectedUser || !selectedRole) return;
+
+        // Tìm tên vai trò từ ID đã chọn
+        const roleToAssign = roles.find((r: any) => r.id === selectedRole);
+        if (!roleToAssign) {
+            toast.error('Không tìm thấy thông tin vai trò');
+            return;
+        }
+
+        try {
+            await updateUserRole({
+                userId: selectedUser.id,
+                role: roleToAssign.name
+            }).unwrap();
+            toast.success('Gán vai trò thành công');
+            setShowRoleDialog(false);
+            setSelectedUser(null);
+            setSelectedRole('');
+        } catch (error) {
+            toast.error('Gán vai trò thất bại');
+        }
+    };
+
+    const handleSuspend = async () => {
+        if (!selectedUser || !suspendReason) return;
+        try {
+            const finalReason = `[${suspendCategory}] ${suspendReason}`;
+            await suspendUser({ id: selectedUser.id, reason: finalReason }).unwrap();
+            toast.success('Đã tạm đình chỉ người dùng');
+            setShowSuspendDialog(false);
+            setSelectedUser(null);
+            setSuspendReason('');
+        } catch (error) {
+            toast.error('Tạm đình chỉ người dùng thất bại');
+        }
+    };
+
+    const handleUnsuspend = async () => {
+        if (!selectedUser || !unsuspendReason) return;
+        try {
+            await unsuspendUser({ id: selectedUser.id, reason: unsuspendReason }).unwrap();
+            toast.success('Kích hoạt lại người dùng thành công');
+            setShowUnsuspendDialog(false);
+            setSelectedUser(null);
+            setUnsuspendReason('');
+        } catch (error) {
+            toast.error('Kích hoạt lại người dùng thất bại');
+        }
+    };
+
+    const handleUpdateQuota = async () => {
+        if (!selectedUser) return;
+        try {
+            await updateQuota({
+                userId: selectedUser.id,
+                maxWorkspaces: quotaValue
+            }).unwrap();
+            toast.success('Cập nhật định mức người dùng thành công');
+            setShowQuotaDialog(false);
+            setSelectedUser(null);
+        } catch (error) {
+            toast.error('Cập nhật định mức người dùng thất bại');
+        }
+    };
+
+    const getInitials = (name: string) => {
+        return name
+            .split(' ')
+            .map(n => n[0])
+            .join('')
+            .toUpperCase()
+            .slice(0, 2);
+    };
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center h-64">
+                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-4">
+            {/* Header & Filters */}
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2 flex-1">
+                    <div className="relative w-full max-w-sm">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <Input
+                            placeholder="Tìm kiếm người dùng..."
+                            value={searchQuery}
+                            onChange={(e) => handleSearch(e.target.value)}
+                            className="pl-8 h-8 text-xs rounded-lg"
+                        />
+                    </div>
+                    <Select
+                        value={filters.role || 'all'}
+                        onValueChange={(val) => {
+                            setFilters(prev => ({ ...prev, role: val === 'all' ? undefined : val }));
+                            setPage(0);
+                        }}
+                    >
+                        <SelectTrigger className="w-[140px] h-8 text-xs rounded-lg">
+                            <Filter className="w-3 h-3 mr-1.5" />
+                            <SelectValue placeholder="Vai trò" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-card border border-border">
+                            <SelectItem value="all" className="text-xs">Tất cả vai trò</SelectItem>
+                            {roles.map((r: any) => (
+                                <SelectItem key={r.id} value={r.name} className="text-xs">{r.displayName}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <Button 
+                    onClick={() => setShowInviteDialog(true)} 
+                    className="h-8.5 text-xs rounded-lg bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold shadow-sm transition-all active:scale-[0.98] cursor-pointer"
+                >
+                    <UserPlus className="w-3.5 h-3.5 mr-1.5" />
+                    Thêm nhân sự
+                </Button>
+            </div>
+
+            {/* Table */}
+            <div className="border border-border rounded-xl overflow-hidden bg-background shadow-sm">
+                <Table>
+                    <TableHeader className="bg-slate-50/50 dark:bg-slate-800/30 border-b border-border">
+                        <TableRow>
+                            <TableHead className="w-[280px] h-8 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Người dùng</TableHead>
+                            <TableHead className="h-8 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Vai trò</TableHead>
+                            <TableHead className="h-8 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Trạng thái</TableHead>
+                            <TableHead className="h-8 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Hoạt động</TableHead>
+                            <TableHead className="h-8 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Ngày tham gia</TableHead>
+                            <TableHead className="w-[50px] h-8"></TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {users.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                                    <div className="flex flex-col items-center gap-2">
+                                        <Users className="w-8 h-8 opacity-20" />
+                                        <p>Không tìm thấy người dùng nào khớp với tìm kiếm</p>
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        ) : (
+                            users.map((user) => (
+                                <UserRow
+                                    key={user.id}
+                                    user={user}
+                                    isOnline={onlineUsers.has(user.id)}
+                                    currentUser={currentUser}
+                                    onEdit={(u: any) => {
+                                        setSelectedUser(u);
+                                        setShowEditDialog(true);
+                                        onEditUser?.(u);
+                                    }}
+                                    onRole={(u : any) => { setSelectedUser(u); setShowRoleDialog(true); }}
+                                    onQuota={(u : any) => { setSelectedUser(u); setQuotaValue(u.maxWorkspaces ?? 10); setShowQuotaDialog(true); }}
+                                    onSuspend={(u : any) => { setSelectedUser(u); setShowSuspendDialog(true); }}
+                                    onUnsuspend={(u :any) => { setSelectedUser(u); setShowUnsuspendDialog(true); }}
+                                    onDelete={(u: any) => { setSelectedUser(u); setShowDeleteDialog(true); }}
+                                />
+                            ))
+                        )}
+                    </TableBody>
+                </Table>
+            </div>
+
+            {/* Pagination */}
+            {usersData && (
+                <WikiPagination
+                    page={page}
+                    size={size}
+                    totalPages={Math.ceil((usersData.total || 0) / size)}
+                    totalElements={usersData.total || 0}
+                    setPage={setPage}
+                    setSize={setSize}
+                />
+            )}
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={showDeleteDialog} onOpenChange={(open) => {
+                setShowDeleteDialog(open);
+                if (!open) setDeleteConfirmEmail('');
+            }}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-red-600">
+                            <AlertTriangle className="w-5 h-5" />
+                            Xóa tài khoản người dùng
+                        </DialogTitle>
+                        <DialogDescription>
+                            Hành động này có tác động lớn đến dữ liệu hệ thống. Vui lòng chọn phương thức xử lý.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="py-4 space-y-6">
+                        <RadioGroup value={deleteMode} onValueChange={(val: any) => setDeleteMode(val)} className="space-y-2">
+                            <div className={cn(
+                                "flex items-start gap-2.5 p-2.5 rounded-lg border transition-colors cursor-pointer",
+                                deleteMode === 'anonymize' 
+                                    ? "bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700" 
+                                    : "border-transparent border-slate-100 dark:border-slate-800/50"
+                            )}>
+                                <RadioGroupItem value="anonymize" id="anonymize" className="mt-1" />
+                                <Label htmlFor="anonymize" className="flex-1 cursor-pointer">
+                                    <span className="block text-xs font-bold text-foreground">Vô danh hóa (Khuyên dùng)</span>
+                                    <span className="block text-[10px] text-muted-foreground mt-0.5 leading-normal">
+                                        Giữ lại các tin nhắn và dữ liệu nhưng thay thế thông tin cá nhân bằng &quot;Deleted User&quot;. Đảm bảo tính toàn vẹn của cuộc hội thoại cũ.
+                                    </span>
+                                </Label>
+                            </div>
+
+                            <div className={cn(
+                                "flex items-start gap-2.5 p-2.5 rounded-lg border transition-colors cursor-pointer",
+                                deleteMode === 'hard' 
+                                    ? "bg-red-50/60 dark:bg-red-950/20 border-red-200 dark:border-red-900/30" 
+                                    : "border-transparent border-slate-100 dark:border-slate-800/50"
+                            )}>
+                                <RadioGroupItem value="hard" id="hard" className="mt-1" />
+                                <Label htmlFor="hard" className="flex-1 cursor-pointer">
+                                    <span className="block text-xs font-bold text-red-600 dark:text-red-400">Xóa vĩnh viễn</span>
+                                    <span className="block text-[10px] text-red-600/70 dark:text-red-400/70 mt-0.5 leading-normal">
+                                        Xóa bỏ hoàn toàn mọi dữ liệu liên quan. Có thể gây ra lỗi hiển thị trong các cuộc hội thoại hoặc không gian làm việc cũ.
+                                    </span>
+                                </Label>
+                            </div>
+                        </RadioGroup>
+
+                        <div className="space-y-2 p-3 bg-amber-50/60 dark:bg-amber-950/10 border border-amber-200 dark:border-amber-900/30 rounded-lg">
+                            <div className="flex items-center gap-1.5 text-amber-800 dark:text-amber-400 font-bold text-xs">
+                                <Info className="w-3.5 h-3.5" />
+                                Xác nhận danh tính người dùng
+                            </div>
+                            <p className="text-[11px] text-amber-700 dark:text-amber-300">
+                                Nhập chính xác email <strong>{selectedUser?.email}</strong> để xác nhận.
+                            </p>
+                            <Input
+                                placeholder="Nhập email để xác nhận..."
+                                value={deleteConfirmEmail}
+                                onChange={(e) => setDeleteConfirmEmail(e.target.value)}
+                                className="bg-white dark:bg-slate-900 h-8 text-xs rounded-lg"
+                            />
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+                            Hủy bỏ
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={handleDeleteUser}
+                            disabled={isDeleting || deleteConfirmEmail !== selectedUser?.email}
+                            className="min-w-[120px]"
+                        >
+                            {isDeleting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                            Xác nhận xóa
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Suspend Dialog */}
+            <Dialog open={showSuspendDialog} onOpenChange={setShowSuspendDialog}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-amber-600">
+                            <Ban className="w-5 h-5" />
+                            Đình chỉ tài khoản
+                        </DialogTitle>
+                        <DialogDescription>
+                            Người dùng sẽ bị đăng xuất ngay lập tức và không thể truy cập hệ thống cho đến khi được mở khóa.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="py-4 space-y-4">
+                        <div className="space-y-2">
+                            <Label>Lý do đình chỉ</Label>
+                            <Select value={suspendCategory} onValueChange={setSuspendCategory}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Chọn danh mục lý do" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="POLICY_VIOLATION">Vi phạm điều khoản sử dụng</SelectItem>
+                                    <SelectItem value="SECURITY_RISK">Rủi ro bảo mật / Nghi ngờ xâm nhập</SelectItem>
+                                    <SelectItem value="INAPPROPRIATE_BEHAVIOR">Hành vi không phù hợp</SelectItem>
+                                    <SelectItem value="REQUESTED_BY_MANAGER">Yêu cầu từ cấp quản lý</SelectItem>
+                                    <SelectItem value="OTHER">Lý do khác</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label>Chi tiết lý do (Bắt buộc)</Label>
+                            <Textarea
+                                placeholder="Mô tả chi tiết để phục vụ việc đối soát sau này..."
+                                value={suspendReason}
+                                onChange={(e) => setSuspendReason(e.target.value)}
+                                className="min-h-[100px] resize-none"
+                            />
+                            <p className="text-[10px] text-muted-foreground italic">
+                                * Lý do này sẽ được lưu vào lịch sử audit và có thể hiển thị cho người dùng.
+                            </p>
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowSuspendDialog(false)}>
+                            Hủy
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={handleSuspend}
+                            disabled={!suspendReason || suspendReason.length < 5 || isSuspending}
+                            className="bg-amber-600 hover:bg-amber-700 border-none"
+                        >
+                            {isSuspending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                            Xác nhận đình chỉ
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Unsuspend Dialog */}
+            <Dialog open={showUnsuspendDialog} onOpenChange={setShowUnsuspendDialog}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-green-600">
+                            <UserCheck className="w-5 h-5" />
+                            Mở đình chỉ tài khoản
+                        </DialogTitle>
+                        <DialogDescription>
+                            Người dùng này sẽ có thể đăng nhập lại và tham gia các hoạt động như bình thường.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="py-3 space-y-3">
+                        <div className="p-2.5 bg-green-50/60 dark:bg-green-950/10 border border-green-200 dark:border-green-900/30 rounded-lg space-y-0.5">
+                            <p className="text-[11px] font-bold text-green-800 dark:text-green-400">Thông tin đình chỉ trước đó:</p>
+                            <p className="text-[11px] text-green-700 dark:text-green-300 italic">&quot;{selectedUser?.suspendReason || 'Không có dữ liệu'}&quot;</p>
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <Label className="text-xs">Lý do mở khóa (Bắt buộc)</Label>
+                            <Textarea
+                                placeholder="Nhập lý do cho việc khôi phục tài khoản này..."
+                                value={unsuspendReason}
+                                onChange={(e) => setUnsuspendReason(e.target.value)}
+                                className="min-h-[80px] resize-none text-xs rounded-lg border-green-200 dark:border-green-900/40 focus-visible:ring-green-500 bg-white dark:bg-slate-900"
+                            />
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => {
+                            setShowUnsuspendDialog(false);
+                            setUnsuspendReason('');
+                        }}>
+                            Hủy
+                        </Button>
+                        <Button
+                            onClick={handleUnsuspend}
+                            disabled={!unsuspendReason || unsuspendReason.length < 5 || isUpdating}
+                            className="bg-green-600 hover:bg-green-700 text-white min-w-[120px]"
+                        >
+                            {isUpdating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                            Khôi phục tài khoản
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+
+            {/* Change Role Dialog */}
+            <Dialog open={showRoleDialog} onOpenChange={setShowRoleDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Cập nhật vai trò người dùng</DialogTitle>
+                        <DialogDescription>
+                            Gán một vai trò bảo mật mới cho <strong>{selectedUser?.name}</strong>.
+                            Thay đổi sẽ có hiệu lực trong phiên làm việc tiếp theo.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4">
+                        <Select value={selectedRole} onValueChange={setSelectedRole}>
+                            <SelectTrigger className="w-full h-11">
+                                <SelectValue placeholder="Chọn một vai trò" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {roles.map((role: any) => (
+                                    <SelectItem key={role.id} value={role.id}>
+                                        {role.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowRoleDialog(false)}>
+                            Hủy
+                        </Button>
+                        <Button
+                            onClick={handleAssignRole}
+                            className="bg-primary"
+                            disabled={!selectedRole || isAssigning}
+                        >
+                            {isAssigning && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                            Cập nhật quyền hạn
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Quota Dialog */}
+            <Dialog open={showQuotaDialog} onOpenChange={setShowQuotaDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Quản lý giới hạn Workspace</DialogTitle>
+                        <DialogDescription>
+                            Thiết lập số lượng Workspace tối đa mà <strong>{selectedUser?.name}</strong> có thể tạo.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4 space-y-3">
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-foreground">Giới hạn số lượng (Workspaces)</label>
+                            <Input
+                                type="number"
+                                value={quotaValue}
+                                onChange={(e) => setQuotaValue(parseInt(e.target.value))}
+                                min={1}
+                                max={100}
+                                className="h-9 text-xs rounded-lg"
+                            />
+                        </div>
+                        <div className="p-2.5 bg-blue-50/60 dark:bg-blue-950/10 border border-blue-200 dark:border-blue-900/30 rounded-lg flex gap-2">
+                            <Building2 className="w-4 h-4 text-blue-500 dark:text-blue-400 shrink-0 mt-0.5" />
+                            <p className="text-[10px] text-blue-700 dark:text-blue-300 leading-normal">
+                                Giới hạn này sẽ ghi đè lên giới hạn mặc định của hệ thống hoặc của tổ chức (nếu có).
+                            </p>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowQuotaDialog(false)}>
+                            Hủy
+                        </Button>
+                        <Button
+                            onClick={handleUpdateQuota}
+                            disabled={isUpdatingQuota}
+                        >
+                            {isUpdatingQuota && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                            Cập nhật Quota
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Invite Dialog */}
+            <InviteDialog
+                open={showInviteDialog}
+                onOpenChange={setShowInviteDialog}
+            />
+
+            {/* Edit Dialog */}
+            <UserEditDialog
+                user={selectedUser}
+                open={showEditDialog}
+                onOpenChange={setShowEditDialog}
+            />
+        </div>
+    );
+}
+
