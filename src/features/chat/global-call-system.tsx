@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import useRingtone from "@/src/hooks/useRingTone";
+import { MeetingVoicePanel } from "@/src/features/meeting-voice/MeetingVoicePanel";
+import type { RootState } from "@/src/redux/store";
 
 // ============= CALL STATE MACHINE =============
 type CallState =
@@ -46,13 +48,22 @@ interface CallData {
   serverUrl?: string;
 }
 
+interface IncomingCallEvent {
+  roomName: string;
+  chatId: string;
+  callerId: string;
+  callerName: string;
+  isVideo: boolean;
+  callType?: "private" | "group";
+}
+
 export function GlobalCallSystem() {
   const [callState, setCallState] = useState<CallState>("idle");
   const [callData, setCallData] = useState<CallData | null>(null);
-  const [endReason, setEndReason] = useState<string>("");
   const callStateRef = useRef<CallState>("idle");
 
-  const user = useSelector((state: any) => state.auth?.user);
+  const user = useSelector((state: RootState) => state.auth.user);
+  const currentWorkspaceId = useSelector((state: RootState) => state.workspace.currentWorkspaceId);
   const { isConnected } = useRealtimeChat();
   const { playRingtone, stopRingtone } = useRingtone('/musics/ring.mp3');
   const { playRingtone: playStopSound } = useRingtone('/musics/stop.mp3', false);
@@ -79,7 +90,6 @@ export function GlobalCallSystem() {
       const timer = setTimeout(() => {
         setCallState("idle");
         setCallData(null);
-        setEndReason("");
       }, 2000);
       return () => clearTimeout(timer);
     }
@@ -160,7 +170,7 @@ export function GlobalCallSystem() {
     };
 
     // Someone is calling US
-    const onIncomingCall = (data: any) => {
+    const onIncomingCall = (data: IncomingCallEvent) => {
       if (data.callerId === user.id) return; // Ignore our own calls
 
       if (callStateRef.current !== "idle") {
@@ -198,7 +208,6 @@ export function GlobalCallSystem() {
     const onDeclined = (data: { roomName: string; declinedByName: string }) => {
       if (callStateRef.current === "ringing_out") {
         toast.info(`${data.declinedByName} đã từ chối cuộc gọi.`);
-        setEndReason("declined");
         setCallState("ended");
       }
     };
@@ -231,7 +240,6 @@ export function GlobalCallSystem() {
       }
 
       toast.info(message);
-      setEndReason(reason);
       setCallState("ended");
     };
 
@@ -329,7 +337,6 @@ export function GlobalCallSystem() {
       setCallState("idle");
       setCallData(null);
     } else {
-      setEndReason("ended");
       setCallState("ended");
     }
   }, [callData]);
@@ -432,7 +439,7 @@ export function GlobalCallSystem() {
         <DialogContent className="max-w-[95vw] w-full h-[92vh] p-0 overflow-hidden bg-black border-none flex flex-col">
           {/* Group call: show "Leave" button instead of "End for all" */}
           {callData.callType === "group" && (
-            <div className="absolute top-3 right-14 z-50 flex items-center gap-2">
+            <div className="absolute top-3 right-14 z-50 flex items-center gap-2 md:right-[21rem]">
               {/* Only the initiator can see "End for all" */}
               {callData.callerId === user?.id && (
                 <button
@@ -461,7 +468,19 @@ export function GlobalCallSystem() {
             style={{ height: "100%", flex: 1 }}
             onDisconnected={endCall}
           >
-            <VideoConference />
+            <div className="flex h-full min-h-0 flex-1 flex-col md:flex-row">
+              <div className="min-h-0 min-w-0 flex-1">
+                <VideoConference />
+              </div>
+              <MeetingVoicePanel
+                socket={socketService.getSocket()}
+                meetingSessionId={callData.roomName}
+                chatId={callData.chatId}
+                workspaceId={currentWorkspaceId}
+                userId={user?.id || ""}
+                userName={user?.name || user?.fullName || "Thành viên"}
+              />
+            </div>
             <RoomAudioRenderer />
           </LiveKitRoom>
         </DialogContent>
