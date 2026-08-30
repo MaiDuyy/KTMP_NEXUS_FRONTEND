@@ -25,6 +25,7 @@ import {
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import useRingtone from "@/src/hooks/useRingTone";
 import { MeetingVoicePanel } from "@/src/features/meeting-voice/MeetingVoicePanel";
+import { MEETING_VOICE_ENABLED } from "@/src/features/meeting-voice/meetingVoiceFeature";
 import type { RootState } from "@/src/redux/store";
 
 // ============= CALL STATE MACHINE =============
@@ -472,14 +473,16 @@ export function GlobalCallSystem() {
               <div className="min-h-0 min-w-0 flex-1">
                 <VideoConference />
               </div>
-              <MeetingVoicePanel
-                socket={socketService.getSocket()}
-                meetingSessionId={callData.roomName}
-                chatId={callData.chatId}
-                workspaceId={currentWorkspaceId}
-                userId={user?.id || ""}
-                userName={user?.name || user?.fullName || "Thành viên"}
-              />
+              {MEETING_VOICE_ENABLED && (
+                <MeetingVoicePanel
+                  socket={socketService.getSocket()}
+                  meetingSessionId={callData.roomName}
+                  chatId={callData.chatId}
+                  workspaceId={currentWorkspaceId}
+                  userId={user?.id || ""}
+                  userName={user?.name || user?.fullName || "Thành viên"}
+                />
+              )}
             </div>
             <RoomAudioRenderer />
           </LiveKitRoom>
