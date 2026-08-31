@@ -203,6 +203,8 @@ export function useMeetingVoice(options: {
         turnId: event.turnId,
         turnToken: event.turnToken,
         uploadUrl: event.uploadUrl,
+        streamUrl: event.streamUrl,
+        stream: event.stream,
         expiresAt: event.expiresAt,
       };
       credentialsRef.current = credentials;
