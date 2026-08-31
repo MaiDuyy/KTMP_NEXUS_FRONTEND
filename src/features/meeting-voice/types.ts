@@ -15,6 +15,7 @@ export interface VoiceTurnAcceptedEvent {
   turnToken: string;
   uploadUrl: string;
   streamUrl: string;
+  stream?: VoiceStreamDescriptor;
   expiresAt: string;
 }
 
@@ -92,5 +93,21 @@ export interface VoiceTurnCredentials {
   turnId: string;
   turnToken: string;
   uploadUrl: string;
+  streamUrl: string;
+  stream?: VoiceStreamDescriptor;
   expiresAt: string;
+}
+
+export type VoiceTransportMode = 'streaming' | 'batch';
+
+export interface VoiceStreamDescriptor {
+  protocolVersion: 1;
+  audioFormat: {
+    encoding: 'LINEAR16';
+    sampleRateHz: 16000;
+    channelCount: 1;
+    chunkDurationMs: 20;
+  };
+  authTimeoutMs: number;
+  maxQueuedBytes: number;
 }
