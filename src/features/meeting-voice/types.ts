@@ -43,6 +43,7 @@ export interface VoiceTranscriptEvent {
   text: string;
   isFinal: boolean;
   stability?: number;
+  revision?: number;
 }
 
 export interface VoiceMessageEvent {
