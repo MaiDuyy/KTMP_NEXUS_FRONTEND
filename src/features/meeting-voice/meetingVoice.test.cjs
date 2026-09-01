@@ -54,6 +54,27 @@ test('meeting voice reducer restores a locked session, appends transcript, then 
   assert.equal(state.messages.length, 1);
 });
 
+test('meeting voice reducer replaces partial transcript and ignores stale revisions', () => {
+  let state = { ...initialMeetingVoiceState, turnId: 'turn-1' };
+  const event = {
+    meetingSessionId: 'call-1',
+    turnId: 'turn-1',
+    speakerUserId: 'user-1',
+    speakerName: 'User One',
+    text: 'bản mới',
+    isFinal: false,
+    revision: 2,
+  };
+  state = meetingVoiceReducer(state, { type: 'TRANSCRIPT', value: event });
+  state = meetingVoiceReducer(state, { type: 'TRANSCRIPT', value: { ...event, text: 'bản cũ', revision: 1 } });
+  assert.equal(state.messages[0].displayText, 'bản mới');
+  assert.equal(state.messages[0].status, 'STREAMING');
+
+  state = meetingVoiceReducer(state, { type: 'TRANSCRIPT', value: { ...event, text: 'bản cuối', isFinal: true, revision: Number.MAX_SAFE_INTEGER } });
+  assert.equal(state.messages[0].displayText, 'bản cuối');
+  assert.equal(state.messages[0].status, 'COMPLETED');
+});
+
 test('meeting recorder emits WebM audio and stops every media track', async () => {
   let trackStops = 0;
   const track = { stop: () => { trackStops += 1; } };

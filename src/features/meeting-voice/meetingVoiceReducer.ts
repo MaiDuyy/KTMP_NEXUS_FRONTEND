@@ -21,6 +21,7 @@ export interface MeetingVoiceState {
   uploadProgress: number | null;
   error: VoiceErrorEvent | null;
   syncing: boolean;
+  transcriptRevisions: Record<string, number>;
 }
 
 export const initialMeetingVoiceState: MeetingVoiceState = {
@@ -35,6 +36,7 @@ export const initialMeetingVoiceState: MeetingVoiceState = {
   uploadProgress: null,
   error: null,
   syncing: true,
+  transcriptRevisions: {},
 };
 
 export type MeetingVoiceAction =
@@ -84,6 +86,7 @@ export function meetingVoiceReducer(
         messages: action.value.messages.slice(-100),
         syncing: false,
         starting: false,
+        transcriptRevisions: {},
       };
     case 'LOCK':
       return {
@@ -100,8 +103,16 @@ export function meetingVoiceReducer(
       if (state.turnId && action.value.turnId !== state.turnId) return state;
       return { ...state, turnId: action.value.turnId, turnState: action.value.state };
     case 'TRANSCRIPT':
+      if (
+        action.value.revision !== undefined
+        && action.value.revision < (state.transcriptRevisions[action.value.turnId] ?? -1)
+      ) return state;
       return {
         ...state,
+        transcriptRevisions: {
+          ...state.transcriptRevisions,
+          [action.value.turnId]: action.value.revision ?? (state.transcriptRevisions[action.value.turnId] ?? 0),
+        },
         messages: upsert(state.messages, {
           id: `${action.value.turnId}:user`,
           turnId: action.value.turnId,
