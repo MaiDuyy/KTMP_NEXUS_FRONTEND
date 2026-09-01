@@ -210,12 +210,14 @@ export function useMeetingVoice(options: {
       return;
     }
     dispatch({ type: 'STARTING', value: true });
+    const transportMode = chooseVoiceTransportMode();
     options.socket.emit('voice:turn:start', {
       meetingSessionId: options.meetingSessionId,
       chatId: options.chatId,
       workspaceId: options.workspaceId,
       clientRequestId: crypto.randomUUID(),
       mode: 'rag',
+      transportMode,
     });
     clearStartTimer();
     startTimerRef.current = setTimeout(() => {
