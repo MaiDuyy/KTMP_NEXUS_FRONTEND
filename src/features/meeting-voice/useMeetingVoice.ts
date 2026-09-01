@@ -16,6 +16,13 @@ import type {
   VoiceTurnCredentials,
 } from './types';
 import { uploadVoiceAudio, VoiceUploadError } from './uploadVoiceAudio';
+import { createPcmAudioCapture, type PcmAudioCapture } from './pcmAudioWorklet';
+import { chooseVoiceTransportMode } from './streamingCapability';
+import {
+  connectVoiceStream,
+  VoiceStreamTransportError,
+  type VoiceStreamTransport,
+} from './voiceStreamTransport';
 
 const RECORDER_MESSAGES: Record<string, string> = {
   MIC_PERMISSION_DENIED: 'Bạn chưa cấp quyền sử dụng micro.',
@@ -31,6 +38,16 @@ const UPLOAD_MESSAGES: Record<string, string> = {
   VOICE_UPLOAD_TIMEOUT: 'Tải đoạn ghi âm lên quá thời gian chờ.',
   VOICE_UPLOAD_ABORTED: 'Đã dừng tải đoạn ghi âm.',
   VOICE_UPLOAD_NETWORK: 'Không thể tải đoạn ghi âm lên máy chủ.',
+};
+
+const STREAM_MESSAGES: Record<string, string> = {
+  VOICE_STREAM_PROTOCOL_ERROR: 'Kết nối truyền âm thanh không tương thích.',
+  VOICE_STREAM_AUTH_TIMEOUT: 'Xác thực truyền âm thanh quá thời gian chờ.',
+  VOICE_STREAM_SEQUENCE_ERROR: 'Thứ tự dữ liệu âm thanh không hợp lệ.',
+  VOICE_STREAM_BACKPRESSURE: 'Kết nối không xử lý kịp dữ liệu âm thanh.',
+  VOICE_STREAM_DISCONNECTED: 'Mất kết nối truyền âm thanh tới AI Voice.',
+  VOICE_STREAM_TIMEOUT: 'Phiên nói đã vượt quá thời gian cho phép.',
+  VOICE_TOKEN_INVALID: 'Phiên hỏi AI Voice không còn hợp lệ.',
 };
 
 function localError(meetingSessionId: string, turnId: string | null, code: string, message: string): VoiceErrorEvent {
@@ -50,6 +67,9 @@ export function useMeetingVoice(options: {
   const mountedRef = useRef(true);
   const credentialsRef = useRef<VoiceTurnCredentials | null>(null);
   const recorderRef = useRef<MeetingRecorder | null>(null);
+  const pcmCaptureRef = useRef<PcmAudioCapture | null>(null);
+  const streamTransportRef = useRef<VoiceStreamTransport | null>(null);
+  const streamTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const uploadControllerRef = useRef<AbortController | null>(null);
   const startTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -63,6 +83,12 @@ export function useMeetingVoice(options: {
   const cancelLocalResources = useCallback(() => {
     recorderRef.current?.cancel();
     recorderRef.current = null;
+    if (streamTimerRef.current) clearTimeout(streamTimerRef.current);
+    streamTimerRef.current = null;
+    void pcmCaptureRef.current?.cancel().catch(() => undefined);
+    pcmCaptureRef.current = null;
+    streamTransportRef.current?.cancel('user_cancelled');
+    streamTransportRef.current = null;
     uploadControllerRef.current?.abort();
     uploadControllerRef.current = null;
     credentialsRef.current = null;
@@ -114,9 +140,46 @@ export function useMeetingVoice(options: {
   }, [options.meetingSessionId, options.socket]);
 
   const stop = useCallback(async () => {
-    const recorder = recorderRef.current;
     const credentials = credentialsRef.current;
-    if (!recorder || !credentials) return;
+    if (!credentials) return;
+
+    const pcmCapture = pcmCaptureRef.current;
+    const streamTransport = streamTransportRef.current;
+    if (pcmCapture && streamTransport) {
+      pcmCaptureRef.current = null;
+      if (streamTimerRef.current) clearTimeout(streamTimerRef.current);
+      streamTimerRef.current = null;
+      dispatch({ type: 'RECORDING', value: false });
+      try {
+        await pcmCapture.stop();
+        options.socket?.emit('voice:turn:end', {
+          meetingSessionId: options.meetingSessionId,
+          turnId: credentials.turnId,
+        });
+        await streamTransport.end();
+        if (streamTransportRef.current === streamTransport) streamTransportRef.current = null;
+        credentialsRef.current = null;
+      } catch (error) {
+        streamTransport.cancel('provider_error');
+        options.socket?.emit('voice:turn:cancel', {
+          meetingSessionId: options.meetingSessionId,
+          turnId: credentials.turnId,
+          reason: 'provider_error',
+        });
+        credentialsRef.current = null;
+        if (mountedRef.current) {
+          const code = error instanceof VoiceStreamTransportError ? error.code : 'VOICE_STREAM_DISCONNECTED';
+          dispatch({
+            type: 'ERROR',
+            value: localError(options.meetingSessionId, credentials.turnId, code, STREAM_MESSAGES[code] ?? 'Không thể hoàn tất truyền âm thanh.'),
+          });
+        }
+      }
+      return;
+    }
+
+    const recorder = recorderRef.current;
+    if (!recorder) return;
     recorderRef.current = null;
     try {
       const audio = await recorder.stop();
@@ -209,6 +272,63 @@ export function useMeetingVoice(options: {
       };
       credentialsRef.current = credentials;
       try {
+        const useStreaming = Boolean(event.stream && event.streamUrl)
+          && chooseVoiceTransportMode() === 'streaming';
+        if (useStreaming && event.stream) {
+          let failed = false;
+          const failStreaming = (error: VoiceStreamTransportError) => {
+            if (failed || !mountedRef.current || credentialsRef.current?.turnId !== event.turnId) return;
+            failed = true;
+            socket.emit('voice:turn:cancel', {
+              meetingSessionId: options.meetingSessionId,
+              turnId: event.turnId,
+              reason: 'provider_error',
+            });
+            cancelLocalResources();
+            dispatch({
+              type: 'ERROR',
+              value: localError(
+                options.meetingSessionId,
+                event.turnId,
+                error.code,
+                STREAM_MESSAGES[error.code] ?? 'Không thể truyền âm thanh tới AI Voice.',
+              ),
+            });
+          };
+          const transport = await connectVoiceStream({
+            url: event.streamUrl,
+            turnId: event.turnId,
+            turnToken: event.turnToken,
+            descriptor: event.stream,
+            onError: failStreaming,
+          });
+          if (!mountedRef.current || credentialsRef.current?.turnId !== event.turnId || failed) {
+            transport.cancel('user_cancelled');
+            return;
+          }
+          streamTransportRef.current = transport;
+          const capture = await createPcmAudioCapture({
+            onChunk: (chunk) => {
+              try {
+                transport.sendChunk(chunk);
+              } catch (error) {
+                failStreaming(error instanceof VoiceStreamTransportError
+                  ? error
+                  : new VoiceStreamTransportError('VOICE_STREAM_DISCONNECTED', 'Streaming failed.'));
+              }
+            },
+          });
+          if (!mountedRef.current || credentialsRef.current?.turnId !== event.turnId || failed) {
+            await capture.cancel();
+            transport.cancel('user_cancelled');
+            return;
+          }
+          pcmCaptureRef.current = capture;
+          streamTimerRef.current = setTimeout(() => void stop(), 60_000);
+          dispatch({ type: 'RECORDING', value: true });
+          return;
+        }
+
         const recorder = await createMeetingRecorder({
           maxDurationMs: 60_000,
           onLimitReached: async (audio) => {
@@ -285,7 +405,7 @@ export function useMeetingVoice(options: {
       socket.off('voice:ready', onReady);
       socket.off('voice:error', onError);
     };
-  }, [cancelLocalResources, clearStartTimer, options.meetingSessionId, options.socket, options.userId, submitAudio]);
+  }, [cancelLocalResources, clearStartTimer, options.meetingSessionId, options.socket, options.userId, stop, submitAudio]);
 
   useEffect(() => {
     mountedRef.current = true;
