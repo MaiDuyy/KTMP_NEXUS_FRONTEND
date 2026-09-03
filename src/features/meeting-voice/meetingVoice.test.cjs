@@ -93,6 +93,30 @@ test('meeting voice reducer atomically replaces an assistant partial and rejects
   assert.equal(state.messages[0].status, 'COMPLETED');
 });
 
+test('meeting voice reducer ignores a stale unlock from an older turn', () => {
+  const state = {
+    ...initialMeetingVoiceState,
+    locked: true,
+    turnId: 'turn-new',
+    ownerUserId: 'user-2',
+    ownerName: 'User Two',
+    turnState: 'LISTENING',
+  };
+  const unchanged = meetingVoiceReducer(state, {
+    type: 'LOCK',
+    value: {
+      meetingSessionId: 'call-1',
+      locked: false,
+      turnId: null,
+      completedTurnId: 'turn-old',
+      ownerUserId: null,
+      ownerName: null,
+      state: 'IDLE',
+    },
+  });
+  assert.equal(unchanged, state);
+});
+
 test('meeting recorder emits WebM audio and stops every media track', async () => {
   let trackStops = 0;
   const track = { stop: () => { trackStops += 1; } };

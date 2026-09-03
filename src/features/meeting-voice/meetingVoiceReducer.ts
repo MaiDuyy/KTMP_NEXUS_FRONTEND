@@ -92,6 +92,12 @@ export function meetingVoiceReducer(
         messageRevisions: {},
       };
     case 'LOCK':
+      if (
+        !action.value.locked
+        && action.value.completedTurnId
+        && state.turnId
+        && state.turnId !== action.value.completedTurnId
+      ) return state;
       return {
         ...state,
         locked: action.value.locked,

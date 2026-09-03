@@ -43,6 +43,8 @@ export function MeetingVoicePanel(props: {
 
   const buttonLabel = voice.canStop
     ? 'Dừng hỏi AI'
+    : voice.canCancel
+      ? 'Dừng AI'
     : voice.state.starting
       ? 'Đang mở micro'
       : voice.state.locked
@@ -51,6 +53,7 @@ export function MeetingVoicePanel(props: {
 
   const handlePrimaryAction = () => {
     if (voice.canStop) void voice.stop();
+    else if (voice.canCancel) voice.cancel();
     else if (voice.canStart) voice.start();
   };
 
@@ -140,16 +143,16 @@ export function MeetingVoicePanel(props: {
               <button
                 type="button"
                 onClick={handlePrimaryAction}
-                disabled={!voice.canStart && !voice.canStop}
+                disabled={!voice.canStart && !voice.canStop && !voice.canCancel}
                 className={`flex h-11 w-full items-center justify-center gap-2 rounded-md px-4 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500 ${
-                  voice.canStop
+                  voice.canStop || voice.canCancel
                     ? 'bg-red-600 text-white hover:bg-red-700'
                     : 'bg-cyan-500 text-zinc-950 hover:bg-cyan-400'
                 }`}
               >
                 {voice.state.starting ? (
                   <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                ) : voice.canStop ? (
+                ) : voice.canStop || voice.canCancel ? (
                   <Square className="h-4 w-4 fill-current" aria-hidden="true" />
                 ) : (
                   <Mic className="h-4 w-4" aria-hidden="true" />
@@ -158,7 +161,13 @@ export function MeetingVoicePanel(props: {
               </button>
             </TooltipTrigger>
             <TooltipContent>
-              {voice.canStop ? 'Kết thúc ghi câu hỏi' : voice.canStart ? 'Bắt đầu hỏi AI bằng giọng nói' : STATE_LABELS[voice.state.turnState]}
+              {voice.canStop
+                ? 'Kết thúc ghi câu hỏi'
+                : voice.canCancel
+                  ? 'Hủy lượt AI hiện tại'
+                  : voice.canStart
+                    ? 'Bắt đầu hỏi AI bằng giọng nói'
+                    : STATE_LABELS[voice.state.turnState]}
             </TooltipContent>
           </Tooltip>
         </div>
