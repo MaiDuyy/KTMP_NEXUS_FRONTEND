@@ -200,6 +200,17 @@ export function useMeetingVoice(options: {
     }
   }, [options.meetingSessionId, options.socket, submitAudio]);
 
+  const cancel = useCallback(() => {
+    const active = stateRef.current;
+    if (!options.socket || !active.locked || active.ownerUserId !== options.userId || !active.turnId) return;
+    cancelLocalResources();
+    options.socket.emit('voice:turn:cancel', {
+      meetingSessionId: options.meetingSessionId,
+      turnId: active.turnId,
+      reason: 'user_cancelled',
+    });
+  }, [cancelLocalResources, options.meetingSessionId, options.socket, options.userId]);
+
   const start = useCallback(() => {
     if (!options.socket || stateRef.current.locked || stateRef.current.starting) return;
     if (!options.workspaceId) {
@@ -430,8 +441,12 @@ export function useMeetingVoice(options: {
     isOwner: state.ownerUserId === options.userId,
     canStart: !state.locked && !state.starting && !state.syncing,
     canStop: state.ownerUserId === options.userId && state.turnState === 'LISTENING' && state.recording,
+    canCancel: state.ownerUserId === options.userId
+      && state.locked
+      && ['FINALIZING_STT', 'THINKING', 'RESPONDING'].includes(state.turnState),
     start,
     stop,
+    cancel,
     clearError: () => dispatch({ type: 'CLEAR_ERROR' }),
   };
 }

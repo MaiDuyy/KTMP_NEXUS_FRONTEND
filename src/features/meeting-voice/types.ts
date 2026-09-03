@@ -23,6 +23,7 @@ export interface VoiceLockChangedEvent {
   meetingSessionId: string;
   locked: boolean;
   turnId: string | null;
+  completedTurnId?: string;
   ownerUserId: string | null;
   ownerName: string | null;
   state: VoiceTurnState;
