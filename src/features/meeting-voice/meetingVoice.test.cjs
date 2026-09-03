@@ -75,6 +75,24 @@ test('meeting voice reducer replaces partial transcript and ignores stale revisi
   assert.equal(state.messages[0].status, 'COMPLETED');
 });
 
+test('meeting voice reducer atomically replaces an assistant partial and rejects stale deltas', () => {
+  let state = { ...initialMeetingVoiceState, turnId: 'turn-1' };
+  const partial = {
+    meetingSessionId: 'call-1', turnId: 'turn-1', role: 'assistant',
+    displayText: 'CÃ¢u tráº£ lá»i Ä‘ang cháº¡y', isFinal: false, revision: 2,
+  };
+  state = meetingVoiceReducer(state, { type: 'MESSAGE', value: partial });
+  state = meetingVoiceReducer(state, { type: 'MESSAGE', value: { ...partial, displayText: 'ná»™i dung cÅ©', revision: 1 } });
+  assert.equal(state.messages.length, 1);
+  assert.equal(state.messages[0].displayText, partial.displayText);
+
+  state = meetingVoiceReducer(state, { type: 'MESSAGE', value: { ...partial, displayText: 'CÃ¢u tráº£ lá»i hoÃ n chá»‰nh', isFinal: true } });
+  state = meetingVoiceReducer(state, { type: 'MESSAGE', value: { ...partial, displayText: 'khÃ´ng Ä‘Æ°á»£c ghi Ä‘Ã¨', revision: 3 } });
+  assert.equal(state.messages.length, 1);
+  assert.equal(state.messages[0].displayText, 'CÃ¢u tráº£ lá»i hoÃ n chá»‰nh');
+  assert.equal(state.messages[0].status, 'COMPLETED');
+});
+
 test('meeting recorder emits WebM audio and stops every media track', async () => {
   let trackStops = 0;
   const track = { stop: () => { trackStops += 1; } };
