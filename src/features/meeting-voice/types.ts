@@ -52,6 +52,8 @@ export interface VoiceMessageEvent {
   role: 'assistant';
   displayText: string;
   isFinal: boolean;
+  revision?: number;
+  sources?: Array<{ documentId: string | number; title: string; chunkId: string }>;
 }
 
 export interface VoiceReadyEvent {
